@@ -35,21 +35,45 @@ func writeFile(c *Conf, e *irc.Event) {
 }
 
 func setupServer(conf ini.File, section string) *irc.Connection {
-
+	var ok bool
 	c := new(Conf)
-	c.Server, _ = conf.Get(section, "Server")
-	c.UseTLS, _ = conf.Get(section, "UseTLS")
-	c.Nick, _ = conf.Get(section, "Nick")
-	c.User, _ = conf.Get(section, "User")
-	c.Channels, _ = conf.Get(section, "Channels")
+	c.Server, ok = conf.Get(section, "Server")
+	if !ok {
+		fmt.Printf("Server entry missing in %s", section)
+		return nil
+	}
+	c.UseTLS, ok = conf.Get(section, "UseTLS")
+	if !ok {
+		fmt.Printf("nonfatal: UseTLS entry missing in %s", section)
+	}
+	c.Nick, ok = conf.Get(section, "Nick")
+	if !ok {
+		fmt.Printf("Nick entry missing in %s", section)
+		return nil
+	}
+	c.User, ok = conf.Get(section, "User")
+	if !ok {
+		fmt.Printf("nonfatal: User entry missing in %s", section)
+	}
+	c.Channels, ok = conf.Get(section, "Channels")
+	if !ok {
+		fmt.Printf("nonfatal: Channels section missing in %s", section)
+	}
 	c.Directory, _ = conf.Get(section, "Directory")
+	if !ok {
+		fmt.Printf("Directory entry missing in %s", section)
+		return nil
+	}
 
 	err := os.MkdirAll(c.Directory, 0744)
+	if err != nil {
+		fmt.Printf("Err %s", err)
+		return nil
+	}
 
 	irccon := irc.IRC(c.Nick, c.User)
-	//TODO: Flag out
-	irccon.Debug = true
-	irccon.VerboseCallbackHandler = true
+	irccon.Debug = *debug
+	irccon.VerboseCallbackHandler = *verbose
 
 	if c.UseTLS == "true" {
 		irccon.UseTLS = true

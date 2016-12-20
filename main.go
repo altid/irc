@@ -1,22 +1,35 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
+	"os"
 
-	"github.com/thoj/go-ircevent"
 	"aqwari.net/net/styx"
+	"github.com/thoj/go-ircevent"
 	"github.com/vaughan0/go-ini"
 )
 
+var (
+	addr    = flag.String("a", ":4567", "Port to listen on")
+	debug   = flag.Bool("d", false, "Enable debugging output")
+	verbose = flag.Bool("v", false, "Enable verbose output")
+)
+
 func main() {
-	d := new(Directory)
+	flag.Parse()
+	if flag.Lookup("h") != nil {
+		flag.Usage()
+		os.Exit(1)
+	}
 	conf, err := ini.LoadFile("irc.ini")
 	if err != nil {
 		fmt.Printf("Err %s", err)
 		return
 	}
 	irccon := make([]irc.Connection, 1)
+	var d = new(Directory)
 	for section, _ := range conf {
 		if section == "options" {
 			d = setupFiles(conf, section)
@@ -24,19 +37,15 @@ func main() {
 		}
 		irccon = append(irccon, *setupServer(conf, section))
 	}
-	h := styx.HandlerFunc(func(s *styx.Session) {
-		for s.Next() {
-			//TODO: Somewhere here, we will send of the irc message
-			switch t := s.Request().(type) {
-			case styx.Tstat:
-				t.Rstat(Directory{}, nil)
-			case styx.Twalk:
-				t.Rwalk(Directory{}, nil)
-			case styx.Topen:
-				t.Ropen(Directory{}, nil)
-			}
-		}
-	})
+	var styxServer styx.Server
+	if *verbose {
+		styxServer.ErrorLog = log.New(os.Stderr, "", 0)
+	}
+	if *debug {
+		styxServer.TraceLog = log.New(os.Stderr, "", 0)
+	}
+	styxServer.Addr = *addr
+	styxServer.Handler = d
 
-	log.Fatal(styx.ListenAndServe(d.port, h))
+	log.Fatal(styxServer.ListenAndServe())
 }
