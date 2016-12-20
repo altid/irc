@@ -32,7 +32,7 @@ func main() {
 	var d = new(Directory)
 	for section, _ := range conf {
 		if section == "options" {
-			d = setupFiles(conf, section)
+			//d = setupFiles(conf, section)
 			continue
 		}
 		irccon = append(irccon, *setupServer(conf, section))
