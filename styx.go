@@ -66,7 +66,7 @@ func (s *stat) Name() string     { return s.name }
 func (s *stat) Sys() interface{} { return s.file }
 
 func (s *stat) ModTime() time.Time {
-	return time.Now().Truncate(time.Hour)
+	return time.Now()
 }
 
 func (s *stat) IsDir() bool {
@@ -76,7 +76,9 @@ func (s *stat) IsDir() bool {
 func (s *stat) Mode() os.FileMode {
 	switch s.file.v.(type) {
 	case map[string]interface{}:
-		return os.ModeDir | 0755
+		return os.ModeDir | 0777
+case []interface{}:
+		return os.ModeDir | 0777
 	}
 	return 0644
 }

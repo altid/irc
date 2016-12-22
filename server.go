@@ -3,6 +3,7 @@ package main
 import (
 	"crypto/tls"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -12,15 +13,15 @@ import (
 )
 
 type Conf struct {
-	Server    string
-	UseTLS    string
-	Nick      string
-	User      string
-	Channels  string
-	Name      string
+	Server   string
+	UseTLS   string
+	Nick     string
+	User     string
+	Channels string
+	Name     string
 }
 
-func writeFile(c *Conf, e *irc.Event) {
+func writeFile(c *Conf, e *irc.Event, s *Session) {
 	p := filepath.Join(*inPath, c.Name, e.Arguments[0])
 	if e.Arguments[0] == c.User {
 		p = filepath.Join(*inPath, c.Name, e.Nick)
@@ -30,13 +31,28 @@ func writeFile(c *Conf, e *irc.Event) {
 		fmt.Printf("Err %s", err)
 	}
 	defer f.Close()
+	//TODO: use text/template
 	f.WriteString(e.Raw)
 	f.WriteString("\n")
+	s.mu.Lock()
+	if e.Arguments[0] == s.Current {
+		//TODO: Use byte slices and append instead here
+		buf, err := ioutil.ReadFile(p)
+		if err != nil {
+			s.Main = "Error"
+		}
+		s.Main = string(buf)
+	}
+	//TODO: find if e.Arguments[0] exists in tabs, if tabs isactive
+	// add to list, norm or highlight
+	//BufferList
+	//NickList
+	//Status
+	//CompletionList
+	s.mu.Unlock()
 }
 
-//TODO: Server messages need to go to named file, ie: ~/freenode/freenode
-
-func setupServer(conf ini.File, section string) *irc.Connection {
+func setupServer(conf ini.File, section string, s *Session) *irc.Connection {
 	var ok bool
 	c := new(Conf)
 	c.Server, ok = conf.Get(section, "Server")
@@ -87,13 +103,13 @@ func setupServer(conf ini.File, section string) *irc.Connection {
 		}
 	})
 	irccon.AddCallback("PRIVMSG", func(e *irc.Event) {
-		writeFile(c, e)
+		writeFile(c, e, s)
 	})
 	irccon.AddCallback("CTCP_ACTION", func(e *irc.Event) {
-		writeFile(c, e)
+		writeFile(c, e, s)
 	})
 	irccon.AddCallback("TOPIC", func(e *irc.Event) {
-		writeFile(c, e)
+		writeFile(c, e, s)
 	})
 	irccon.AddCallback("366", func(e *irc.Event) {})
 	err = irccon.Connect(c.Server)

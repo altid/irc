@@ -4,39 +4,49 @@ import (
 	"github.com/vaughan0/go-ini"
 )
 
-func setupShow(conf ini.File, section string, srv *Server) *show {
+func setupShow(conf ini.File, section string) *Show {
 
-	//TODO:srv.AddFile("main", current.buf)
-	srv.AddFile("main", "test")
-	//TODO:srv.AddFile("main", completionList)
-	srv.AddFile("ctl", "test")
-	show := new(show)
+	Show := new(Show)
 	for key, value := range conf[section] {
 		switch key {
 		case "Title":
-			show.Title = (value == "show")
-			//TODO: srv.AddFile("title", usefultitle)
-			srv.AddFile("title", "ubqt-irc")
+			Show.Title = (value == "show")
 		case "Status":
-			show.Status = (value == "show")
-			//TODO: srv.AddFile("status", mode/buffer/etc)
-			srv.AddFile("status", "test")
+			Show.Status = (value == "show")
 		case "Tabs":
-			show.Tabs = (value == "show")
-			//TODO: srv.AddFile("tabs", bufferlist)
-			srv.AddFile("tabs", "test")
+			Show.Tabs = (value == "show")
 		case "Input":
-			show.Input = (value == "show")
-			srv.AddFile("input", "")
+			Show.Input = (value == "show")
 		case "Sidebar":
-			show.Sidebar = (value == "show")
-			//TODO: srv.Addfile("sidebar", nicklist)
-			srv.AddFile("sidebar", "test")
+			Show.Sidebar = (value == "show")
 		case "Timestamps":
-			show.Timestamps = (value == "show")
+			Show.Timestamps = (value == "show")
 		}
 	}
-	return show
+	return Show
+}
+
+func (srv *Server) Update(s *Show, b *Session) {
+	srv.AddFile("main", b.Main)
+	//TODO:srv.AddFile("main", completionList)
+	srv.AddFile("ctl", "test")
+	switch {
+	case s.Title:
+		//TODO: srv.AddFile("title", usefultitle)
+		srv.AddFile("title", "ubqt-irc")
+	case s.Status:
+		//TODO: srv.AddFile("status", mode/buffer/etc)
+		srv.AddFile("status", "test")
+	case s.Tabs:
+		//TODO: srv.AddFile("tabs", bufferlist)
+		srv.AddFile("tabs", "test")
+	case s.Input:
+		//TODO: srv.AddFile("tabs", scrollback)
+		srv.AddFile("input", "stuff")
+	case s.Sidebar:
+		//TODO: srv.Addfile("sidebar", nicklist)
+		srv.AddFile("sidebar", "test")
+	}
 }
 
 func (srv *Server) AddFile(key string, file interface{}) {
