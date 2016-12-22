@@ -3,19 +3,31 @@ package main
 import (
 	"flag"
 	"fmt"
-	"log"
 	"os"
 
-	"aqwari.net/net/styx"
 	"github.com/thoj/go-ircevent"
 	"github.com/vaughan0/go-ini"
 )
 
 var (
 	addr    = flag.String("a", ":4567", "Port to listen on")
+	inPath  = flag.String("p", "~/irc", "Path for file system")
 	debug   = flag.Bool("d", false, "Enable debugging output")
 	verbose = flag.Bool("v", false, "Enable verbose output")
 )
+
+type show struct {
+	Title bool
+	Tabs bool
+	Status bool
+	Input bool //You may want to watch a chat only, for instance
+	Sidebar bool
+	Timestamps bool
+}
+
+type server struct {
+	file map[string]interface{}
+}
 
 func main() {
 	flag.Parse()
@@ -29,23 +41,14 @@ func main() {
 		return
 	}
 	irccon := make([]irc.Connection, 1)
-	var d = new(Directory)
+	var srv server
+	show := new(show)
 	for section, _ := range conf {
 		if section == "options" {
-			//d = setupFiles(conf, section)
+			show = setupShow(conf, section, &srv)
 			continue
 		}
 		irccon = append(irccon, *setupServer(conf, section))
 	}
-	var styxServer styx.Server
-	if *verbose {
-		styxServer.ErrorLog = log.New(os.Stderr, "", 0)
-	}
-	if *debug {
-		styxServer.TraceLog = log.New(os.Stderr, "", 0)
-	}
-	styxServer.Addr = *addr
-	styxServer.Handler = d
-
-	log.Fatal(styxServer.ListenAndServe())
+	fmt.Printf("Defaults\nShow title: %v\nShow tabs: %v\nShow status: %v\nShow input: %v\nShow sidebar: %v\n", show.Title, show.Tabs, show.Status, show.Input, show.Sidebar)
 }

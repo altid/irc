@@ -17,15 +17,15 @@ type Conf struct {
 	Nick      string
 	User      string
 	Channels  string
-	Directory string
+	Name      string
 }
 
 func writeFile(c *Conf, e *irc.Event) {
-	path := filepath.Join(c.Directory, e.Arguments[0])
+	p := filepath.Join(*inPath, c.Name, e.Arguments[0])
 	if e.Arguments[0] == c.User {
-		path = filepath.Join(c.Directory, e.Nick)
+		p = filepath.Join(*inPath, c.Name, e.Nick)
 	}
-	f, err := os.OpenFile(path, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
+	f, err := os.OpenFile(p, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
 	if err != nil {
 		fmt.Printf("Err %s", err)
 	}
@@ -33,6 +33,8 @@ func writeFile(c *Conf, e *irc.Event) {
 	f.WriteString(e.Raw)
 	f.WriteString("\n")
 }
+
+//TODO: Server messages need to go to named file, ie: ~/freenode/freenode
 
 func setupServer(conf ini.File, section string) *irc.Connection {
 	var ok bool
@@ -59,13 +61,13 @@ func setupServer(conf ini.File, section string) *irc.Connection {
 	if !ok {
 		fmt.Printf("nonfatal: Channels section missing in %s", section)
 	}
-	c.Directory, _ = conf.Get(section, "Directory")
+	c.Name, _ = conf.Get(section, "Name")
 	if !ok {
-		fmt.Printf("Directory entry missing in %s", section)
+		fmt.Printf("Name entry missing in %s", section)
 		return nil
 	}
 
-	err := os.MkdirAll(c.Directory, 0744)
+	err := os.MkdirAll(filepath.Join(*inPath, c.Name), 0744)
 	if err != nil {
 		fmt.Printf("Err %s", err)
 		return nil
