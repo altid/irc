@@ -28,23 +28,16 @@ func setupShow(conf ini.File, section string) *Show {
 //TODO: Delete member on ctl 
 func (srv *Server) Update(s *Show, b *Session) {
 	srv.AddFile("main", b.Read(b.Current))
-	//TODO:srv.AddFile("main", completionList)
-	srv.AddFile("ctl", "test")
+	srv.AddFile("ctl", b.ListFunctions())
 	switch {
 	case s.Title:
 		srv.AddFile("title", "ubqt-irc")
 	case s.Status:
-		//TODO: srv.AddFile("status", mode/buffer/etc)
-		srv.AddFile("status", "test")
+		srv.AddFile("status", b.UpdateStatus())
 	case s.Tabs:
-		//TODO: srv.AddFile("tabs", bufferlist)
-		srv.AddFile("tabs", "test")
-	case s.Input:
-		//TODO: srv.AddFile("tabs", scrollback)
-		srv.AddFile("input", "stuff")
+		srv.AddFile("tabs", b.UpdateTabs())
 	case s.Sidebar:
-		//TODO: srv.Addfile("sidebar", nicklist)
-		srv.AddFile("sidebar", "test")
+		srv.AddFile("sidebar", b.UpdateSidebar())
 	}
 }
 

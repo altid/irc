@@ -164,3 +164,19 @@ func (s Session) Read(file string) string {
 	}
 	return string(buf)
 }
+
+func (s Session) UpdateStatus() string {
+	return "status"
+}
+
+func (s Session) UpdateTabs() string {
+	return "lots of things for the tab bar"
+}
+
+func (s Session) UpdateSidebar() string {
+	return "items\non\nthe\nside\nare\ncool"
+}
+
+func (s Session) ListFunctions() string {
+	return "buffer\njoin\npart"
+}
