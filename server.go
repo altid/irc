@@ -21,35 +21,6 @@ type Conf struct {
 	Name     string
 }
 
-func (s Srv) Title() string {
-	return "ubqt-irc"
-}
-
-func (s Srv) Tabs() {
-
-}
-
-func (s Srv) Main() {
-
-}
-
-func (s Srv) Sidebar() {
-
-}
-
-func (s Srv) Status() {
-
-}
-
-func (s Srv) Ctl() {
-
-}
-
-func (s Srv) Write() {
-
-}
-
-//TODO: Remove session part
 func writeFile(c *Conf, e *irc.Event, s *Session) {
 	p := filepath.Join(*inPath, c.Name, e.Arguments[0])
 	if e.Arguments[0] == c.User {
@@ -81,7 +52,6 @@ func writeFile(c *Conf, e *irc.Event, s *Session) {
 	s.mu.Unlock()
 }
 
-//TODO: Remove session part
 func setupServer(conf ini.File, section string, s *Session) *irc.Connection {
 	var ok bool
 	c := new(Conf)
