@@ -3,7 +3,9 @@ package main
 import (
 	"bytes"
 	"flag"
+	"path/filepath"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 	"path"
@@ -61,6 +63,7 @@ func main() {
 	irccon := make([]irc.Connection, 1)
 	Show := new(Show)
 	Session := new(Session)
+	Session.Current = "freenode/#ubqt"
 	for section, _ := range conf {
 		if section == "options" {
 			Show = setupShow(conf, section)
@@ -149,5 +152,15 @@ func (srv *Server) Serve9P(s *styx.Session) {
 
 
 func (s Session) Read(file string) string {
-	return "test"
+	p := filepath.Join(*inPath, file)
+	f, err := os.OpenFile(p, os.O_RDONLY, 0644)
+	if err != nil {
+		fmt.Printf("Err %s", err)
+	}
+	defer f.Close()
+	buf, err := ioutil.ReadFile(p)
+	if err != nil {
+		return ""
+	}
+	return string(buf)
 }
