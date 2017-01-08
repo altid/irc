@@ -33,10 +33,33 @@ func writeFile(c *Conf, e *irc.Event) {
 	//TODO: use text/template
 	f.WriteString(e.Raw)
 	f.WriteString("\n")
-	//TODO: lock mutex before and after these updates
-	//TODO: inform clients on new data if writing to current
-	//TODO: else update `tabs` to show new data
+}
 
+func newState(s *State) *State {
+	state := new(State)
+	state.file = make(map[string]interface{})
+	s.file["main"] = "main" //irc.Current
+
+	switch {
+	case s.current != "":
+		state.current = s.current
+	case s.Title:
+		s.Title = true
+		s.file["title"] = "ubqt-irc"
+	case s.Tabs:
+		s.Tabs = true
+		s.file["tabs"] = "tabs" //irc.Tabs
+	case s.Status:
+		s.Status = true
+		s.file["status"] = "status" //irc.Status
+	case s.Input:
+		s.Input = true
+		s.file["input"] = ""
+	case s.Sidebar:
+		s.Sidebar = true
+		s.file["sidebar"] = "some\nstuff" //irc.Sidebar
+	}
+	return state
 }
 
 func setupServer(conf ini.File, section string) *irc.Connection {

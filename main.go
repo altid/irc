@@ -44,16 +44,16 @@ func main() {
 		return
 	}
 	irccon := make([]irc.Connection, 1)
-	state := new(State)
+	var state State
 	for section, _ := range conf {
 		if section == "options" {
-			setupState(conf, section, state)
+			setupState(conf, section, &state)
 			continue
 		}
 		irccon = append(irccon, *setupServer(conf, section))
 	}
-	//Set the first IRC server on the list to current buffer name
 	state.current = irccon[0].Server
+	state.file = make(map[string]interface{})
 	var styxServer styx.Server
 	if *verbose {
 		styxServer.ErrorLog = log.New(os.Stderr, "", 0)
@@ -62,7 +62,7 @@ func main() {
 		styxServer.TraceLog = log.New(os.Stderr, "", 0)
 	}
 	styxServer.Addr = *addr
-	styxServer.Handler = state
+	styxServer.Handler = &state
 	log.Fatal(styxServer.ListenAndServe())
 }
 
@@ -86,16 +86,16 @@ func walkTo(v interface{}, loc string) (interface{}, bool) {
 	return cwd, true
 }
 
-func (srv *State) Serve9P(s *styx.Session) {
-	//TODO: Make a copy of show for each client coming in, based off the 
-	//TODO: Original settings from CLI.
+func (st *State) Serve9P(s *styx.Session) {
 	//TODO: We get a client connection here, set up each clients dataset
 	//TODO: Handle and mutate as writes come, update data sets and send out
 	//TODO: Notification of new data from here
+	//TODO: Maybe here we can listen on our channel to update the structure?
+	state := newState(st)
 
 	for s.Next() {
 		t := s.Request()
-		file, ok := walkTo(srv.file, t.Path())
+		file, ok := walkTo(state.file, t.Path())
 		if !ok {
 			t.Rerror("no such file or directory")
 			continue
