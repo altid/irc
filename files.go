@@ -4,10 +4,9 @@ import (
 	"github.com/vaughan0/go-ini"
 )
 
-// Function parses the options in the irc.ini
-// To give defaults, these are per-client unique 
-// And subsequent clients connecting in will not modify
-// the Show of any other client.
+// Function parses the options in the irc.ini to give defaults 
+// Subsequent clients connecting in will not modify
+// the State of any other client
 func setupState(conf ini.File, section string, s *State) {
 
 	for key, value := range conf[section] {

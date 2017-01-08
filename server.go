@@ -39,6 +39,7 @@ func newState(s *State) *State {
 	state := new(State)
 	state.file = make(map[string]interface{})
 	s.file["main"] = "main" //irc.Current
+	s.file["ctl"] = "ctl" // irc.Commands
 
 	switch {
 	case s.current != "":
@@ -54,7 +55,7 @@ func newState(s *State) *State {
 		s.file["status"] = "status" //irc.Status
 	case s.Input:
 		s.Input = true
-		s.file["input"] = ""
+		s.file["input"] = "input" // irc.Scrollback
 	case s.Sidebar:
 		s.Sidebar = true
 		s.file["sidebar"] = "some\nstuff" //irc.Sidebar
