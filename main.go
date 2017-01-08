@@ -3,14 +3,11 @@ package main
 import (
 	"bytes"
 	"flag"
-	"path/filepath"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"path"
 	"strings"
-	"sync"
 
 	"aqwari.net/net/styx"
 	"github.com/thoj/go-ircevent"
@@ -24,18 +21,9 @@ var (
 	verbose = flag.Bool("v", false, "Enable verbose output")
 )
 
-type Session struct {
-	Title          string
-	BufferList     string
-	NickList       string
-	Status         string
-	CompletionList string
-	Main           string
-	Current        string
-	mu             sync.Mutex
-}
-
-type Show struct {
+type State struct {
+	file map[string]interface{}
+	current    string
 	Title      bool
 	Tabs       bool
 	Status     bool
@@ -44,34 +32,28 @@ type Show struct {
 	Timestamps bool
 }
 
-type Server struct {
-	file map[string]interface{}
-}
-
 func main() {
 	flag.Parse()
 	if flag.Lookup("h") != nil {
 		flag.Usage()
 		os.Exit(1)
 	}
-	var srv Server
 	conf, err := ini.LoadFile("irc.ini")
 	if err != nil {
 		fmt.Printf("Err %s", err)
 		return
 	}
 	irccon := make([]irc.Connection, 1)
-	Show := new(Show)
-	Session := new(Session)
-	Session.Current = "freenode/#ubqt"
+	state := new(State)
 	for section, _ := range conf {
 		if section == "options" {
-			Show = setupShow(conf, section)
+			setupState(conf, section, state)
 			continue
 		}
-		irccon = append(irccon, *setupServer(conf, section, Session))
+		irccon = append(irccon, *setupServer(conf, section))
 	}
-	srv.Update(Show, Session)
+	//Set the first IRC server on the list to current buffer name
+	state.current = irccon[0].Server
 	var styxServer styx.Server
 	if *verbose {
 		styxServer.ErrorLog = log.New(os.Stderr, "", 0)
@@ -80,7 +62,7 @@ func main() {
 		styxServer.TraceLog = log.New(os.Stderr, "", 0)
 	}
 	styxServer.Addr = *addr
-	styxServer.Handler = &srv
+	styxServer.Handler = state
 	log.Fatal(styxServer.ListenAndServe())
 }
 
@@ -104,7 +86,13 @@ func walkTo(v interface{}, loc string) (interface{}, bool) {
 	return cwd, true
 }
 
-func (srv *Server) Serve9P(s *styx.Session) {
+func (srv *State) Serve9P(s *styx.Session) {
+	//TODO: Make a copy of show for each client coming in, based off the 
+	//TODO: Original settings from CLI.
+	//TODO: We get a client connection here, set up each clients dataset
+	//TODO: Handle and mutate as writes come, update data sets and send out
+	//TODO: Notification of new data from here
+
 	for s.Next() {
 		t := s.Request()
 		file, ok := walkTo(srv.file, t.Path())
@@ -147,36 +135,4 @@ func (srv *Server) Serve9P(s *styx.Session) {
 			}
 		}
 	}
-}
-
-
-
-func (s Session) Read(file string) string {
-	p := filepath.Join(*inPath, file)
-	f, err := os.OpenFile(p, os.O_RDONLY, 0644)
-	if err != nil {
-		fmt.Printf("Err %s", err)
-	}
-	defer f.Close()
-	buf, err := ioutil.ReadFile(p)
-	if err != nil {
-		return ""
-	}
-	return string(buf)
-}
-
-func (s Session) UpdateStatus() string {
-	return "status"
-}
-
-func (s Session) UpdateTabs() string {
-	return "lots of things for the tab bar"
-}
-
-func (s Session) UpdateSidebar() string {
-	return "items\non\nthe\nside\nare\ncool"
-}
-
-func (s Session) ListFunctions() string {
-	return "buffer\njoin\npart"
 }

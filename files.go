@@ -4,46 +4,26 @@ import (
 	"github.com/vaughan0/go-ini"
 )
 
-func setupShow(conf ini.File, section string) *Show {
+// Function parses the options in the irc.ini
+// To give defaults, these are per-client unique 
+// And subsequent clients connecting in will not modify
+// the Show of any other client.
+func setupState(conf ini.File, section string, s *State) {
 
-	Show := new(Show)
 	for key, value := range conf[section] {
 		switch key {
 		case "Title":
-			Show.Title = (value == "show")
+			s.Title = (value == "show")
 		case "Status":
-			Show.Status = (value == "show")
+			s.Status = (value == "show")
 		case "Tabs":
-			Show.Tabs = (value == "show")
+			s.Tabs = (value == "show")
 		case "Input":
-			Show.Input = (value == "show")
+			s.Input = (value == "show")
 		case "Sidebar":
-			Show.Sidebar = (value == "show")
+			s.Sidebar = (value == "show")
 		case "Timestamps":
-			Show.Timestamps = (value == "show")
+			s.Timestamps = (value == "show")
 		}
 	}
-	return Show
-}
-//TODO: Delete member on ctl 
-func (srv *Server) Update(s *Show, b *Session) {
-	srv.AddFile("main", b.Read(b.Current))
-	srv.AddFile("ctl", b.ListFunctions())
-	switch {
-	case s.Title:
-		srv.AddFile("title", "ubqt-irc")
-	case s.Status:
-		srv.AddFile("status", b.UpdateStatus())
-	case s.Tabs:
-		srv.AddFile("tabs", b.UpdateTabs())
-	case s.Sidebar:
-		srv.AddFile("sidebar", b.UpdateSidebar())
-	}
-}
-
-func (srv *Server) AddFile(key string, file interface{}) {
-	if srv.file == nil {
-		srv.file = make(map[string]interface{})
-	}
-	srv.file[key] = file
 }
