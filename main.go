@@ -30,6 +30,7 @@ type State struct {
 	Input      bool //You may want to watch a chat only, for instance
 	Sidebar    bool
 	Timestamps bool
+	ch chan string
 }
 
 func main() {
@@ -54,6 +55,7 @@ func main() {
 	}
 	state.current = irccon[0].Server
 	state.file = make(map[string]interface{})
+	state.ch = make(chan string)
 	var styxServer styx.Server
 	if *verbose {
 		styxServer.ErrorLog = log.New(os.Stderr, "", 0)
@@ -91,8 +93,8 @@ func (st *State) Serve9P(s *styx.Session) {
 	//TODO: Handle and mutate as writes come, update data sets and send out
 	//TODO: Notification of new data from here
 	//TODO: Maybe here we can listen on our channel to update the structure?
-	state := newState(st)
-
+	var state State
+	newState(&state, st)
 	for s.Next() {
 		t := s.Request()
 		file, ok := walkTo(state.file, t.Path())

@@ -35,32 +35,30 @@ func writeFile(c *Conf, e *irc.Event) {
 	f.WriteString("\n")
 }
 
-func newState(s *State) *State {
-	state := new(State)
+func newState(state *State, s *State){
 	state.file = make(map[string]interface{})
-	s.file["main"] = "main" //irc.Current
-	s.file["ctl"] = "ctl" // irc.Commands
-
-	switch {
-	case s.current != "":
-		state.current = s.current
-	case s.Title:
-		s.Title = true
-		s.file["title"] = "ubqt-irc"
-	case s.Tabs:
-		s.Tabs = true
-		s.file["tabs"] = "tabs" //irc.Tabs
-	case s.Status:
-		s.Status = true
-		s.file["status"] = "status" //irc.Status
-	case s.Input:
-		s.Input = true
-		s.file["input"] = "input" // irc.Scrollback
-	case s.Sidebar:
-		s.Sidebar = true
-		s.file["sidebar"] = "some\nstuff" //irc.Sidebar
+	state.file["main"] = "the main file" //irc.Current
+	state.file["ctl"] = "my ctl file" // irc.Commands
+	if s.Title == true {
+		state.Title = true
+		state.file["title"] = "ubqt-irc"
 	}
-	return state
+	if s.Tabs == true {
+		state.Tabs = true
+		state.file["tabs"] = "tabs" //irc.Tabs
+	}
+	if s.Status == true {
+		state.Status = true
+		state.file["status"] = "status" //irc.Status
+	}
+	if s.Input == true {
+		state.Input = true
+		state.file["input"] = "input" // irc.Scrollback
+	}
+	if s.Sidebar == true {
+		state.Sidebar = true
+		state.file["sidebar"] = "some\nstuff" //irc.Sidebar
+	}
 }
 
 func setupServer(conf ini.File, section string) *irc.Connection {
