@@ -77,7 +77,7 @@ func (s *stat) Mode() os.FileMode {
 	switch s.file.v.(type) {
 	case map[string]interface{}:
 		return os.ModeDir | 0777
-case []interface{}:
+	case []interface{}:
 		return os.ModeDir | 0777
 	}
 	return 0644

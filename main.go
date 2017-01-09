@@ -22,9 +22,9 @@ var (
 )
 
 type State struct {
-	file map[string]interface{}
-	irc map[string]*irc.Connection
-	server     string //current server
+	file       map[string]interface{}
+	irc        map[string]*irc.Connection
+	server     string
 	current    string //current buffer
 	Title      bool
 	Tabs       bool
@@ -32,7 +32,8 @@ type State struct {
 	Input      bool //You may want to watch a chat only, for instance
 	Sidebar    bool
 	Timestamps bool
-	ch chan irc.Event
+	ch         chan irc.Event
+	input      chan string
 }
 
 func main() {
@@ -94,17 +95,15 @@ func (st *State) Serve9P(s *styx.Session) {
 	var state State
 	newState(&state, st)
 	go func() {
-		event := <-st.ch
-		ircobj := st.irc["freenode"]
-		/*TODO: We will listen on multiple channels here
-		event --> if from current, update state.file["main"]
-		if from other, update state.file["tabs"] 
-		 - if not already on list & highlighted || if not on list
-		input --> write message to server by name 
-		*/
-		ircobj.Privmsg("#ubqt", "test")
-		fmt.Println(event.Arguments[0])
-		fmt.Println(event.Arguments[1])
+		select {
+
+		case event := <-st.ch:
+			fmt.Println(event)
+			//event --> if from current, update state.file["main"]
+		case input := <-st.input:
+			ircobj := st.irc[st.server]
+			ircobj.Privmsg(st.current, input)
+		}
 	}()
 	for s.Next() {
 		t := s.Request()
@@ -122,9 +121,6 @@ func (st *State) Serve9P(s *styx.Session) {
 			case map[string]interface{}:
 				t.Ropen(mkdir(v), nil)
 			default:
-				if s.Request().Path() == "ctl" {
-					fmt.Printf("ctl")
-				}
 				t.Ropen(strings.NewReader(fmt.Sprint(v)), nil)
 			}
 		case styx.Tstat:
