@@ -61,13 +61,15 @@ func newState(state *State, s *State){
 	}
 }
 
-func setupServer(conf ini.File, section string) *irc.Connection {
+func setupServer(conf ini.File, section string, st *State) {
+	if st.irc == nil {
+		st.irc = make(map[string]*irc.Connection)
+	}
 	var ok bool
 	c := new(Conf)
 	c.Server, ok = conf.Get(section, "Server")
 	if !ok {
 		fmt.Printf("Server entry missing in %s", section)
-		return nil
 	}
 	c.UseTLS, ok = conf.Get(section, "UseTLS")
 	if !ok {
@@ -76,7 +78,6 @@ func setupServer(conf ini.File, section string) *irc.Connection {
 	c.Nick, ok = conf.Get(section, "Nick")
 	if !ok {
 		fmt.Printf("Nick entry missing in %s", section)
-		return nil
 	}
 	c.User, ok = conf.Get(section, "User")
 	if !ok {
@@ -89,13 +90,11 @@ func setupServer(conf ini.File, section string) *irc.Connection {
 	c.Name, _ = conf.Get(section, "Name")
 	if !ok {
 		fmt.Printf("Name entry missing in %s", section)
-		return nil
 	}
 
 	err := os.MkdirAll(filepath.Join(*inPath, c.Name), 0744)
 	if err != nil {
 		fmt.Printf("Err %s", err)
-		return nil
 	}
 
 	irccon := irc.IRC(c.Nick, c.User)
@@ -112,21 +111,23 @@ func setupServer(conf ini.File, section string) *irc.Connection {
 		}
 	})
 	irccon.AddCallback("PRIVMSG", func(e *irc.Event) {
+		st.ch <- *e
 		writeFile(c, e)
 	})
 	irccon.AddCallback("CTCP_ACTION", func(e *irc.Event) {
+		st.ch <- *e
 		writeFile(c, e)
 	})
 	irccon.AddCallback("TOPIC", func(e *irc.Event) {
+		st.ch <- *e
 		writeFile(c, e)
 	})
 	irccon.AddCallback("366", func(e *irc.Event) {})
 	err = irccon.Connect(c.Server)
 	if err != nil {
 		fmt.Printf("Err %s", err)
-		return nil
 	}
+	st.irc[section] = irccon
 	go irccon.Loop()
-	return irccon
 
 }

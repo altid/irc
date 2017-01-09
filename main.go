@@ -23,14 +23,16 @@ var (
 
 type State struct {
 	file map[string]interface{}
-	current    string
+	irc map[string]*irc.Connection
+	server     string //current server
+	current    string //current buffer
 	Title      bool
 	Tabs       bool
 	Status     bool
 	Input      bool //You may want to watch a chat only, for instance
 	Sidebar    bool
 	Timestamps bool
-	ch chan string
+	ch chan irc.Event
 }
 
 func main() {
@@ -44,18 +46,18 @@ func main() {
 		fmt.Printf("Err %s", err)
 		return
 	}
-	irccon := make([]irc.Connection, 1)
 	var state State
+	state.ch = make(chan irc.Event)
 	for section, _ := range conf {
 		if section == "options" {
 			setupState(conf, section, &state)
 			continue
 		}
-		irccon = append(irccon, *setupServer(conf, section))
+		state.server = section
+		state.current = section
+		setupServer(conf, section, &state)
 	}
-	state.current = irccon[0].Server
 	state.file = make(map[string]interface{})
-	state.ch = make(chan string)
 	var styxServer styx.Server
 	if *verbose {
 		styxServer.ErrorLog = log.New(os.Stderr, "", 0)
@@ -89,12 +91,21 @@ func walkTo(v interface{}, loc string) (interface{}, bool) {
 }
 
 func (st *State) Serve9P(s *styx.Session) {
-	//TODO: We get a client connection here, set up each clients dataset
-	//TODO: Handle and mutate as writes come, update data sets and send out
-	//TODO: Notification of new data from here
-	//TODO: Maybe here we can listen on our channel to update the structure?
 	var state State
 	newState(&state, st)
+	go func() {
+		event := <-st.ch
+		ircobj := st.irc["freenode"]
+		/*TODO: We will listen on multiple channels here
+		event --> if from current, update state.file["main"]
+		if from other, update state.file["tabs"] 
+		 - if not already on list & highlighted || if not on list
+		input --> write message to server by name 
+		*/
+		ircobj.Privmsg("#ubqt", "test")
+		fmt.Println(event.Arguments[0])
+		fmt.Println(event.Arguments[1])
+	}()
 	for s.Next() {
 		t := s.Request()
 		file, ok := walkTo(state.file, t.Path())
