@@ -11,7 +11,7 @@ import (
 	"github.com/vaughan0/go-ini"
 )
 
-type Conf struct {
+type settings struct {
 	Server   string
 	UseTLS   string
 	Nick     string
@@ -20,7 +20,7 @@ type Conf struct {
 	Name     string
 }
 
-func writeFile(c *Conf, e *irc.Event) {
+func writeFile(c *settings, e *irc.Event) {
 	p := filepath.Join(*inPath, c.Name, e.Arguments[0])
 	if e.Arguments[0] == c.User {
 		p = filepath.Join(*inPath, c.Name, e.Nick)
@@ -35,10 +35,10 @@ func writeFile(c *Conf, e *irc.Event) {
 	f.WriteString("\n")
 }
 
-func newState(state *State, s *State){
+func newState(state *state, s *state) {
 	state.file = make(map[string]interface{})
 	state.file["main"] = "the main file" //irc.Current
-	state.file["ctl"] = "my ctl file" // irc.Commands
+	state.file["ctl"] = "my ctl file"    // irc.Commands
 	if s.Title == true {
 		state.Title = true
 		state.file["title"] = "ubqt-irc"
@@ -61,12 +61,12 @@ func newState(state *State, s *State){
 	}
 }
 
-func setupServer(conf ini.File, section string, st *State) {
+func setupServer(conf ini.File, section string, st *state) {
 	if st.irc == nil {
 		st.irc = make(map[string]*irc.Connection)
 	}
 	var ok bool
-	c := new(Conf)
+	c := new(settings)
 	c.Server, ok = conf.Get(section, "Server")
 	if !ok {
 		fmt.Printf("Server entry missing in %s", section)

@@ -21,7 +21,7 @@ var (
 	verbose = flag.Bool("v", false, "Enable verbose output")
 )
 
-type State struct {
+type state struct {
 	file       map[string]interface{}
 	irc        map[string]*irc.Connection
 	server     string
@@ -47,18 +47,18 @@ func main() {
 		fmt.Printf("Err %s", err)
 		return
 	}
-	var state State
-	state.ch = make(chan irc.Event)
-	for section, _ := range conf {
+	var st state
+	st.ch = make(chan irc.Event)
+	for section := range conf {
 		if section == "options" {
-			setupState(conf, section, &state)
+			setupState(conf, section, &st)
 			continue
 		}
-		state.server = section
-		state.current = section
-		setupServer(conf, section, &state)
+		st.server = section
+		st.current = section
+		setupServer(conf, section, &st)
 	}
-	state.file = make(map[string]interface{})
+	st.file = make(map[string]interface{})
 	var styxServer styx.Server
 	if *verbose {
 		styxServer.ErrorLog = log.New(os.Stderr, "", 0)
@@ -67,23 +67,33 @@ func main() {
 		styxServer.TraceLog = log.New(os.Stderr, "", 0)
 	}
 	styxServer.Addr = *addr
-	styxServer.Handler = &state
+	styxServer.Handler = &st
 	log.Fatal(styxServer.ListenAndServe())
 }
 
 func walkTo(v interface{}, loc string) (interface{}, bool) {
 	cwd := v
 	parts := strings.FieldsFunc(loc, func(r rune) bool { return r == '/' })
+	var parent interface{}
 
 	for _, p := range parts {
 		switch v := cwd.(type) {
 		case map[string]interface{}:
-			child, ok := v[p]
-			if !ok {
+			parent = v
+			if child, ok := v[p]; !ok {
 				return nil, false
-			} else {
-				cwd = child
 			}
+			cwd = child
+		case []interface{}:
+			parent = v
+			i, err := strcont.Atoi(p)
+			if err != nil {
+				return nil, false
+			}
+			if len(v) <= i {
+				return nil, false
+			}
+			cwd = v[i]
 		default:
 			return nil, false
 		}
@@ -91,28 +101,20 @@ func walkTo(v interface{}, loc string) (interface{}, bool) {
 	return cwd, true
 }
 
-func (st *State) Serve9P(s *styx.Session) {
-	var state State
-	newState(&state, st)
-	go func() {
-		select {
-
-		case event := <-st.ch:
-			fmt.Println(event)
-			//event --> if from current, update state.file["main"]
-		case input := <-st.input:
-			ircobj := st.irc[st.server]
-			ircobj.Privmsg(st.current, input)
-		}
-	}()
+//TODO: Starting from here, blow up everything styx side. Reimplement everything and see what we can define for our own data type.
+// No reason we need to use the naive interface that the example does, we can attribute whatever names and such are necessary to make this all work
+func (st *state) Serve9P(s *styx.Session) {
+	var client state
+	newState(&client, st)
 	for s.Next() {
 		t := s.Request()
-		file, ok := walkTo(state.file, t.Path())
+		name := path.Base(t.Path())
+		file, ok := walkTo(client.file, t.Path())
 		if !ok {
 			t.Rerror("no such file or directory")
 			continue
 		}
-		fi := &stat{name: path.Base(t.Path()), file: &fakefile{v: file}}
+		fi := &stat{name: name, file: &fakefile{v: file}}
 		switch t := t.(type) {
 		case styx.Twalk:
 			t.Rwalk(fi, nil)
@@ -121,6 +123,11 @@ func (st *State) Serve9P(s *styx.Session) {
 			case map[string]interface{}:
 				t.Ropen(mkdir(v), nil)
 			default:
+				//TODO: This updates after an iteration, oddly.
+				//TODO: Updating our data here will likely not be very useful
+				if name == "input" {
+					client.file["input"] = "Hey, we got some input"
+				}
 				t.Ropen(strings.NewReader(fmt.Sprint(v)), nil)
 			}
 		case styx.Tstat:
