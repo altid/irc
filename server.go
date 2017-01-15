@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"text/template"
 
 	"github.com/thoj/go-ircevent"
 	"github.com/vaughan0/go-ini"
@@ -20,7 +21,7 @@ type settings struct {
 	Name     string
 }
 
-func writeFile(c *settings, e *irc.Event) {
+func writeFile(c *settings, e *irc.Event, s *state) {
 	p := filepath.Join(*inPath, c.Name, e.Arguments[0])
 	if e.Arguments[0] == c.User {
 		p = filepath.Join(*inPath, c.Name, e.Nick)
@@ -30,8 +31,17 @@ func writeFile(c *settings, e *irc.Event) {
 		fmt.Printf("Err %s", err)
 	}
 	defer f.Close()
-	//TODO: use text/template
-	f.WriteString(e.Raw)
+	//TODO: Seperate out events per type
+	const format = `[#5F87A7]({{index .Arguments 0}}) {{index .Arguments 1}}`
+	t, err := template.New("event").Parse(format)
+	if err != nil {
+		fmt.Printf("Err %s", err)
+	}
+
+	err = t.Execute(f, e)
+	if err != nil {
+		fmt.Printf("Err %s", err)
+	}
 	f.WriteString("\n")
 }
 
@@ -87,7 +97,7 @@ func setupServer(conf ini.File, section string, st *state) {
 	if !ok {
 		fmt.Printf("nonfatal: Channels section missing in %s", section)
 	}
-	c.Name, _ = conf.Get(section, "Name")
+	c.Name, ok = conf.Get(section, "Name")
 	if !ok {
 		fmt.Printf("Name entry missing in %s", section)
 	}
@@ -111,16 +121,16 @@ func setupServer(conf ini.File, section string, st *state) {
 		}
 	})
 	irccon.AddCallback("PRIVMSG", func(e *irc.Event) {
-		st.ch <- *e
-		writeFile(c, e)
+		//st.ch <- *e
+		writeFile(c, e, st)
 	})
 	irccon.AddCallback("CTCP_ACTION", func(e *irc.Event) {
-		st.ch <- *e
-		writeFile(c, e)
+		//st.ch <- *e
+		writeFile(c, e, st)
 	})
 	irccon.AddCallback("TOPIC", func(e *irc.Event) {
-		st.ch <- *e
-		writeFile(c, e)
+		//st.ch <- *e
+		writeFile(c, e, st)
 	})
 	irccon.AddCallback("366", func(e *irc.Event) {})
 	err = irccon.Connect(c.Server)

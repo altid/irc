@@ -68,32 +68,30 @@ func main() {
 	}
 	styxServer.Addr = *addr
 	styxServer.Handler = &st
+	go func() {
+		select {
+		case event := <-st.ch:
+			fmt.Println(event)
+		case input := <-st.input:
+			ircobj := st.irc[st.server]
+			ircobj.Privmsg(st.current, input)
+		}
+	}()
 	log.Fatal(styxServer.ListenAndServe())
 }
 
 func walkTo(v interface{}, loc string) (interface{}, bool) {
 	cwd := v
 	parts := strings.FieldsFunc(loc, func(r rune) bool { return r == '/' })
-	var parent interface{}
 
 	for _, p := range parts {
 		switch v := cwd.(type) {
 		case map[string]interface{}:
-			parent = v
-			if child, ok := v[p]; !ok {
+			child, ok := v[p]
+			if !ok {
 				return nil, false
 			}
 			cwd = child
-		case []interface{}:
-			parent = v
-			i, err := strcont.Atoi(p)
-			if err != nil {
-				return nil, false
-			}
-			if len(v) <= i {
-				return nil, false
-			}
-			cwd = v[i]
 		default:
 			return nil, false
 		}

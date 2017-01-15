@@ -9,6 +9,9 @@ import (
 	"time"
 )
 
+//TODO: It seems that this passes around channels everywhere
+// Not sure what that benefits here, but we should follow
+// the flow of data and try to understand what's going on
 type fakefile struct {
 	v      interface{}
 	offset int64
@@ -92,6 +95,8 @@ type dir struct {
 	done chan struct{}
 }
 
+// Iterates through our data structure, making a stat for each entry
+// We could do this explicitely as well, but we gain nothing
 func mkdir(val interface{}) *dir {
 	c := make(chan stat, 10)
 	done := make(chan struct{})
