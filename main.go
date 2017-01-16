@@ -121,11 +121,6 @@ func (st *state) Serve9P(s *styx.Session) {
 			case map[string]interface{}:
 				t.Ropen(mkdir(v), nil)
 			default:
-				//TODO: This updates after an iteration, oddly.
-				//TODO: Updating our data here will likely not be very useful
-				if name == "input" {
-					client.file["input"] = "Hey, we got some input"
-				}
 				t.Ropen(strings.NewReader(fmt.Sprint(v)), nil)
 			}
 		case styx.Tstat:
