@@ -45,32 +45,6 @@ func writeFile(c *settings, e *irc.Event, s *state) {
 	f.WriteString("\n")
 }
 
-func newState(state *state, s *state) {
-	state.file = make(map[string]interface{})
-	state.file["main"] = "the main file" //irc.Current
-	state.file["ctl"] = "my ctl file"    // irc.Commands
-	if s.Title == true {
-		state.Title = true
-		state.file["title"] = "ubqt-irc"
-	}
-	if s.Tabs == true {
-		state.Tabs = true
-		state.file["tabs"] = "tabs" //irc.Tabs
-	}
-	if s.Status == true {
-		state.Status = true
-		state.file["status"] = "status" //irc.Status
-	}
-	if s.Input == true {
-		state.Input = true
-		state.file["input"] = "input" // irc.Scrollback
-	}
-	if s.Sidebar == true {
-		state.Sidebar = true
-		state.file["sidebar"] = "some\nstuff" //irc.Sidebar
-	}
-}
-
 func setupServer(conf ini.File, section string, st *state) {
 	if st.irc == nil {
 		st.irc = make(map[string]*irc.Connection)
