@@ -64,7 +64,7 @@ type Tabs struct {
 type Input struct {
 	show bool
 	srv.File
-	history []string
+	history []byte
 	ch      chan []byte
 }
 
