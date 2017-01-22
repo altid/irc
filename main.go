@@ -4,7 +4,6 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	//"path"
 
 	"github.com/lionkov/go9p/p/srv"
 	"github.com/thoj/go-ircevent"
@@ -18,15 +17,17 @@ var (
 )
 
 type state struct {
-	irc        map[string]*irc.Connection
-	current    *Current
-	title      *Title
-	tabs       *Tabs
-	status     *Status
-	input      *Input
-	bar        *Sidebar
-	ctl        *Ctl
-	timestamps bool
+	irc map[string]*irc.Connection
+	// Represents files served over 9p
+	current *Current
+	bar     *Sidebar
+	input   *Input
+	title   *Title
+	tabs    *Tabs
+	status  *Status
+	ctl     *Ctl
+	// Toggle for timestamps
+	timestamps map[string]bool
 }
 
 //TODO: This will be cleaned up in the future, for now get something running
@@ -34,15 +35,22 @@ type state struct {
 // Current buffer, active on server
 type Current struct {
 	srv.File
-	server string
-	buffer string
+	// Used to have per-client buffers
+	server map[string]string
+	buffer map[string]string
+}
+
+// Sidebar holds a list of nicknames present in current channel
+type Sidebar struct {
+	show bool
+	srv.File
+	names map[string][]string
 }
 
 // Ctl - List of completions, on read; on write commands
 type Ctl struct {
 	srv.File
-	completions []byte
-	ch          chan []byte
+	compl []byte
 }
 
 // Title will print the name of our program
@@ -55,26 +63,15 @@ type Title struct {
 type Tabs struct {
 	show bool
 	srv.File
-	buflist   []string
-	activity  []string
-	highlight []string
+	buflist []string
 }
 
 // Input accepts user input, will scrub for slash commands
 type Input struct {
 	show bool
 	srv.File
-	server  string
-	buffer  string
 	history []byte
-	irc     *irc.Connection
-}
-
-// Sidebar holds a list of nicknames present in current channel
-type Sidebar struct {
-	show bool
-	srv.File
-	names []string
+	ch      chan []byte
 }
 
 // Status lists current user count, channel modes, etc
@@ -106,8 +103,6 @@ func main() {
 	s.Dotu = true
 	s.Start(s)
 
-	//TODO: Have init function from srv set up new data type
-	// each client will spawn a goroutine to select on the necessary channels
 	err = s.StartNetListener("tcp", *addr)
 	if err != nil {
 		fmt.Printf("Err %s", err)

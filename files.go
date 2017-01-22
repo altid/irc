@@ -5,10 +5,10 @@ import (
 	"github.com/lionkov/go9p/p/srv"
 )
 
-// Write - simply send on channel to parser, append to completion list
+// Write - append entry to input history, fire off message
 func (i *Input) Write(fid *srv.FFid, buf []byte, offset uint64) (int, error) {
 	i.history = append(i.history[:], buf...)
-	writeMsg(i, buf[offset:])
+	i.ch <- buf
 	return len(buf), nil
 }
 
@@ -20,7 +20,7 @@ func (i *Input) Wstat(fid *srv.FFid, dir *p.Dir) error {
 
 // Remove - We may want to hide input, for whatever reason
 func (i *Input) Remove(fid *srv.FFid) error {
-	//Clunk the file
+	i.show = false
 	return nil
 
 }
@@ -28,6 +28,11 @@ func (i *Input) Remove(fid *srv.FFid) error {
 func (i *Input) Read(fid *srv.FFid, buf []byte, offset uint64) (int, error) {
 	c := copy(buf, i.history[offset:])
 	return c, nil
+}
+
+func (c *Current) Read(fid *srv.FFid, buff []byte, offset uint64) (int, error) {
+	//Open file for reading
+	return 0, nil
 }
 
 //Write

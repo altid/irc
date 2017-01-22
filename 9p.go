@@ -7,15 +7,14 @@ import (
 	"github.com/lionkov/go9p/p/srv"
 )
 
-/*TODO proper multiplexing
+//TODO proper multiplexing
 func (st *state) ConnOpened(c *srv.Conn) {
-	// Add map for qid to meaningful struct members
-
+	st.current.server[c.Id] = st.current.server["main"]
+	st.bar.names[c.Id] = st.bar.names["main"]
 }
 
 func (st *state) ConnClosed(c *srv.Conn) {
-	// Remove map for qid to meaningful struct members
-}*/
+}
 
 func setupFiles(st *state) (*srv.File, error) {
 	user := p.OsUsers.Uid2User(os.Geteuid())
@@ -32,7 +31,6 @@ func setupFiles(st *state) (*srv.File, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	if st.input.show {
 		err = st.input.Add(root, "input", user, nil, 0666, st.input)
 		if err != nil {
