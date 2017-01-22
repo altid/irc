@@ -7,8 +7,8 @@ import (
 
 // Write - simply send on channel to parser, append to completion list
 func (i *Input) Write(fid *srv.FFid, buf []byte, offset uint64) (int, error) {
-	i.ch <- buf
 	i.history = append(i.history[:], buf...)
+	writeMsg(i, buf[offset:])
 	return len(buf), nil
 }
 

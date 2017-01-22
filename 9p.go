@@ -7,6 +7,16 @@ import (
 	"github.com/lionkov/go9p/p/srv"
 )
 
+/*TODO proper multiplexing
+func (st *state) ConnOpened(c *srv.Conn) {
+	// Add map for qid to meaningful struct members
+
+}
+
+func (st *state) ConnClosed(c *srv.Conn) {
+	// Remove map for qid to meaningful struct members
+}*/
+
 func setupFiles(st *state) (*srv.File, error) {
 	user := p.OsUsers.Uid2User(os.Geteuid())
 	root := new(srv.File)

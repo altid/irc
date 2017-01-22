@@ -39,8 +39,9 @@ func newState() (*state, error) {
 			}
 			continue
 		}
-		st.current.server = section
 		setupServer(conf, section, &st)
+		st.current.buffer = section
+		st.current.server = section
 	}
 	return &st, nil
 }

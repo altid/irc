@@ -21,6 +21,11 @@ type settings struct {
 	Name     string
 }
 
+func writeMsg(i *Input, buf []byte) {
+	// Scrub out control messages, actions
+	i.irc.Privmsg("#ubqt", string(buf))
+}
+
 func writeFile(c *settings, e *irc.Event, s *state) {
 	p := filepath.Join(*inPath, c.Name, e.Arguments[0])
 	if e.Arguments[0] == c.User {
@@ -112,6 +117,8 @@ func setupServer(conf ini.File, section string, st *state) {
 		fmt.Printf("Err %s", err)
 	}
 	st.irc[section] = irccon
+	//TODO: Hold for now
+	st.input.irc = st.irc["freenode"]
 	go irccon.Loop()
 
 }

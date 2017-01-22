@@ -19,7 +19,6 @@ var (
 
 type state struct {
 	irc        map[string]*irc.Connection
-	ch         chan []byte
 	current    *Current
 	title      *Title
 	tabs       *Tabs
@@ -36,6 +35,7 @@ type state struct {
 type Current struct {
 	srv.File
 	server string
+	buffer string
 }
 
 // Ctl - List of completions, on read; on write commands
@@ -64,8 +64,10 @@ type Tabs struct {
 type Input struct {
 	show bool
 	srv.File
+	server  string
+	buffer  string
 	history []byte
-	ch      chan []byte
+	irc     *irc.Connection
 }
 
 // Sidebar holds a list of nicknames present in current channel
@@ -111,4 +113,5 @@ func main() {
 		fmt.Printf("Err %s", err)
 		return
 	}
+
 }
