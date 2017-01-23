@@ -42,6 +42,7 @@ func writeFile(c *settings, e *irc.Event, s *state) {
 	if err != nil {
 		fmt.Printf("Err %s", err)
 	}
+	s.current.ch <- 1
 	f.WriteString("\n")
 }
 

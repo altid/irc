@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/lionkov/go9p/p"
@@ -9,11 +10,17 @@ import (
 
 //TODO proper multiplexing
 func (st *state) ConnOpened(c *srv.Conn) {
+	fmt.Println(c.Id)
 	st.current.server[c.Id] = st.current.server["main"]
+	st.current.buffer[c.Id] = st.current.buffer["main"]
 	st.bar.names[c.Id] = st.bar.names["main"]
+	st.current.ch <- 1
 }
 
 func (st *state) ConnClosed(c *srv.Conn) {
+	delete(st.current.server, c.Id)
+	delete(st.current.buffer, c.Id)
+	delete(st.bar.names, c.Id)
 }
 
 func setupFiles(st *state) (*srv.File, error) {

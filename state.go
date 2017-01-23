@@ -9,14 +9,12 @@ func inputListener(st *state) {
 	for {
 		select {
 		case input := <-st.input.ch:
-			fmt.Println(string(input))
+			fmt.Println(string(input.buf))
 		}
 	}
 }
 
 // Iterate through conf, setting up state
-// launching IRC goroutines
-
 func newState() (*state, error) {
 	var st state
 	conf, err := ini.LoadFile("irc.ini")
@@ -26,11 +24,13 @@ func newState() (*state, error) {
 	st.current = new(Current)
 	st.current.buffer = make(map[string]string)
 	st.current.server = make(map[string]string)
+	st.current.ch = make(chan int, 10)
+	st.bar = new(Sidebar)
+	st.bar.names = make(map[string]string)
 	st.title = new(Title)
 	st.status = new(Status)
 	st.tabs = new(Tabs)
 	st.input = new(Input)
-	st.bar = new(Sidebar)
 	st.ctl = new(Ctl)
 
 	for section := range conf {
@@ -44,7 +44,7 @@ func newState() (*state, error) {
 				case "Tabs":
 					st.tabs.show = (value == "show")
 				case "Input":
-					st.input.ch = make(chan []byte)
+					st.input.ch = make(chan *Message)
 					st.input.show = (value == "show")
 				case "Sidebar":
 					st.bar.show = (value == "show")
@@ -59,6 +59,7 @@ func newState() (*state, error) {
 
 		st.current.buffer["main"] = section
 		st.current.server["main"] = section
+		st.bar.names["main"] = section
 	}
 	go inputListener(&st)
 	return &st, nil

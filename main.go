@@ -38,13 +38,14 @@ type Current struct {
 	// Used to have per-client buffers
 	server map[string]string
 	buffer map[string]string
+	ch     chan int
 }
 
 // Sidebar holds a list of nicknames present in current channel
 type Sidebar struct {
 	show bool
 	srv.File
-	names map[string][]string
+	names map[string]string
 }
 
 // Ctl - List of completions, on read; on write commands
@@ -71,7 +72,13 @@ type Input struct {
 	show bool
 	srv.File
 	history []byte
-	ch      chan []byte
+	ch      chan *Message
+}
+
+// Message - channel from input/ctl
+type Message struct {
+	buf []byte
+	id  string
 }
 
 // Status lists current user count, channel modes, etc
