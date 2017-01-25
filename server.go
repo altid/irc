@@ -21,7 +21,7 @@ type settings struct {
 	Name     string
 }
 
-func writeFile(c *settings, e *irc.Event, s *state) {
+func writeFile(c *settings, e *irc.Event, s *State) {
 	p := filepath.Join(*inPath, c.Name, e.Arguments[0])
 	if e.Arguments[0] == c.User {
 		p = filepath.Join(*inPath, c.Name, e.Nick)
@@ -32,21 +32,19 @@ func writeFile(c *settings, e *irc.Event, s *state) {
 	}
 	defer f.Close()
 	//TODO: Seperate out events per type
-	const format = `[#5F87A7]({{index .Arguments 0}}) {{index .Arguments 1}}`
+	const format = `[#5F87A7]({{.Nick}}) {{index .Arguments 1}}`
 	t, err := template.New("event").Parse(format)
 	if err != nil {
 		fmt.Printf("Err %s", err)
 	}
-
 	err = t.Execute(f, e)
 	if err != nil {
 		fmt.Printf("Err %s", err)
 	}
-	s.current.ch <- 1
 	f.WriteString("\n")
 }
 
-func setupServer(conf ini.File, section string, st *state) {
+func setupServer(conf ini.File, section string, st *State) {
 	if st.irc == nil {
 		st.irc = make(map[string]*irc.Connection)
 	}
@@ -96,15 +94,12 @@ func setupServer(conf ini.File, section string, st *state) {
 		}
 	})
 	irccon.AddCallback("PRIVMSG", func(e *irc.Event) {
-		//st.ch <- *e
 		writeFile(c, e, st)
 	})
 	irccon.AddCallback("CTCP_ACTION", func(e *irc.Event) {
-		//st.ch <- *e
 		writeFile(c, e, st)
 	})
 	irccon.AddCallback("TOPIC", func(e *irc.Event) {
-		//st.ch <- *e
 		writeFile(c, e, st)
 	})
 	irccon.AddCallback("366", func(e *irc.Event) {})

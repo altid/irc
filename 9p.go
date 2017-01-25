@@ -9,21 +9,21 @@ import (
 )
 
 //TODO proper multiplexing
-func (st *state) ConnOpened(c *srv.Conn) {
+func (st *State) ConnOpened(c *srv.Conn) {
 	fmt.Println(c.Id)
-	st.current.server[c.Id] = st.current.server["main"]
-	st.current.buffer[c.Id] = st.current.buffer["main"]
-	st.bar.names[c.Id] = st.bar.names["main"]
-	st.current.ch <- 1
+	//st.current.server[c.Id] = st.current.server["main"]
+	//st.current.buffer[c.Id] = st.current.buffer["main"]
+	//st.bar.names[c.Id] = st.bar.names["main"]
+	//st.current.ch <- 1
 }
 
-func (st *state) ConnClosed(c *srv.Conn) {
-	delete(st.current.server, c.Id)
-	delete(st.current.buffer, c.Id)
-	delete(st.bar.names, c.Id)
+func (st *State) ConnClosed(c *srv.Conn) {
+	//delete(st.current.server, c.Id)
+	//delete(st.current.buffer, c.Id)
+	//delete(st.bar.names, c.Id)
 }
 
-func setupFiles(st *state) (*srv.File, error) {
+func setupFiles(st *State) (*srv.File, error) {
 	user := p.OsUsers.Uid2User(os.Geteuid())
 	root := new(srv.File)
 	err := root.Add(nil, "/", user, nil, p.DMDIR|0777, nil)

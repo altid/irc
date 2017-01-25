@@ -5,7 +5,7 @@ import (
 	"github.com/vaughan0/go-ini"
 )
 
-func inputListener(st *state) {
+func inputListener(st *State) {
 	for {
 		select {
 		case input := <-st.input.ch:
@@ -15,8 +15,8 @@ func inputListener(st *state) {
 }
 
 // Iterate through conf, setting up state
-func newState() (*state, error) {
-	var st state
+func newState() (*State, error) {
+	var st State
 	conf, err := ini.LoadFile("irc.ini")
 	if err != nil {
 		return nil, err
@@ -24,7 +24,6 @@ func newState() (*state, error) {
 	st.current = new(Current)
 	st.current.buffer = make(map[string]string)
 	st.current.server = make(map[string]string)
-	st.current.ch = make(chan int, 10)
 	st.bar = new(Sidebar)
 	st.bar.names = make(map[string]string)
 	st.title = new(Title)

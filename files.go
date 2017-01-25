@@ -2,9 +2,11 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"os"
 	//"path"
 
+	"github.com/lionkov/go9p/p"
 	"github.com/lionkov/go9p/p/srv"
 )
 
@@ -24,9 +26,19 @@ func (i *Input) Remove(fid *srv.FFid) error {
 
 }
 
+// Wstat - So we can stat
+func (i *Input) Wstat(fid *srv.FFid, dir *p.Dir) error {
+	return nil
+}
+
 func (i *Input) Read(fid *srv.FFid, buf []byte, offset uint64) (int, error) {
 	c := copy(buf, i.history[offset:])
 	return c, nil
+}
+
+// Wstat - for current
+func (c *Current) Wstat(fid *srv.FFid, dir *p.Dir) error {
+	return nil
 }
 
 func (c *Current) Read(fid *srv.FFid, buff []byte, offset uint64) (int, error) {
@@ -37,9 +49,9 @@ func (c *Current) Read(fid *srv.FFid, buff []byte, offset uint64) (int, error) {
 		fmt.Printf("Err %s", err)
 	}
 	defer file.Close()
-	<-c.ch
+	//<-c.ch
 	n, err := file.ReadAt(buff, int64(offset))
-	if err != nil {
+	if err != nil && err != io.EOF {
 		fmt.Printf("Err %s", err)
 	}
 	return n, nil

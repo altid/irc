@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"net"
 	"os"
 
 	"github.com/lionkov/go9p/p/srv"
@@ -16,7 +17,9 @@ var (
 	verbose = flag.Bool("v", false, "Enable verbose output")
 )
 
-type state struct {
+// State - holds server session
+type State struct {
+	srv.Fsrv
 	irc map[string]*irc.Connection
 	// Represents files served over 9p
 	current *Current
@@ -101,19 +104,26 @@ func main() {
 		fmt.Printf("Err %s", err)
 		os.Exit(1)
 	}
-	root, err := setupFiles(st)
+	//root, err := setupFiles(st)
+	//if err != nil {
+	//	fmt.Printf("Err %s", err)
+	//	os.Exit(1)
+	//}
+	//TODO: Implement listener accept, then call srv.NewConn in goroutin
+	//st =
+	st.Dotu = true
+	st.Start(st)
+	l, err := net.Listen("tcp", *addr)
 	if err != nil {
 		fmt.Printf("Err %s", err)
 		os.Exit(1)
 	}
-	s := srv.NewFileSrv(root)
-	s.Dotu = true
-	s.Start(s)
-
-	err = s.StartNetListener("tcp", *addr)
-	if err != nil {
-		fmt.Printf("Err %s", err)
-		return
+	for {
+		c, err := l.Accept()
+		if err != nil {
+			fmt.Printf("Err %s", err)
+		}
+		go st.NewConn(c)
 	}
-
+	//err = s.StartNetListener("tcp", *addr)
 }
