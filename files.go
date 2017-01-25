@@ -1,79 +1,147 @@
 package main
 
 import (
+	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"os"
-	//"path"
-
-	"github.com/lionkov/go9p/p"
-	"github.com/lionkov/go9p/p/srv"
+	"strconv"
+	"time"
 )
 
-// Write - append entry to input history, fire off message
-func (i *Input) Write(fid *srv.FFid, buf []byte, offset uint64) (int, error) {
-	i.history = append(i.history[:], buf...)
-	//if /buffer | /quit, send it off to ctl
-	m := &Message{buf: buf, id: fid.Fid.Fconn.Id}
-	i.ch <- m
-	return len(buf), nil
+// Turn Go types into files
+
+type fakefile struct {
+	v      interface{}
+	offset int64
+	set    func(s string)
 }
 
-// Remove - We may want to hide input, for whatever reason
-func (i *Input) Remove(fid *srv.FFid) error {
-	i.show = false
-	return nil
-
-}
-
-// Wstat - So we can stat
-func (i *Input) Wstat(fid *srv.FFid, dir *p.Dir) error {
-	return nil
-}
-
-func (i *Input) Read(fid *srv.FFid, buf []byte, offset uint64) (int, error) {
-	c := copy(buf, i.history[offset:])
-	return c, nil
-}
-
-// Wstat - for current
-func (c *Current) Wstat(fid *srv.FFid, dir *p.Dir) error {
-	return nil
-}
-
-func (c *Current) Read(fid *srv.FFid, buff []byte, offset uint64) (int, error) {
-	//conn := fid.Fid.Fconn.Id
-	//p := path.Join(*inPath, c.server[conn], c.buffer[conn])
-	file, err := os.Open("/home/halfwit/local/run/irc/freenode/#ubqt")
-	if err != nil {
-		fmt.Printf("Err %s", err)
+func (f *fakefile) ReadAt(p []byte, off int64) (int, error) {
+	var s string
+	if v, ok := f.v.(fmt.Stringer); ok {
+		s = v.String()
+	} else {
+		s = fmt.Sprint(f.v)
 	}
-	defer file.Close()
-	//<-c.ch
-	n, err := file.ReadAt(buff, int64(offset))
-	if err != nil && err != io.EOF {
-		fmt.Printf("Err %s", err)
+	if off > int64(len(s)) {
+		return 0, io.EOF
 	}
+	n := copy(p, s)
 	return n, nil
 }
 
-func (s *Status) Read(fid *srv.FFid, buff []byte, offset uint64) (int, error) {
-
-	b := []byte("hello")
-	c := copy(buff, b[offset:])
-	return c, nil
+func (f *fakefile) WriteAt(p []byte, off int64) (int, error) {
+	buf, ok := f.v.(*bytes.Buffer)
+	if !ok {
+		return 0, errors.New("not supported")
+	}
+	if off != f.offset {
+		return 0, errors.New("no seeking")
+	}
+	n, err := buf.Write(p)
+	f.offset += int64(n)
+	return n, err
 }
 
-func (c *Ctl) Read(fid *srv.FFid, buff []byte, offset uint64) (int, error) {
-	return 0, nil
+func (f *fakefile) Close() error {
+	if f.set != nil {
+		f.set(fmt.Sprint(f.v))
+	}
+	return nil
 }
 
-func (t *Title) Read(fid *srv.FFid, buff []byte, offset uint64) (int, error) {
-	b := []byte("#MY PROGRAM")
-	c := copy(buff, b[offset:])
-	return c, nil
+func (f *fakefile) size() int64 {
+	switch f.v.(type) {
+	case map[string]interface{}, []interface{}:
+		return 0
+	}
+	return int64(len(fmt.Sprint(f.v)))
 }
 
-func (t *Tabs) Read(fid *srv.FFid, buff []byte, offset uint64) (int, error) {
-	return 0, nil
+type stat struct {
+	name string
+	file *fakefile
+}
+
+func (s *stat) Name() string     { return s.name }
+func (s *stat) Sys() interface{} { return s.file }
+
+func (s *stat) ModTime() time.Time {
+	return time.Now().Truncate(time.Hour)
+}
+
+func (s *stat) IsDir() bool {
+	return s.Mode().IsDir()
+}
+
+func (s *stat) Mode() os.FileMode {
+	switch s.file.v.(type) {
+	case map[string]interface{}:
+		return os.ModeDir | 0755
+	case []interface{}:
+		return os.ModeDir | 0755
+	}
+	return 0644
+}
+
+func (s *stat) Size() int64 {
+	return s.file.size()
+}
+
+type dir struct {
+	c    chan stat
+	done chan struct{}
+}
+
+func mkdir(val interface{}) *dir {
+	c := make(chan stat, 10)
+	done := make(chan struct{})
+	go func() {
+		if m, ok := val.(map[string]interface{}); ok {
+		LoopMap:
+			for name, v := range m {
+				select {
+				case c <- stat{name: name, file: &fakefile{v: v}}:
+				case <-done:
+					break LoopMap
+				}
+			}
+		} else if a, ok := val.([]interface{}); ok {
+		LoopArray:
+			for i, v := range a {
+				name := strconv.Itoa(i)
+				select {
+				case c <- stat{name: name, file: &fakefile{v: v}}:
+				case <-done:
+					break LoopArray
+				}
+			}
+		}
+		close(c)
+	}()
+	return &dir{
+		c:    c,
+		done: done,
+	}
+}
+
+func (d *dir) Readdir(n int) ([]os.FileInfo, error) {
+	var err error
+	fi := make([]os.FileInfo, 0, 10)
+	for i := 0; i < n; i++ {
+		s, ok := <-d.c
+		if !ok {
+			err = io.EOF
+			break
+		}
+		fi = append(fi, &s)
+	}
+	return fi, err
+}
+
+func (d *dir) Close() error {
+	close(d.done)
+	return nil
 }

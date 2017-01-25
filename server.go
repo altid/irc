@@ -52,32 +52,32 @@ func setupServer(conf ini.File, section string, st *State) {
 	c := new(settings)
 	c.Server, ok = conf.Get(section, "Server")
 	if !ok {
-		fmt.Printf("Server entry missing in %s", section)
+		fmt.Printf("Server entry missing in %s\n", section)
 	}
 	c.UseTLS, ok = conf.Get(section, "UseTLS")
 	if !ok {
-		fmt.Printf("nonfatal: UseTLS entry missing in %s", section)
+		fmt.Printf("nonfatal: UseTLS entry missing in %s\n", section)
 	}
 	c.Nick, ok = conf.Get(section, "Nick")
 	if !ok {
-		fmt.Printf("Nick entry missing in %s", section)
+		fmt.Printf("Nick entry missing in %s\n", section)
 	}
 	c.User, ok = conf.Get(section, "User")
 	if !ok {
-		fmt.Printf("nonfatal: User entry missing in %s", section)
+		fmt.Printf("nonfatal: User entry missing in %s\n", section)
 	}
 	c.Channels, ok = conf.Get(section, "Channels")
 	if !ok {
-		fmt.Printf("nonfatal: Channels section missing in %s", section)
+		fmt.Printf("nonfatal: Channels section missing in %s\n", section)
 	}
 	c.Name, ok = conf.Get(section, "Name")
 	if !ok {
-		fmt.Printf("Name entry missing in %s", section)
+		fmt.Printf("Name entry missing in %s\n", section)
 	}
 
 	err := os.MkdirAll(filepath.Join(*inPath, c.Name), 0744)
 	if err != nil {
-		fmt.Printf("Err %s", err)
+		fmt.Printf("Err %s\n", err)
 	}
 
 	irccon := irc.IRC(c.Nick, c.User)

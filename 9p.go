@@ -1,73 +1,42 @@
 package main
 
 import (
-	"fmt"
+	"log"
 	"os"
+	"path"
 
-	"github.com/lionkov/go9p/p"
-	"github.com/lionkov/go9p/p/srv"
+	"aqwari.net/net/styx"
 )
 
-//TODO proper multiplexing
-func (st *State) ConnOpened(c *srv.Conn) {
-	fmt.Println(c.Id)
-	//st.current.server[c.Id] = st.current.server["main"]
-	//st.current.buffer[c.Id] = st.current.buffer["main"]
-	//st.bar.names[c.Id] = st.bar.names["main"]
-	//st.current.ch <- 1
+// Run - Fires off a goroutine per connection
+func (st *State) Run() error {
+	var srv styx.Server
+	if *verbose {
+		srv.ErrorLog = log.New(os.Stderr, "", 0)
+	}
+	if *debug {
+		srv.TraceLog = log.New(os.Stderr, "", 0)
+	}
+	srv.Addr = *addr
+	srv.Handler = st
+	// Long running, will return error if one occurs
+	err := srv.ListenAndServe()
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
-func (st *State) ConnClosed(c *srv.Conn) {
-	//delete(st.current.server, c.Id)
-	//delete(st.current.buffer, c.Id)
-	//delete(st.bar.names, c.Id)
+func newStat(file string) *stat {
+	s := &stat{name: file, file: &fakefile{v: 
 }
 
-func setupFiles(st *State) (*srv.File, error) {
-	user := p.OsUsers.Uid2User(os.Geteuid())
-	root := new(srv.File)
-	err := root.Add(nil, "/", user, nil, p.DMDIR|0777, nil)
-	if err != nil {
-		return nil, err
-	}
-	err = st.ctl.Add(root, "ctl", user, nil, 0666, st.ctl)
-	if err != nil {
-		return nil, err
-	}
-	err = st.current.Add(root, "main", user, nil, 0666, st.current)
-	if err != nil {
-		return nil, err
-	}
-	if st.input.show {
-		err = st.input.Add(root, "input", user, nil, 0666, st.input)
-		if err != nil {
-			return nil, err
-		}
-	}
-	if st.status.show {
-		err = st.status.Add(root, "status", user, nil, 0644, st.status)
-		if err != nil {
-			return nil, err
-		}
-	}
-	if st.title.show {
-		err = st.title.Add(root, "title", user, nil, 0644, st.title)
-		if err != nil {
-			return nil, err
-		}
-	}
-	if st.bar.show {
-		err = st.bar.Add(root, "sidebar", user, nil, 0644, st.bar)
-		if err != nil {
-			return nil, err
-		}
-	}
-	if st.tabs.show {
-		err = st.tabs.Add(root, "tabs", user, nil, 0644, st.bar)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return root, nil
+// Serve9P - Called on client connection
+func (st *State) Serve9P(s *styx.Session) {
+	//TODO: Serve up some initial data for our connection on read
+	for s.Next() {
+		t := s.Request
+		fi := newStat(path.Base(t.Path()))
 
+	}
 }
