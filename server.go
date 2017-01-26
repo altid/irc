@@ -75,9 +75,6 @@ func setupServer(conf ini.File, section string, st *State) {
 	if !ok {
 		fmt.Printf("Name entry missing in %s\n", section)
 	}
-}
-
-func setupIrc(conf ini.File, section string, st *State) {
 	err := os.MkdirAll(filepath.Join(*inPath, c.Name), 0744)
 	if err != nil {
 		fmt.Printf("Err %s\n", err)

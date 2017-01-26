@@ -1,9 +1,11 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"path"
+	"strings"
 
 	"aqwari.net/net/styx"
 )
@@ -27,16 +29,30 @@ func (st *State) Run() error {
 	return nil
 }
 
-func newStat(file string) *stat {
-	s := &stat{name: file, file: &fakefile{v: 
-}
-
 // Serve9P - Called on client connection
 func (st *State) Serve9P(s *styx.Session) {
 	//TODO: Serve up some initial data for our connection on read
 	for s.Next() {
-		t := s.Request
-		fi := newStat(path.Base(t.Path()))
+		t := s.Request()
+		name := path.Base(t.Path())
+		fi := &stat{name: name, file: &fakefile{name: name}}
+		switch t := t.(type) {
+		case styx.Twalk:
+			t.Rwalk(fi, nil)
+		case styx.Topen:
+			switch name {
+			case "/":
+				t.Ropen(mkdir(st), nil)
+			default:
+				t.Ropen(strings.NewReader(fmt.Sprint(st)), nil)
+			}
+		case styx.Tstat:
+			t.Rstat(fi, nil)
+		case styx.Tcreate:
+			t.Rerror("permission denied")
+		case styx.Tremove:
+			t.Rerror("permission denied")
 
+		}
 	}
 }

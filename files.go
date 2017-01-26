@@ -1,63 +1,56 @@
 package main
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"io"
 	"os"
-	"strconv"
 	"time"
 )
 
 // Turn Go types into files
 
 type fakefile struct {
-	v      interface{}
+	name   string
 	offset int64
-	set    func(s string)
 }
 
 func (f *fakefile) ReadAt(p []byte, off int64) (int, error) {
 	var s string
-	if v, ok := f.v.(fmt.Stringer); ok {
-		s = v.String()
-	} else {
-		s = fmt.Sprint(f.v)
-	}
+	//if v, ok := f.v.(fmt.Stringer); ok {
+	//	s = v.String()
+	//} else {
+	//	s = fmt.Sprint(f.v)
+	//}
 	if off > int64(len(s)) {
 		return 0, io.EOF
 	}
-	n := copy(p, s)
+	n := copy(p, "test")
 	return n, nil
 }
 
 func (f *fakefile) WriteAt(p []byte, off int64) (int, error) {
-	buf, ok := f.v.(*bytes.Buffer)
-	if !ok {
-		return 0, errors.New("not supported")
-	}
+	//buf, ok := f.v.(*bytes.Buffer)
+	//if !ok {
+	//	return 0, errors.New("not supported")
+	//}
 	if off != f.offset {
 		return 0, errors.New("no seeking")
 	}
-	n, err := buf.Write(p)
-	f.offset += int64(n)
-	return n, err
+	//n, err := buf.Write(p)
+	//f.offset += int64(n)
+	return 0, nil
 }
 
 func (f *fakefile) Close() error {
-	if f.set != nil {
-		f.set(fmt.Sprint(f.v))
-	}
 	return nil
 }
 
 func (f *fakefile) size() int64 {
-	switch f.v.(type) {
-	case map[string]interface{}, []interface{}:
+	if f.name == "/" {
 		return 0
 	}
-	return int64(len(fmt.Sprint(f.v)))
+	return int64(len(fmt.Sprint(f.name)))
 }
 
 type stat struct {
@@ -72,15 +65,14 @@ func (s *stat) ModTime() time.Time {
 	return time.Now().Truncate(time.Hour)
 }
 
+// We have only one directory, so return that
 func (s *stat) IsDir() bool {
-	return s.Mode().IsDir()
+	return (s.name == "/")
 }
 
+// Again, only root directory so we can safely optimize
 func (s *stat) Mode() os.FileMode {
-	switch s.file.v.(type) {
-	case map[string]interface{}:
-		return os.ModeDir | 0755
-	case []interface{}:
+	if s.name == "/" {
 		return os.ModeDir | 0755
 	}
 	return 0644
@@ -95,27 +87,20 @@ type dir struct {
 	done chan struct{}
 }
 
-func mkdir(val interface{}) *dir {
+func mkdir(st *State) *dir {
 	c := make(chan stat, 10)
 	done := make(chan struct{})
+	// Add entry for root
+	// Loop over our map, add an entry if it is positive
 	go func() {
-		if m, ok := val.(map[string]interface{}); ok {
-		LoopMap:
-			for name, v := range m {
+		c <- stat{name: "/", file: &fakefile{name: "/"}}
+	LoopMap:
+		for name, show := range st.show {
+			if show {
 				select {
-				case c <- stat{name: name, file: &fakefile{v: v}}:
+				case c <- stat{name: name, file: &fakefile{name: name}}:
 				case <-done:
 					break LoopMap
-				}
-			}
-		} else if a, ok := val.([]interface{}); ok {
-		LoopArray:
-			for i, v := range a {
-				name := strconv.Itoa(i)
-				select {
-				case c <- stat{name: name, file: &fakefile{v: v}}:
-				case <-done:
-					break LoopArray
 				}
 			}
 		}
@@ -127,6 +112,7 @@ func mkdir(val interface{}) *dir {
 	}
 }
 
+// This is fine for our needs
 func (d *dir) Readdir(n int) ([]os.FileInfo, error) {
 	var err error
 	fi := make([]os.FileInfo, 0, 10)
