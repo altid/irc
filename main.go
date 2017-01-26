@@ -1,9 +1,5 @@
 package main
 
-/*
-Satisfy our fakefile interface for each file type that needs, we may not even need a struct for each in fact
-use the existing stat/dir creation, for each true key in state.show as we get messages, run each read, launch in a go routine
-*/
 import (
 	"flag"
 	"fmt"

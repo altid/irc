@@ -36,6 +36,7 @@ func (st *State) Initialize() error {
 		}
 		// Fires off IRC sessions
 		setupServer(conf, section, st)
+		setupIrc(conf, section, st)
 		st.buffer = section
 		st.server = section
 	}

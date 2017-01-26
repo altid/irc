@@ -45,6 +45,7 @@ func writeFile(c *settings, e *irc.Event, s *State) {
 }
 
 func setupServer(conf ini.File, section string, st *State) {
+
 	if st.irc == nil {
 		st.irc = make(map[string]*irc.Connection)
 	}
@@ -74,12 +75,13 @@ func setupServer(conf ini.File, section string, st *State) {
 	if !ok {
 		fmt.Printf("Name entry missing in %s\n", section)
 	}
+}
 
+func setupIrc(conf ini.File, section string, st *State) {
 	err := os.MkdirAll(filepath.Join(*inPath, c.Name), 0744)
 	if err != nil {
 		fmt.Printf("Err %s\n", err)
 	}
-
 	irccon := irc.IRC(c.Nick, c.User)
 	irccon.Debug = *debug
 	irccon.VerboseCallbackHandler = *verbose
