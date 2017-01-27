@@ -36,7 +36,6 @@ func (st *State) Run() error {
 
 // Serve9P - Called on client connection
 func (st *State) Serve9P(s *styx.Session) {
-	//TODO: Serve up some initial data for our connection on read
 	c := new(client)
 	//c.buffer = st.buffer
 	//c.server = st.server
@@ -47,8 +46,7 @@ func (st *State) Serve9P(s *styx.Session) {
 	for s.Next() {
 		t := s.Request()
 		name := path.Base(t.Path())
-		fi := &stat{name: name, file: &fakefile{name: name, event: st.event}}
-		p := path.Join(*inPath, c.server, c.buffer)
+		fi := &stat{name: name, file: &fakefile{name: name, st: st, c: c}}
 		switch t := t.(type) {
 		case styx.Twalk:
 			t.Rwalk(fi, nil)
@@ -57,13 +55,17 @@ func (st *State) Serve9P(s *styx.Session) {
 			case "/":
 				t.Ropen(mkdir(st), nil)
 			case "main":
+				p := path.Join(*inPath, c.server, c.buffer)
 				t.Ropen(os.Open(p))
+			case "input", "ctl", "sidebar", "status", "tabs", "title":
+				t.Ropen(fi.file, nil)
 			default:
-				t.Ropen(fi, nil)
+				t.Rerror("No such file or directory")
 			}
 		case styx.Tstat:
 			switch name {
 			case "main":
+				p := path.Join(*inPath, c.server, c.buffer)
 				t.Rstat(os.Stat(p))
 			default:
 				t.Rstat(fi, nil)

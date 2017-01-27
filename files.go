@@ -8,19 +8,44 @@ import (
 )
 
 type fakefile struct {
-	event  chan string
+	st     *State
+	c      *client
 	name   string
 	offset int64
 }
 
 func (f *fakefile) ReadAt(p []byte, off int64) (int, error) {
-	n := copy(p[off:], "test\n")
+	var c string
+	switch f.name {
+	case "input":
+		c = string(f.st.input[:])
+	case "ctl":
+		c = ":fake\n:list\n:of\n:crap\n"
+		//c := f.st.getCtl()
+	case "sidebar":
+		//c := f.st.getNicks(f.c)
+		c = "fake\nsidebar\njohn\nbob\npeter\npaul\n"
+	case "status":
+		//c := f.st.getStatus(f.c)
+		c = "Mock status\n"
+	case "tabs":
+		//c := f.st.getTabs()
+		c = "banana cream pie\n"
+	case "title":
+		c = "irc"
+	default:
+		return 0, nil
+	}
+	n := copy(p, c[off:])
 	return n, nil
 }
 
 // Called on input and ctl
-func (f *fakefile) Write(p []byte, off int64) (int, error) {
-	f.event <- string(p[off:])
+func (f *fakefile) WriteAt(p []byte, off int64) (int, error) {
+	if f.name == "input" {
+		f.st.input = append(f.st.input[off:], p...)
+	}
+	//f.st.event <- string(p[off:])
 	return 0, nil
 }
 
@@ -29,8 +54,13 @@ func (f *fakefile) Close() error {
 }
 
 func (f *fakefile) size() int64 {
-	if f.name == "/" {
+	switch f.name {
+	case "/":
 		return 0
+	case "input":
+		return int64(len(f.st.input))
+		//case "ctl":
+		//	return int64(len(f.st.getCtl()))
 	}
 	return int64(len(fmt.Sprint(f)))
 }
@@ -44,7 +74,7 @@ func (s *stat) Name() string     { return s.name }
 func (s *stat) Sys() interface{} { return s.file }
 
 func (s *stat) ModTime() time.Time {
-	return time.Now().Truncate(time.Hour)
+	return time.Now()
 }
 
 // We have only one directory, so return that
@@ -79,7 +109,7 @@ func mkdir(st *State) *dir {
 		for name, show := range st.show {
 			if show {
 				select {
-				case c <- stat{name: name, file: &fakefile{name: name}}:
+				case c <- stat{name: name, file: &fakefile{name: name, st: st}}:
 				case <-done:
 					break
 				}
