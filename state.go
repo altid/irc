@@ -5,20 +5,20 @@ import (
 )
 
 func parseOptions(st *State, conf ini.File) {
+	st.show = make(map[string]bool)
 	for key, value := range conf["options"] {
-		st.show = make(map[string]bool)
 		switch key {
 		case "Title":
-			st.show["Title"] = (value == "show")
+			st.show["title"] = (value == "show")
 		case "Status":
-			st.show["Status"] = (value == "show")
+			st.show["status"] = (value == "show")
 		case "Tabs":
-			st.show["Tabs"] = (value == "show")
+			st.show["tabs"] = (value == "show")
 		case "Input":
 			st.input = make(chan string)
-			st.show["Input"] = (value == "show")
+			st.show["input"] = (value == "show")
 		case "Sidebar":
-			st.show["Bar"] = (value == "show")
+			st.show["sidebar"] = (value == "show")
 		}
 	}
 }
@@ -30,6 +30,8 @@ func (st *State) Initialize() error {
 		return err
 	}
 	parseOptions(st, conf)
+	st.show["ctl"] = true
+	st.show["main"] = true
 	for section := range conf {
 		if section == "options" {
 			continue

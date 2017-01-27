@@ -16,16 +16,7 @@ type fakefile struct {
 }
 
 func (f *fakefile) ReadAt(p []byte, off int64) (int, error) {
-	var s string
-	//if v, ok := f.v.(fmt.Stringer); ok {
-	//	s = v.String()
-	//} else {
-	//	s = fmt.Sprint(f.v)
-	//}
-	if off > int64(len(s)) {
-		return 0, io.EOF
-	}
-	n := copy(p, "test")
+	n := copy(p[off:], "test")
 	return n, nil
 }
 
@@ -72,10 +63,13 @@ func (s *stat) IsDir() bool {
 
 // Again, only root directory so we can safely optimize
 func (s *stat) Mode() os.FileMode {
-	if s.name == "/" {
+	switch s.name {
+	case "/":
 		return os.ModeDir | 0755
+	case "input", "ctl":
+		return 0666
 	}
-	return 0644
+	return 0444
 }
 
 func (s *stat) Size() int64 {
@@ -90,17 +84,13 @@ type dir struct {
 func mkdir(st *State) *dir {
 	c := make(chan stat, 10)
 	done := make(chan struct{})
-	// Add entry for root
-	// Loop over our map, add an entry if it is positive
 	go func() {
-		c <- stat{name: "/", file: &fakefile{name: "/"}}
-	LoopMap:
 		for name, show := range st.show {
 			if show {
 				select {
 				case c <- stat{name: name, file: &fakefile{name: name}}:
 				case <-done:
-					break LoopMap
+					break
 				}
 			}
 		}
