@@ -18,8 +18,9 @@ var (
 // State - holds server session
 type State struct {
 	show   map[string]bool
-	input  chan string
 	irc    map[string]*irc.Connection
+	event  chan string
+	input  []byte
 	buffer string
 	server string
 }

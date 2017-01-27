@@ -1,35 +1,26 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"os"
 	"time"
 )
 
-// Turn Go types into files
-
 type fakefile struct {
+	event  chan string
 	name   string
 	offset int64
 }
 
 func (f *fakefile) ReadAt(p []byte, off int64) (int, error) {
-	n := copy(p[off:], "test")
+	n := copy(p[off:], "test\n")
 	return n, nil
 }
 
-func (f *fakefile) WriteAt(p []byte, off int64) (int, error) {
-	//buf, ok := f.v.(*bytes.Buffer)
-	//if !ok {
-	//	return 0, errors.New("not supported")
-	//}
-	if off != f.offset {
-		return 0, errors.New("no seeking")
-	}
-	//n, err := buf.Write(p)
-	//f.offset += int64(n)
+// Called on input and ctl
+func (f *fakefile) Write(p []byte, off int64) (int, error) {
+	f.event <- string(p[off:])
 	return 0, nil
 }
 
@@ -41,7 +32,7 @@ func (f *fakefile) size() int64 {
 	if f.name == "/" {
 		return 0
 	}
-	return int64(len(fmt.Sprint(f.name)))
+	return int64(len(fmt.Sprint(f)))
 }
 
 type stat struct {

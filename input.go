@@ -7,7 +7,7 @@ import (
 func inputHandler(st *State) {
 	for {
 		select {
-		case input := <-st.input:
+		case input := <-st.event:
 			fmt.Println(input)
 		}
 	}

@@ -6,6 +6,7 @@ import (
 
 func parseOptions(st *State, conf ini.File) {
 	st.show = make(map[string]bool)
+	st.event = make(chan string)
 	for key, value := range conf["options"] {
 		switch key {
 		case "Title":
@@ -15,7 +16,6 @@ func parseOptions(st *State, conf ini.File) {
 		case "Tabs":
 			st.show["tabs"] = (value == "show")
 		case "Input":
-			st.input = make(chan string)
 			st.show["input"] = (value == "show")
 		case "Sidebar":
 			st.show["sidebar"] = (value == "show")
