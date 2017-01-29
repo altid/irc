@@ -9,10 +9,8 @@ import (
 )
 
 type client struct {
-	buffer  string
-	server  string
-	status  string
-	sidebar string
+	buffer string
+	server string
 }
 
 // Run - Fires off a goroutine per connection
@@ -36,13 +34,9 @@ func (st *State) Run() error {
 
 // Serve9P - Called on client connection
 func (st *State) Serve9P(s *styx.Session) {
-	c := new(client)
-	//c.buffer = st.buffer
-	//c.server = st.server
+	c := &client{buffer: st.buffer, server: st.server}
 	c.buffer = "#ubqt"
 	c.server = "freenode"
-	c.status = "This is a status, deal bro.\n"
-	c.sidebar = "some\ncrap\nthat\nis\nfun\n"
 	for s.Next() {
 		t := s.Request()
 		name := path.Base(t.Path())

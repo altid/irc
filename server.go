@@ -42,6 +42,7 @@ func writeFile(c *settings, e *irc.Event, s *State) {
 		fmt.Printf("Err %s", err)
 	}
 	f.WriteString("\n")
+	s.done <- 1
 }
 
 func setupServer(conf ini.File, section string, st *State) {
@@ -50,7 +51,7 @@ func setupServer(conf ini.File, section string, st *State) {
 		st.irc = make(map[string]*irc.Connection)
 	}
 	var ok bool
-	c := new(settings)
+	c := &settings{}
 	c.Server, ok = conf.Get(section, "Server")
 	if !ok {
 		fmt.Printf("Server entry missing in %s\n", section)

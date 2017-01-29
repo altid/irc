@@ -20,19 +20,15 @@ func (f *fakefile) ReadAt(p []byte, off int64) (int, error) {
 	case "input":
 		c = string(f.st.input[:])
 	case "ctl":
-		c = ":fake\n:list\n:of\n:crap\n"
-		//c := f.st.getCtl()
+		c = f.c.Ctl()
 	case "sidebar":
-		//c := f.st.getNicks(f.c)
-		c = "fake\nsidebar\njohn\nbob\npeter\npaul\n"
+		c = f.c.Nicks()
 	case "status":
-		//c := f.st.getStatus(f.c)
-		c = "Mock status\n"
+		c = f.c.Status()
 	case "tabs":
-		//c := f.st.getTabs()
-		c = "banana cream pie\n"
+		c = f.c.Tabs()
 	case "title":
-		c = "irc"
+		c = f.c.Title()
 	default:
 		return 0, nil
 	}
@@ -45,7 +41,6 @@ func (f *fakefile) WriteAt(p []byte, off int64) (int, error) {
 	if f.name == "input" {
 		f.st.input = append(f.st.input[off:], p...)
 	}
-	//f.st.event <- string(p[off:])
 	return 0, nil
 }
 
@@ -59,8 +54,8 @@ func (f *fakefile) size() int64 {
 		return 0
 	case "input":
 		return int64(len(f.st.input))
-		//case "ctl":
-		//	return int64(len(f.st.getCtl()))
+	case "ctl":
+		return int64(len(f.c.Ctl()))
 	}
 	return int64(len(fmt.Sprint(f)))
 }

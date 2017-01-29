@@ -7,6 +7,7 @@ import (
 func parseOptions(st *State, conf ini.File) {
 	st.show = make(map[string]bool)
 	st.event = make(chan string)
+	st.done = make(chan int)
 	for key, value := range conf["options"] {
 		switch key {
 		case "Title":
@@ -25,6 +26,7 @@ func parseOptions(st *State, conf ini.File) {
 
 // Initialize - Read config and set up IRC sessions per entry
 func (st *State) Initialize() error {
+	//st.ctl = getCtl()
 	conf, err := ini.LoadFile("irc.ini")
 	if err != nil {
 		return err
