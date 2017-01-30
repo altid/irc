@@ -14,7 +14,7 @@ func parseOptions(srv *ubqtlib.Srv, conf ini.File) {
 }
 
 // Initialize - Read config and set up IRC sessions per entry
-func (st *state) initialize(srv *ubqtlib.Srv) error {
+func (st *State) initialize(srv *ubqtlib.Srv) error {
 	//st.ctl = getCtl()
 	conf, err := ini.LoadFile("irc.ini")
 	if err != nil {
