@@ -18,20 +18,21 @@ var (
 //TODO: Switch to lstanley/girc instead, it's still event based but much more mature, with better tracking
 
 // State - holds server session
-type State struct {
+type state struct {
 	buffer string
 	server string
 }
 
-func (st *State) WriteFile(filename string, data []byte, perm os.FileMode) error {
+func (st *state) WriteFile(filename string, data []byte, perm os.FileMode) error {
+	fmt.Println(string(data))
 	return nil
 }
 
-func (st *State) ReadFile(filename string) ([]byte, error) {
+func (st *state) ReadFile(filename string) ([]byte, error) {
 	return []byte("Hello world\n"), nil
 }
 
-func (st *State) CloseFile(filename string) error {
+func (st *state) CloseFile(filename string) error {
 	return nil
 }
 
@@ -41,7 +42,7 @@ func main() {
 		flag.Usage()
 		os.Exit(1)
 	}
-	st := &State{}
+	st := &state{}
 	srv := ubqtlib.NewSrv()
 	err := st.initialize(srv)
 	if err != nil {
