@@ -23,14 +23,17 @@ type State struct {
 	server string
 }
 
+// WriteFile - Handle writes on ctl, input to send to channel/mutate program state
 func (st *State) WriteFile(filename string, data []byte, perm os.FileMode) error {
 	return nil
 }
 
+// ReadFile - Return formatted strings for various files
 func (st *State) ReadFile(filename string) ([]byte, error) {
 	return []byte("Hello world\n"), nil
 }
 
+// CloseFile - Remove file from our working list (perclient)
 func (st *State) CloseFile(filename string) error {
 	return nil
 }
