@@ -23,18 +23,28 @@ type State struct {
 	server string
 }
 
-// WriteFile - Handle writes on ctl, input to send to channel/mutate program state
-func (st *State) WriteFile(filename string, data []byte, perm os.FileMode) error {
-	return nil
+var clients map[string]*State
+var input []byte
+
+// ClientWrite - Handle writes on ctl, input to send to channel/mutate program state
+func (st *State) ClientWrite(filename string, client string, data []byte) (int, error) {
+	// TODO: If struct doesn't exist, create one
+	if filename == "input" {
+		input = append(input, data...)
+	}
+	return len(data), nil
 }
 
-// ReadFile - Return formatted strings for various files
-func (st *State) ReadFile(filename string) ([]byte, error) {
+// ClientRead - Return formatted strings for various files
+func (st *State) ClientRead(filename string, client string) ([]byte, error) {
+	if filename == "input" {
+		return input, nil
+	}
 	return []byte("Hello world\n"), nil
 }
 
-// CloseFile - Remove file from our working list (perclient)
-func (st *State) CloseFile(filename string) error {
+// ClientClose - Remove file from our working list (perclient)
+func (st *State) ClientClose(filename string, client string) error {
 	return nil
 }
 
@@ -45,7 +55,14 @@ func main() {
 		os.Exit(1)
 	}
 	st := &State{}
+	clients = make(map[string]*State)
 	srv := ubqtlib.NewSrv()
+	if *debug {
+		srv.Debug()
+	}
+	if *verbose {
+		srv.Verbose()
+	}
 	err := st.initialize(srv)
 	if err != nil {
 		fmt.Printf("Err %s", err)
