@@ -15,8 +15,6 @@ var (
 	verbose = flag.Bool("v", false, "Enable verbose output")
 )
 
-//TODO: Switch to lstanley/girc instead, it's still event based but much more mature, with better tracking
-
 // State - holds server session
 type State struct {
 	buffer string

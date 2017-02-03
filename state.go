@@ -1,6 +1,7 @@
 package main
 
 import (
+	//"github.com/lrstanley/girc"
 	"github.com/ubqt-systems/ubqtlib"
 	"github.com/vaughan0/go-ini"
 )
@@ -27,7 +28,30 @@ func (st *State) initialize(srv *ubqtlib.Srv) error {
 		if section == "options" {
 			continue
 		}
-		// Fires off IRC sessions
+		/*
+			conf := girc.Config {
+				Server: Server,
+				Port: Port,
+				Nick: Nick,
+				User: User,
+				Name: Name,
+				MaxRetries: 3,
+				Logger: os.Stdout,
+			}
+			client := girc.New(conf)
+			client.Callbacks.Add(girc.CONNECTED, func(c *girc.Client, e girc.Event) {
+				c.Join(channels)
+			})
+			client.Callbacks.Add(girc.PRIVMSG, func(c *girc.Client, e girc.Event) {
+				//TODO: handle privmsg
+			})
+			err = client.Connect()
+			if err != nil {
+				log.Fatalf("an error occured while attempting to connect to %s: %s", client.Server(), err)
+			}
+			// Fire off IRC connection
+			go client.Loop()
+		*/
 		st.buffer = section
 		st.server = section
 	}
