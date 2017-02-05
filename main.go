@@ -19,16 +19,16 @@ var (
 type State struct {
 	buffer string
 	server string
+	input  []byte
 }
 
 var clients map[string]*State
-var input []byte
 
 // ClientWrite - Handle writes on ctl, input to send to channel/mutate program state
 func (st *State) ClientWrite(filename string, client string, data []byte) (int, error) {
 	// TODO: If struct doesn't exist, create one
 	if filename == "input" {
-		input = append(input, data...)
+		st.input = append(st.input, data...)
 	}
 	return len(data), nil
 }
@@ -36,14 +36,9 @@ func (st *State) ClientWrite(filename string, client string, data []byte) (int, 
 // ClientRead - Return formatted strings for various files
 func (st *State) ClientRead(filename string, client string) ([]byte, error) {
 	if filename == "input" {
-		return input, nil
+		return st.input, nil
 	}
 	return []byte("Hello world\n"), nil
-}
-
-// ClientClose - Remove file from our working list (perclient)
-func (st *State) ClientClose(filename string, client string) error {
-	return nil
 }
 
 func main() {
