@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -25,20 +26,40 @@ type State struct {
 var clients map[string]*State
 
 // ClientWrite - Handle writes on ctl, input to send to channel/mutate program state
-func (st *State) ClientWrite(filename string, client string, data []byte) (int, error) {
-	// TODO: If struct doesn't exist, create one
-	if filename == "input" {
-		st.input = append(st.input, data...)
+func (st *State) ClientWrite(filename string, client string, data []byte) (n int, err error) {
+	switch filename {
+	case "input":
+		n, err = st.handleInput(data, client)
+	case "ctl":
+		n, err = st.handleCtl(data, client)
+	default:
+		err = errors.New("permission denied")
 	}
-	return len(data), nil
+	return
 }
 
 // ClientRead - Return formatted strings for various files
-func (st *State) ClientRead(filename string, client string) ([]byte, error) {
-	if filename == "input" {
+func (st *State) ClientRead(filename string, client string) (buf []byte, err error) {
+	// Calls may error, pass that back as required
+	switch filename {
+	case "input":
 		return st.input, nil
+	case "ctl":
+		buf, err = st.ctl(client)
+	case "status":
+		buf, err = st.status(client)
+	case "sidebar":
+		buf, err = st.sidebar(client)
+	case "tabs":
+		buf, err = st.tabs(client)
+	case "main":
+		buf, err = st.buff(client)
+	case "title":
+		buf, err = st.title(client)
+	default:
+		err = errors.New("permission denied")
 	}
-	return []byte("Hello world\n"), nil
+	return
 }
 
 func main() {
