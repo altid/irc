@@ -1,7 +1,11 @@
 package main
 
 import (
-	//"github.com/lrstanley/girc"
+	"fmt"
+	"log"
+	"strconv"
+
+	"github.com/lrstanley/girc"
 	"github.com/ubqt-systems/ubqtlib"
 	"github.com/vaughan0/go-ini"
 )
@@ -17,7 +21,7 @@ func parseOptions(srv *ubqtlib.Srv, conf ini.File) {
 // Initialize - Read config and set up IRC sessions per entry
 func (st *State) initialize(srv *ubqtlib.Srv) error {
 	//st.ctl = getCtl()
-	conf, err := ini.LoadFile("irc.ini")
+	conf, err := ini.LoadFile(*conf)
 	if err != nil {
 		return err
 	}
@@ -28,32 +32,54 @@ func (st *State) initialize(srv *ubqtlib.Srv) error {
 		if section == "options" {
 			continue
 		}
-		/*
-			conf := girc.Config {
-				Server: Server,
-				Port: Port,
-				Nick: Nick,
-				User: User,
-				Name: Name,
-				MaxRetries: 3,
-				Logger: os.Stdout,
-			}
-			client := girc.New(conf)
-			client.Callbacks.Add(girc.CONNECTED, func(c *girc.Client, e girc.Event) {
-				c.Join(channels)
-			})
-			client.Callbacks.Add(girc.PRIVMSG, func(c *girc.Client, e girc.Event) {
-				//TODO: handle privmsg
-			})
-			err = client.Connect()
-			if err != nil {
-				log.Fatalf("an error occured while attempting to connect to %s: %s", client.Server(), err)
-			}
-			// Fire off IRC connection
-			go client.Loop()
-		*/
-		st.buffer = section
-		st.server = section
+		server, ok := conf.Get(section, "Server")
+		if !ok {
+			fmt.Println("server entry not found")
+		}
+		p, ok := conf.Get(section, "Port")
+		port, _ := strconv.Atoi(p)
+		if !ok {
+			fmt.Println("No port set, using 6667")
+			port = 6667
+		}
+		nick, ok := conf.Get(section, "Nick")
+		if !ok {
+			fmt.Println("nick entry not found")
+		}
+		user, ok := conf.Get(section, "User")
+		if !ok {
+			fmt.Println("user entry not found")
+		}
+		name, ok := conf.Get(section, "Name")
+		if !ok {
+			fmt.Println("name entry not found")
+		}
+		channels, _ := conf.Get(section, "Channels")
+		ircConf := girc.Config{
+			Server: server,
+			Port:   port,
+			Nick:   nick,
+			User:   user,
+			Name:   name,
+		}
+		client := girc.New(ircConf)
+		client.Handlers.Add(girc.CONNECTED, func(c *girc.Client, e girc.Event) {
+			c.Commands.Join(channels)
+		})
+		//client.Callbacks.Add(girc.PRIVMSG, func(c *girc.Client, e girc.Event) {
+		//defer handlers to another file
+		//TODO: handle privmsg - append message to file
+		//})
+		//TODO: Handle all other interesting events that we can
+		err = client.Connect()
+		if err != nil {
+			log.Fatalf("an error occured while attempting to connect to %s: %s", client.Server(), err)
+		}
+		// Fire off IRC connection
+		go client.Loop()
+		// Set up defaults
+		st.irc["default"] = client
+		st.channel["default"] = client.Lookup(section)
 	}
 	return nil
 }
