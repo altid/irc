@@ -77,9 +77,8 @@ func (st *State) initialize(srv *ubqtlib.Srv) error {
 		}
 		// Fire off IRC connection
 		go client.Loop()
-		// Set up defaults
-		st.irc["default"] = client
-		st.channel["default"] = client.Lookup(section)
+		// Set up default later add default channel as they become available
+		st.c["default"] = &Client{irc: client, channel: "#teamcool"}
 	}
 	return nil
 }

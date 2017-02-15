@@ -18,12 +18,17 @@ var (
 	verbose = flag.Bool("v", false, "Enable verbose output")
 )
 
+// Client - holds a connected client
+type Client struct {
+	irc     *girc.Client
+	channel string
+}
+
 // State - holds server session
 type State struct {
 	//track current client per connection, as well as current channel
-	irc     map[string]*girc.Client
-	channel map[string]*girc.Channel
-	tab     []byte
+	c       map[string]*Client
+	tablist []byte
 	input   []byte
 }
 
@@ -46,14 +51,14 @@ func (st *State) ClientRead(filename string, client string) (buf []byte, err err
 	switch filename {
 	case "input":
 		return st.input, nil
+	case "tabs":
+		return st.tablist, nil
 	case "ctl":
 		buf, err = st.ctl(client)
 	case "status":
 		buf, err = st.status(client)
 	case "sidebar":
 		buf, err = st.sidebar(client)
-	case "tabs":
-		buf, err = st.tabs(client)
 	case "main":
 		buf, err = st.buff(client)
 	case "title":
@@ -66,14 +71,13 @@ func (st *State) ClientRead(filename string, client string) (buf []byte, err err
 
 // ClientConnect - called when client connects
 func (st *State) ClientConnect(client string) {
-	st.channel[client] = st.channel["default"]
-	st.irc[client] = st.irc["default"]
+	def := st.c["default"]
+	st.c[client] = &Client{channel: def.channel, irc: def.irc}
 }
 
 // ClientDisconnect - called when client disconnects
 func (st *State) ClientDisconnect(client string) {
-	delete(st.channel, client)
-	delete(st.irc, client)
+	delete(st.c, client)
 }
 
 func main() {
@@ -83,8 +87,7 @@ func main() {
 		os.Exit(1)
 	}
 	st := &State{}
-	st.irc = make(map[string]*girc.Client)
-	st.channel = make(map[string]*girc.Channel)
+	st.c = make(map[string]*Client)
 	srv := ubqtlib.NewSrv()
 	if *debug {
 		srv.Debug()
