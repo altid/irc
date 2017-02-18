@@ -12,28 +12,50 @@ func (st *State) getChannel(client string) *girc.Channel {
 
 // handleInput - append valid runes to input type, curtail input at [history]input lines.
 func (st *State) handleInput(data []byte, client string) (int, error) {
-	// TODO: Scrub and send message to channel
+	// Strip out initial forward slash of command, test for literal slash input
+	if data[0] == '/' {
+		data = data[1:]
+		if data[0] != '/' {
+			return st.handleCtl(data, client)
+		}
+	}
 	c := st.c[client]
 	if c.channel != "" {
 		c.irc.Commands.Message(c.channel, string(data))
+		st.input = append(st.input, data...)
 	}
-	st.input = append(st.input, data...)
 	return len(data), nil
 }
 
-func (st *State) handleCtl(data []byte, name string) (int, error) {
-	//TODO: Handle command
-	switch data[0] {
-	case 'j': //join
-	case 'p': //part
-	case 'q': //quit
-	case 'b': //buffer
+func (st *State) handleCtl(b []byte, client string) (int, error) {
+	switch getFirstWord(b) {
+	case "set":
+		// Set for client specif
+		st.handleSet(b[4:], client)
+	// Handle -server, default to current [client]
+	case "q":
+		st.handleMsg(b[2:], client)
+	case "msg":
+		st.handleMsg(b[4:], client)
+	case "join":
+		// We only need current irc connection here
+		st.handleJoin(b[5:], client)
+	case "part":
+		// We only need current irc connection here
+		st.handlePart(b[5:], client)
+	case "buffer":
+		// Buffer swapping
+		st.handleBuffer(b[7:], client)
+	case "ignore":
+		// This will be a global blacklist that we just don't log messages with, won't need client. Will just be `st.AddIgnore(b) and such
+		// Store to file, such as `irc/freenode/ignore`
+		st.handleIgnore(b[7:], client)
 	}
-	return len(data), nil
+	return len(b), nil
 }
 
 func (st *State) ctl(client string) ([]byte, error) {
-	return []byte("part\njoin\nquit\nbuffer\n"), nil
+	return []byte("part\njoin\nquit\nbuffer\nignore\n"), nil
 }
 
 func (st *State) status(client string) ([]byte, error) {
@@ -42,6 +64,7 @@ func (st *State) status(client string) ([]byte, error) {
 	if channel == nil {
 		return nil, nil
 	}
+	//TODO: text/template to design the status bar
 	buf = append(buf, '\\')
 	buf = append(buf, []byte(channel.Name)...)
 	buf = append(buf, []byte(channel.Modes.String())...)
@@ -64,6 +87,7 @@ func (st *State) sidebar(client string) ([]byte, error) {
 }
 
 func (st *State) buff(client string) ([]byte, error) {
+	//TODO: Format either here, or have the logs formatted.
 	//os.Open() make path based whichever current thing we're on
 	return []byte("buffer file\n"), nil
 }
@@ -73,5 +97,7 @@ func (st *State) title(client string) ([]byte, error) {
 	if channel == nil {
 		return nil, nil
 	}
-	return []byte(channel.Topic), nil
+	buf := []byte(channel.Topic)
+	buf = append(buf, '\n')
+	return buf, nil
 }
