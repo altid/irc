@@ -66,10 +66,9 @@ func (st *State) initialize(srv *ubqtlib.Srv) error {
 		client.Handlers.Add(girc.CONNECTED, func(c *girc.Client, e girc.Event) {
 			c.Commands.Join(channels)
 		})
-		//client.Callbacks.Add(girc.PRIVMSG, func(c *girc.Client, e girc.Event) {
-		//defer handlers to another file
-		//TODO: handle privmsg - append message to file
-		//})
+		client.Handlers.Add(girc.PRIVMSG, func(c *girc.Client, e girc.Event) {
+			st.handlePrivmsg(c.Server(), e.Bytes())
+		})
 		//TODO: Handle all other interesting events that we can
 		err = client.Connect()
 		if err != nil {

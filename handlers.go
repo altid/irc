@@ -1,6 +1,9 @@
 package main
 
 import (
+	"bytes"
+	"fmt"
+
 	"github.com/lrstanley/girc"
 )
 
@@ -28,28 +31,30 @@ func (st *State) handleInput(data []byte, client string) (int, error) {
 }
 
 func (st *State) handleCtl(b []byte, client string) (int, error) {
-	switch getFirstWord(b) {
+	sep := []byte(" \n\r\t")
+	arr := bytes.Split(b, sep)
+	switch string(arr[0]) {
 	case "set":
 		// Set for client specif
-		st.handleSet(b[4:], client)
+		st.handleSet(arr[1:], client)
 	// Handle -server, default to current [client]
 	case "q":
-		st.handleMsg(b[2:], client)
+		st.handleMsg(arr[1:], client)
 	case "msg":
-		st.handleMsg(b[4:], client)
+		st.handleMsg(arr[1:], client)
 	case "join":
 		// We only need current irc connection here
-		st.handleJoin(b[5:], client)
+		st.handleJoin(string(arr[1]), client)
 	case "part":
 		// We only need current irc connection here
-		st.handlePart(b[5:], client)
+		st.handlePart(arr[1:], client)
 	case "buffer":
 		// Buffer swapping
-		st.handleBuffer(b[7:], client)
+		st.handleBuffer(string(arr[1]), client)
 	case "ignore":
 		// This will be a global blacklist that we just don't log messages with, won't need client. Will just be `st.AddIgnore(b) and such
 		// Store to file, such as `irc/freenode/ignore`
-		st.handleIgnore(b[7:], client)
+		st.handleIgnore(arr[1:], client)
 	}
 	return len(b), nil
 }
@@ -101,3 +106,7 @@ func (st *State) title(client string) ([]byte, error) {
 	buf = append(buf, '\n')
 	return buf, nil
 }
+
+func (st *State) handlePrivmsg(server string, b []byte) {
+	fmt.Println(string(b))
+} 
