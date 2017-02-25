@@ -20,14 +20,14 @@ var (
 
 // Client - holds a connected client
 type Client struct {
-	irc     *girc.Client
+	server  string
 	channel string
 }
 
 // State - holds server session
 type State struct {
-	//track current client per connection, as well as current channel
-	c       map[string]*Client
+	clients map[string]*Client
+	irc     map[string]*girc.Client
 	tablist []byte
 	input   []byte
 }
@@ -71,13 +71,17 @@ func (st *State) ClientRead(filename string, client string) (buf []byte, err err
 
 // ClientConnect - called when client connects
 func (st *State) ClientConnect(client string) {
-	def := st.c["default"]
-	st.c[client] = &Client{channel: def.channel, irc: def.irc}
+	chans := st.irc["default"].Channels()
+	var channel string
+	if chans != nil {
+		channel = chans[0]
+	}
+	st.clients[client] = &Client{server: st.irc["default"].Server(), channel: channel}
 }
 
 // ClientDisconnect - called when client disconnects
 func (st *State) ClientDisconnect(client string) {
-	delete(st.c, client)
+	delete(st.clients, client)
 }
 
 func main() {
@@ -87,7 +91,8 @@ func main() {
 		os.Exit(1)
 	}
 	st := &State{}
-	st.c = make(map[string]*Client)
+	st.clients = make(map[string]*Client)
+	st.irc = make(map[string]*girc.Client)
 	srv := ubqtlib.NewSrv()
 	if *debug {
 		srv.Debug()

@@ -12,7 +12,7 @@ func (st *State) handleMsg(b [][]byte, client string) {
 
 func (st *State) handleJoin(channel string, client string) {
 	//if string(b[1]) == "-server" {
-	server := st.c[client].irc
+	server := st.irc[client]
 	err := server.Commands.Join(channel)
 	if err != nil {
 		fmt.Println("Join failed")

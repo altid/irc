@@ -74,10 +74,11 @@ func (st *State) initialize(srv *ubqtlib.Srv) error {
 		if err != nil {
 			log.Fatalf("an error occured while attempting to connect to %s: %s", client.Server(), err)
 		}
+		// This is a bit odd, as we reassign this for every server.
+		st.irc["default"] = client
+		st.irc[server] = client
 		// Fire off IRC connection
 		go client.Loop()
-		// Set up default later add default channel as they become available
-		st.c["default"] = &Client{irc: client, channel: "#teamcool"}
 	}
 	return nil
 }

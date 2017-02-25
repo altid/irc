@@ -3,15 +3,8 @@ package main
 import (
 	"bytes"
 	"fmt"
-
-	"github.com/lrstanley/girc"
+	//"github.com/lrstanley/girc"
 )
-
-func (st *State) getChannel(client string) *girc.Channel {
-	c := st.c[client]
-	channel := c.irc.Lookup(c.channel)
-	return channel
-}
 
 // handleInput - append valid runes to input type, curtail input at [history]input lines.
 func (st *State) handleInput(data []byte, client string) (int, error) {
@@ -22,11 +15,10 @@ func (st *State) handleInput(data []byte, client string) (int, error) {
 			return st.handleCtl(data, client)
 		}
 	}
-	c := st.c[client]
-	if c.channel != "" {
-		c.irc.Commands.Message(c.channel, string(data))
-		st.input = append(st.input, data...)
-	}
+	c := st.irc[client]
+	cl := st.c[client]
+	c.Commands.Message(cl.channel, string(data))
+	st.input = append(st.input, data...)
 	return len(data), nil
 }
 
@@ -65,10 +57,11 @@ func (st *State) ctl(client string) ([]byte, error) {
 
 func (st *State) status(client string) ([]byte, error) {
 	var buf []byte
-	channel := st.getChannel(client)
-	if channel == nil {
+	cl := st.irc[client]
+	if cl == nil {
 		return nil, nil
 	}
+	channel := cl.Lookup(st.c[client].channel)
 	//TODO: text/template to design the status bar
 	buf = append(buf, '\\')
 	buf = append(buf, []byte(channel.Name)...)
@@ -78,10 +71,11 @@ func (st *State) status(client string) ([]byte, error) {
 }
 
 func (st *State) sidebar(client string) ([]byte, error) {
-	channel := st.getChannel(client)
-	if channel == nil {
+	cl := st.irc[client]
+	if cl == nil {
 		return nil, nil
 	}
+	channel := cl.Lookup(st.c[client].channel)
 	var buf []byte
 	list := channel.NickList()
 	for _, item := range list {
@@ -98,7 +92,7 @@ func (st *State) buff(client string) ([]byte, error) {
 }
 
 func (st *State) title(client string) ([]byte, error) {
-	channel := st.getChannel(client)
+	channel := st.irc[client].Lookup(st.c[client].channel)
 	if channel == nil {
 		return nil, nil
 	}
@@ -109,4 +103,4 @@ func (st *State) title(client string) ([]byte, error) {
 
 func (st *State) handlePrivmsg(server string, b []byte) {
 	fmt.Println(string(b))
-} 
+}
