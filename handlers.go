@@ -16,7 +16,7 @@ func (st *State) handleInput(data []byte, client string) (int, error) {
 		}
 	}
 	c := st.irc[client]
-	cl := st.c[client]
+	cl := st.clients[client]
 	c.Commands.Message(cl.channel, string(data))
 	st.input = append(st.input, data...)
 	return len(data), nil
@@ -61,7 +61,7 @@ func (st *State) status(client string) ([]byte, error) {
 	if cl == nil {
 		return nil, nil
 	}
-	channel := cl.Lookup(st.c[client].channel)
+	channel := cl.Lookup(st.clients[client].channel)
 	//TODO: text/template to design the status bar
 	buf = append(buf, '\\')
 	buf = append(buf, []byte(channel.Name)...)
@@ -75,7 +75,7 @@ func (st *State) sidebar(client string) ([]byte, error) {
 	if cl == nil {
 		return nil, nil
 	}
-	channel := cl.Lookup(st.c[client].channel)
+	channel := cl.Lookup(st.clients[client].channel)
 	var buf []byte
 	list := channel.NickList()
 	for _, item := range list {
@@ -92,10 +92,11 @@ func (st *State) buff(client string) ([]byte, error) {
 }
 
 func (st *State) title(client string) ([]byte, error) {
-	channel := st.irc[client].Lookup(st.c[client].channel)
-	if channel == nil {
+	cl := st.irc[client]
+	if cl == nil {
 		return nil, nil
 	}
+	channel := cl.Lookup(st.clients[client].channel)
 	buf := []byte(channel.Topic)
 	buf = append(buf, '\n')
 	return buf, nil

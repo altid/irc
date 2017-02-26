@@ -26,7 +26,7 @@ func (st *State) handlePart(b [][]byte, client string) {
 // TODO: Handle cases where we swap to a buffer
 // on another network - range st.c and test if buffer exists
 func (st *State) handleBuffer(channel string, client string) {
-	st.c[client].channel = channel
+	st.clients[client].channel = channel
 }
 
 func (st *State) handleIgnore(b [][]byte, client string) {
