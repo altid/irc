@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"fmt"
-	//"github.com/lrstanley/girc"
 )
 
 // handleInput - append valid runes to input type, curtail input at [history]input lines.
@@ -15,7 +14,7 @@ func (st *State) handleInput(data []byte, client string) (int, error) {
 			return st.handleCtl(data, client)
 		}
 	}
-	c := st.irc[client]
+	c := st.irc[st.clients[client].server]
 	cl := st.clients[client]
 	c.Commands.Message(cl.channel, string(data))
 	st.input = append(st.input, data...)
@@ -23,8 +22,7 @@ func (st *State) handleInput(data []byte, client string) (int, error) {
 }
 
 func (st *State) handleCtl(b []byte, client string) (int, error) {
-	sep := []byte(" \n\r\t")
-	arr := bytes.Split(b, sep)
+	arr := bytes.Fields(b)
 	switch string(arr[0]) {
 	case "set":
 		// Set for client specif
@@ -39,7 +37,7 @@ func (st *State) handleCtl(b []byte, client string) (int, error) {
 		st.handleJoin(string(arr[1]), client)
 	case "part":
 		// We only need current irc connection here
-		st.handlePart(arr[1:], client)
+		st.handlePart(string(arr[1]), client)
 	case "buffer":
 		// Buffer swapping
 		st.handleBuffer(string(arr[1]), client)
@@ -47,6 +45,8 @@ func (st *State) handleCtl(b []byte, client string) (int, error) {
 		// This will be a global blacklist that we just don't log messages with, won't need client. Will just be `st.AddIgnore(b) and such
 		// Store to file, such as `irc/freenode/ignore`
 		st.handleIgnore(arr[1:], client)
+	case "connect":
+
 	}
 	return len(b), nil
 }
@@ -57,11 +57,11 @@ func (st *State) ctl(client string) ([]byte, error) {
 
 func (st *State) status(client string) ([]byte, error) {
 	var buf []byte
-	cl := st.irc[client]
-	if cl == nil {
+	cl := st.irc[st.clients[client].server]
+	channel := cl.Lookup(st.clients[client].channel)
+	if channel == nil {
 		return nil, nil
 	}
-	channel := cl.Lookup(st.clients[client].channel)
 	//TODO: text/template to design the status bar
 	buf = append(buf, '\\')
 	buf = append(buf, []byte(channel.Name)...)
@@ -71,11 +71,11 @@ func (st *State) status(client string) ([]byte, error) {
 }
 
 func (st *State) sidebar(client string) ([]byte, error) {
-	cl := st.irc[client]
-	if cl == nil {
+	cl := st.irc[st.clients[client].server]
+	channel := cl.Lookup(st.clients[client].channel)
+	if channel == nil {
 		return nil, nil
 	}
-	channel := cl.Lookup(st.clients[client].channel)
 	var buf []byte
 	list := channel.NickList()
 	for _, item := range list {
@@ -92,10 +92,7 @@ func (st *State) buff(client string) ([]byte, error) {
 }
 
 func (st *State) title(client string) ([]byte, error) {
-	cl := st.irc[client]
-	if cl == nil {
-		return nil, nil
-	}
+	cl := st.irc[st.clients[client].server]
 	channel := cl.Lookup(st.clients[client].channel)
 	buf := []byte(channel.Topic)
 	buf = append(buf, '\n')

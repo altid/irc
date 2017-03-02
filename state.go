@@ -18,7 +18,7 @@ func parseOptions(srv *ubqtlib.Srv, conf ini.File) {
 	}
 }
 
-// Initialize - Read config and set up IRC sessions per entry
+// initialize - Read config and set up IRC sessions per entry
 func (st *State) initialize(srv *ubqtlib.Srv) error {
 	//st.ctl = getCtl()
 	conf, err := ini.LoadFile(*conf)
@@ -77,6 +77,8 @@ func (st *State) initialize(srv *ubqtlib.Srv) error {
 		// This is a bit odd, as we reassign this for every server.
 		st.irc["default"] = client
 		st.irc[server] = client
+		//TODO: grab first channel instead
+		st.clients["default"] = &Client{server: server, channel: "#ubqt"}
 		// Fire off IRC connection
 		go client.Loop()
 	}

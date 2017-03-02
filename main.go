@@ -69,14 +69,10 @@ func (st *State) ClientRead(filename string, client string) (buf []byte, err err
 	return
 }
 
-// ClientConnect - called when client connects
+// ClientConnect - add last server in list, first channel in list
 func (st *State) ClientConnect(client string) {
-	chans := st.irc["default"].Channels()
-	var channel string
-	if chans != nil {
-		channel = chans[0]
-	}
-	st.clients[client] = &Client{server: st.irc["default"].Server(), channel: channel}
+	defs := st.clients["default"]
+	st.clients[client] = &Client{server: defs.server, channel: defs.channel}
 }
 
 // ClientDisconnect - called when client disconnects
