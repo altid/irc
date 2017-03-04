@@ -14,9 +14,9 @@ func (st *State) handleInput(data []byte, client string) (int, error) {
 			return st.handleCtl(data, client)
 		}
 	}
-	c := st.irc[st.clients[client].server]
-	cl := st.clients[client]
-	c.Commands.Message(cl.channel, string(data))
+	current := st.clients[client]
+	irc := st.irc[current.server]
+	irc.Commands.Message(current.channel, string(data))
 	st.input = append(st.input, data...)
 	return len(data), nil
 }
@@ -57,8 +57,9 @@ func (st *State) ctl(client string) ([]byte, error) {
 
 func (st *State) status(client string) ([]byte, error) {
 	var buf []byte
-	cl := st.irc[st.clients[client].server]
-	channel := cl.Lookup(st.clients[client].channel)
+	current := st.clients[client]
+	irc := st.irc[current.server]
+	channel := irc.Lookup(current.channel)
 	if channel == nil {
 		return nil, nil
 	}
@@ -71,8 +72,9 @@ func (st *State) status(client string) ([]byte, error) {
 }
 
 func (st *State) sidebar(client string) ([]byte, error) {
-	cl := st.irc[st.clients[client].server]
-	channel := cl.Lookup(st.clients[client].channel)
+	current := st.clients[client]
+	irc := st.irc[current.server]
+	channel := irc.Lookup(current.channel)
 	if channel == nil {
 		return nil, nil
 	}
@@ -92,8 +94,9 @@ func (st *State) buff(client string) ([]byte, error) {
 }
 
 func (st *State) title(client string) ([]byte, error) {
-	cl := st.irc[st.clients[client].server]
-	channel := cl.Lookup(st.clients[client].channel)
+	current := st.clients[client]
+	irc := st.irc[current.server]
+	channel := irc.Lookup(current.channel)
 	buf := []byte(channel.Topic)
 	buf = append(buf, '\n')
 	return buf, nil
