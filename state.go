@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"strconv"
+	"strings"
 
 	"github.com/lrstanley/girc"
 	"github.com/ubqt-systems/ubqtlib"
@@ -19,6 +20,7 @@ func parseOptions(srv *ubqtlib.Srv, conf ini.File) {
 }
 
 // initialize - Read config and set up IRC sessions per entry
+// we also log to a filesystem, and set up defaults
 func (st *State) initialize(srv *ubqtlib.Srv) error {
 	//st.ctl = getCtl()
 	conf, err := ini.LoadFile(*conf)
@@ -55,6 +57,7 @@ func (st *State) initialize(srv *ubqtlib.Srv) error {
 			fmt.Println("name entry not found")
 		}
 		channels, _ := conf.Get(section, "Channels")
+		chanlist := strings.Split(channels, ",")
 		ircConf := girc.Config{
 			Server: server,
 			Port:   port,
@@ -64,21 +67,30 @@ func (st *State) initialize(srv *ubqtlib.Srv) error {
 		}
 		client := girc.New(ircConf)
 		client.Handlers.Add(girc.CONNECTED, func(c *girc.Client, e girc.Event) {
-			c.Commands.Join(channels)
+			for _, channel := range chanlist {
+				if strings.Contains(channel, " ") {
+					// We have a password
+					channel := strings.Fields(channel)
+					c.Commands.JoinKey(channel[0], channel[1])
+				} else {
+					c.Commands.Join(channel)
+				}
+			}
 		})
-		//client.Handlers.Add(girc.PRIVMSG, func(c *girc.Client, e girc.Event) {
-		//	st.handlePrivmsg(c.Server(), e.Bytes())
-		//})
+		client.Handlers.Add(girc.PRIVMSG, func(c *girc.Client, e girc.Event) {
+			st.handlePrivmsg(c.Server(), e.Bytes())
+		})
 		//TODO: Handle all other interesting events that we can
 		err = client.Connect()
 		if err != nil {
 			log.Fatalf("an error occured while attempting to connect to %s: %s", client.Server(), err)
+			return err
 		}
 		// This is a bit odd, as we reassign this for every server.
 		st.irc["default"] = client
 		st.irc[server] = client
-		//TODO: grab first channel instead
-		st.clients["default"] = &Client{server: server, channel: "#ubqt"}
+		//TODO: If we have a password, scrub it out here
+		st.clients["default"] = &Client{server: server, channel: chanlist[0]}
 		// Fire off IRC connection
 		go client.Loop()
 	}
