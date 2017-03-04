@@ -5,6 +5,12 @@ import (
 	"fmt"
 )
 
+//TODO: Block on all reads for main files until any event occurs, then unlock -
+// either all channels, or just the ones we're interested in.
+// Reading title 200 times just because of a privmsg may be silly.
+//TODO: So, wit hthat in mind, set up buffered channels for each file that needs to wait on relevent data. We may have events where titles are updated, or on buffer changes that unlock title, or people joining or parting that unlock sidebar, etc.
+//TODO: Research how to best block reads here; do we need seperate goroutines or not?
+
 // handleInput - append valid runes to input type, curtail input at [history]input lines.
 func (st *State) handleInput(data []byte, client string) (int, error) {
 	// Strip out initial forward slash of command, test for literal slash input
@@ -29,9 +35,11 @@ func (st *State) handleCtl(b []byte, client string) (int, error) {
 		st.handleSet(arr[1:], client)
 	// Handle -server, default to current [client]
 	case "q":
-		st.handleMsg(arr[1:], client)
+		message := bytes.Join(arr[2:], []byte(" "))
+		st.handleMsg(string(arr[1]), string(message), client)
 	case "msg":
-		st.handleMsg(arr[1:], client)
+		message := bytes.Join(arr[2:], []byte(" "))
+		st.handleMsg(string(arr[1]), string(message), client)
 	case "join":
 		// We only need current irc connection here
 		st.handleJoin(string(arr[1]), client)
@@ -90,6 +98,7 @@ func (st *State) sidebar(client string) ([]byte, error) {
 func (st *State) buff(client string) ([]byte, error) {
 	//TODO: Format either here, or have the logs formatted.
 	//os.Open() make path based whichever current thing we're on
+	//TODO: Update tabs to reflect
 	return []byte("buffer file\n"), nil
 }
 
@@ -102,6 +111,8 @@ func (st *State) title(client string) ([]byte, error) {
 	return buf, nil
 }
 
-func (st *State) handlePrivmsg(server string, b []byte) {
+func (st *State) handleIrc(server string, b []byte) {
+	//TODO: All messages from IRC will filter through here, drawing to their respective files
+	//TODO: Update tabs to reflect what occurs here
 	fmt.Println(string(b))
 }

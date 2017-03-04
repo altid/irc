@@ -78,7 +78,7 @@ func (st *State) initialize(srv *ubqtlib.Srv) error {
 			}
 		})
 		client.Handlers.Add(girc.PRIVMSG, func(c *girc.Client, e girc.Event) {
-			st.handlePrivmsg(c.Server(), e.Bytes())
+			st.handleIrc(c.Server(), e.Bytes())
 		})
 		//TODO: Handle all other interesting events that we can
 		err = client.Connect()
