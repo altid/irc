@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"fmt"
 )
 
 //TODO: Block on all reads for main files until any event occurs, then unlock -
@@ -109,10 +108,4 @@ func (st *State) title(client string) ([]byte, error) {
 	buf := []byte(channel.Topic)
 	buf = append(buf, '\n')
 	return buf, nil
-}
-
-func (st *State) handleIrc(server string, b []byte) {
-	//TODO: All messages from IRC will filter through here, drawing to their respective files
-	//TODO: Update tabs to reflect what occurs here
-	fmt.Println(string(b))
 }

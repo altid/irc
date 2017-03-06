@@ -7,7 +7,8 @@ import (
 )
 
 func (st *State) handleSet(b [][]byte, client string) {
-
+	// Toggle off/on UI elements
+	// Toggle timestapms
 }
 
 func (st *State) handleMsg(nick string, message string, client string) {
@@ -19,28 +20,30 @@ func (st *State) handleMsg(nick string, message string, client string) {
 	irc.Commands.Message(nick, message)
 }
 
+//TODO: Handle per-server as well as passwords.
 func (st *State) handleJoin(channel string, client string) {
-	//TODO: if string(b[1]) == "-server" {
 	if !girc.IsValidChannel(channel) {
 		return
 	}
-	server := st.irc[st.clients[client].server]
-	err := server.Commands.Join(channel)
+	current := st.clients[client]
+	irc := st.irc[current.server]
+	err := irc.Commands.Join(channel)
 	if err != nil {
 		fmt.Println("Join failed")
 		return
 	}
-	st.clients[client].channel = channel
+	current.channel = channel
 }
 
 func (st *State) handlePart(channel string, client string) {
-	server := st.irc[st.clients[client].server]
-	err := server.Commands.Part(channel, "")
+	current := st.clients[client]
+	irc := st.irc[current.server]
+	err := irc.Commands.Part(channel, "leaving")
 	if err != nil {
 		fmt.Println("Part failed")
 		return
 	}
-	st.clients[client].channel = server.Channels()[0]
+	current.channel = irc.Channels()[0]
 }
 
 // TODO: Handle cases where we swap to a buffer
