@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"sync"
 
 	"github.com/lrstanley/girc"
 	"github.com/ubqt-systems/ubqtlib"
@@ -26,6 +27,7 @@ type Client struct {
 
 // State - holds server session
 type State struct {
+	sync.Mutex
 	clients map[string]*Client
 	irc     map[string]*girc.Client
 	tablist []byte
@@ -47,16 +49,13 @@ func (st *State) ClientWrite(filename string, client string, data []byte) (n int
 
 // ClientRead - Return formatted strings for various files
 func (st *State) ClientRead(filename string, client string) (buf []byte, err error) {
-	// TODO: we want our reads to block until there's new data
-	// have channel to block for each thing we read. (exclude things like ctl, input from blocking)
-	// Calls may error, pass that back as required
 	switch filename {
 	case "input":
 		return st.input, nil
+	case "ctl":
+		return []byte("part\njoin\nquit\nbuffer\nignore\n"), nil
 	case "tabs":
 		return st.tablist, nil
-	case "ctl":
-		buf, err = st.ctl(client)
 	case "status":
 		buf, err = st.status(client)
 	case "sidebar":
