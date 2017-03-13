@@ -5,7 +5,6 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"sync"
 
 	"github.com/lrstanley/girc"
 	"github.com/ubqt-systems/ubqtlib"
@@ -27,15 +26,20 @@ type Client struct {
 
 // State - holds server session
 type State struct {
-	sync.Mutex
 	clients map[string]*Client
 	irc     map[string]*girc.Client
+	buffch  chan struct{}
+	statch  chan struct{}
+	sidech  chan struct{}
+	titlch  chan struct{}
+	tabsch  chan struct{}
 	tablist []byte
 	input   []byte
 }
 
 // ClientWrite - Handle writes on ctl, input to send to channel/mutate program state
 func (st *State) ClientWrite(filename string, client string, data []byte) (n int, err error) {
+	//current := st.clients[client]
 	switch filename {
 	case "input":
 		n, err = st.handleInput(data, client)
@@ -49,20 +53,36 @@ func (st *State) ClientWrite(filename string, client string, data []byte) (n int
 
 // ClientRead - Return formatted strings for various files
 func (st *State) ClientRead(filename string, client string) (buf []byte, err error) {
+	//current := st.clients[client]
 	switch filename {
 	case "input":
 		return st.input, nil
 	case "ctl":
 		return []byte("part\njoin\nquit\nbuffer\nignore\n"), nil
 	case "tabs":
+		st.tabsch = make(chan struct{})
+		st.tabsch <- struct{}{}
+		defer close(st.tabsch)
 		return st.tablist, nil
 	case "status":
+		st.statch = make(chan struct{})
+		st.statch <- struct{}{}
+		defer close(st.statch)
 		buf, err = st.status(client)
 	case "sidebar":
+		st.sidech = make(chan struct{})
+		st.sidech <- struct{}{}
+		defer close(st.sidech)
 		buf, err = st.sidebar(client)
 	case "main":
+		st.buffch = make(chan struct{})
+		st.buffch <- struct{}{}
+		defer close(st.buffch)
 		buf, err = st.buff(client)
 	case "title":
+		st.titlch = make(chan struct{})
+		st.titlch <- struct{}{}
+		defer close(st.titlch)
 		buf, err = st.title(client)
 	default:
 		err = errors.New("permission denied")
@@ -74,6 +94,11 @@ func (st *State) ClientRead(filename string, client string) (buf []byte, err err
 func (st *State) ClientConnect(client string) {
 	defs := st.clients["default"]
 	st.clients[client] = &Client{server: defs.server, channel: defs.channel}
+	go st.wait("buffer")
+	go st.wait("status")
+	go st.wait("sidebar")
+	go st.wait("title")
+	go st.wait("tabs")
 }
 
 // ClientDisconnect - called when client disconnects
