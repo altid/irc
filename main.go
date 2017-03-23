@@ -32,6 +32,7 @@ type State struct {
 	irc     map[string]*girc.Client
 	tablist []byte
 	input   []byte
+	event   chan []byte
 }
 
 // ClientWrite - Handle writes on ctl, input to send to channel/mutate program state
@@ -90,7 +91,16 @@ func main() {
 	st := &State{}
 	st.clients = make(map[string]*Client)
 	st.irc = make(map[string]*girc.Client)
+	st.event = make(chan []byte)
 	srv := ubqtlib.NewSrv()
+	go func() {
+		for {
+			select {
+			case buf := <-st.event:
+				srv.SendEvent(buf)
+			}
+		}
+	}()
 	if *debug {
 		srv.Debug()
 	}

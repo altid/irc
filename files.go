@@ -12,5 +12,6 @@ func (st *State) writeServer(c *girc.Client, e girc.Event) {
 }
 
 func (st *State) writeChannel(c *girc.Client, e girc.Event) {
+	st.event <- []byte("main")
 	fmt.Println(string(e.Bytes()))
 }
