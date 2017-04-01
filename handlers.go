@@ -85,10 +85,6 @@ func (st *State) sidebar(client string) ([]byte, error) {
 	return buf, nil
 }
 
-func (st *State) buff(client string) ([]byte, error) {
-	return []byte("buffer file\n"), nil
-}
-
 func (st *State) title(client string) ([]byte, error) {
 	current := st.clients[client]
 	irc := st.irc[current.server]

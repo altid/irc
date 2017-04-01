@@ -4,7 +4,9 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"os"
+	"path"
 	"sync"
 
 	"github.com/lrstanley/girc"
@@ -61,10 +63,14 @@ func (st *State) ClientRead(filename string, client string) (buf []byte, err err
 		buf, err = st.status(client)
 	case "sidebar":
 		buf, err = st.sidebar(client)
-	case "feed":
-		buf, err = st.buff(client)
 	case "title":
 		buf, err = st.title(client)
+	case "feed":
+		filePath := path.Join(*inPath, filename)
+		if _, err := os.Stat(filePath); err != nil {
+			return nil, err
+		}
+		buf, err = ioutil.ReadFile(filePath)
 	default:
 		err = errors.New("permission denied")
 	}
