@@ -29,7 +29,7 @@ func (st *State) initialize(srv *ubqtlib.Srv) error {
 	}
 	parseOptions(srv, conf)
 	srv.AddFile("ctl")
-	srv.AddFile("main")
+	srv.AddFile("feed")
 	for section := range conf {
 		if section == "options" {
 			continue

@@ -61,7 +61,7 @@ func (st *State) ClientRead(filename string, client string) (buf []byte, err err
 		buf, err = st.status(client)
 	case "sidebar":
 		buf, err = st.sidebar(client)
-	case "main":
+	case "feed":
 		buf, err = st.buff(client)
 	case "title":
 		buf, err = st.title(client)
