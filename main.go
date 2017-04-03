@@ -4,7 +4,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"sync"
@@ -16,7 +15,7 @@ import (
 var (
 	addr    = flag.String("a", ":4567", "Port to listen on")
 	conf    = flag.String("c", "irc.ini", "Configuration file")
-	inPath  = flag.String("p", "~/irc", "Path for file system")
+	inPath  = flag.String("p", path.Join(os.Getenv("HOME"), "irc"), "Path for file system")
 	debug   = flag.Bool("d", false, "Enable debugging output")
 	verbose = flag.Bool("v", false, "Enable verbose output")
 )
@@ -65,22 +64,27 @@ func (st *State) ClientRead(filename string, client string) (buf []byte, err err
 		buf, err = st.sidebar(client)
 	case "title":
 		buf, err = st.title(client)
-	case "feed":
-		filePath := path.Join(*inPath, filename)
-		if _, err := os.Stat(filePath); err != nil {
-			return nil, err
-		}
-		buf, err = ioutil.ReadFile(filePath)
 	default:
 		err = errors.New("permission denied")
 	}
 	return
 }
 
+// ClientOther - Should only ever be "feed" in this case
+func (st *State) ClientOther(filename string, client string) (*os.File, error) {
+	if filename != "feed" {
+		return nil, nil
+	}
+	current := st.clients[client]
+	// We have the channel by name, now we need to make teh path.
+	filePath := path.Join(*inPath, current.server, current.channel)
+	return os.Open(filePath)
+}
+
 // ClientConnect - add last server in list, first channel in list
 func (st *State) ClientConnect(client string) {
-	defs := st.clients["default"]
-	st.clients[client] = &Client{server: defs.server, channel: defs.channel}
+	default := st.clients["default"]
+	st.clients[client] = &Client{server: default.server, channel: default.channel}
 }
 
 // ClientDisconnect - called when client disconnects
@@ -99,6 +103,7 @@ func main() {
 	st.irc = make(map[string]*girc.Client)
 	st.event = make(chan []byte)
 	srv := ubqtlib.NewSrv()
+	//This way we don't have to track srv outside of our scope here.
 	go func() {
 		for {
 			select {

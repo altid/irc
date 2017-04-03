@@ -7,6 +7,7 @@ import (
 	"github.com/lrstanley/girc"
 )
 
+// Append formatted messages to client's buffer string
 func (st *State) writeServer(c *girc.Client, e girc.Event) {
 	fmt.Println(string(e.Bytes()))
 }
