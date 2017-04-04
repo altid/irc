@@ -83,8 +83,8 @@ func (st *State) ClientOther(filename string, client string) (*os.File, error) {
 
 // ClientConnect - add last server in list, first channel in list
 func (st *State) ClientConnect(client string) {
-	default := st.clients["default"]
-	st.clients[client] = &Client{server: default.server, channel: default.channel}
+	def := st.clients["default"]
+	st.clients[client] = &Client{server: def.server, channel: def.channel}
 }
 
 // ClientDisconnect - called when client disconnects
