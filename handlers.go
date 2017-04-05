@@ -2,6 +2,10 @@ package main
 
 import (
 	"bytes"
+	"path"
+	"os"
+	
+	"github.com/lrstanley/girc"
 )
 
 // handleInput - append valid runes to input type, curtail input at [history]input lines.
@@ -17,6 +21,20 @@ func (st *State) handleInput(data []byte, client string) (int, error) {
 	irc := st.irc[current.server]
 	irc.Commands.Message(current.channel, string(data))
 	st.input = append(st.input, data...)
+	filePath := path.Join(*inPath, current.server, current.channel)
+	f, err := os.OpenFile(filePath, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
+	defer f.Close()
+	if err != nil {
+		return 0, err
+	}
+	p := make([]string, 1)
+	p[0] = irc.Config.Nick
+	e := &girc.Event{Trailing: string(data), Params: p}
+	err = st.chanFmt.Execute(f, e)
+	if err != nil {
+		return 0, err
+	}
+	st.event <- []byte("main\n")
 	return len(data), nil
 }
 
@@ -69,7 +87,6 @@ func (st *State) status(client string) ([]byte, error) {
 }
 
 func (st *State) sidebar(client string) ([]byte, error) {
-	//TODO: Block for data
 	current := st.clients[client]
 	irc := st.irc[current.server]
 	channel := irc.Lookup(current.channel)
