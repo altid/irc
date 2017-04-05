@@ -34,6 +34,10 @@ type State struct {
 	tablist []byte
 	input   []byte
 	event   chan []byte
+	srvFmt  string
+	chanFmt string
+	ntfyFmt string
+	modeFmt string
 }
 
 // ClientWrite - Handle writes on ctl, input to send to channel/mutate program state
