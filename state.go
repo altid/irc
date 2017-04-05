@@ -5,18 +5,32 @@ import (
 	"log"
 	"strconv"
 	"strings"
+	"text/template"
 
 	"github.com/lrstanley/girc"
 	"github.com/ubqt-systems/ubqtlib"
 	"github.com/vaughan0/go-ini"
 )
 
-func parseOptions(srv *ubqtlib.Srv, conf ini.File) {
+func parseOptions(srv *ubqtlib.Srv, conf ini.File, st *State) {
+	//Set some pretty printed defaults
+	chanFmt := `[#5F87A7]({{index .Params 0}}) {{.Trailing}}`
+	ntfyFmt := `[#5F87A7]({{index .Params 0}}) {{.Trailing}}`
+	servFmt := `[#5F87A7]({{index .Params 0}}) {{.Trailing}}`
 	for key, value := range conf["options"] {
 		if value == "show" {
 			srv.AddFile(key)
 		}
+		switch key {
+		case "channelfmt" :
+			chanFmt = value
+		case "notificationfmt":
+			ntfyFmt = value
+		}
 	}
+	st.chanFmt = template.Must(template.New("chan").Parse(chanFmt))
+	st.ntfyFmt = template.Must(template.New("ntfy").Parse(ntfyFmt))
+	st.servFmt = template.Must(template.New("serv").Parse(servFmt))
 }
 
 // initialize - Read config and set up IRC sessions per entry
@@ -27,7 +41,7 @@ func (st *State) initialize(srv *ubqtlib.Srv) error {
 	if err != nil {
 		return err
 	}
-	parseOptions(srv, conf)
+	parseOptions(srv, conf, st)
 	srv.AddFile("ctl")
 	srv.AddFile("feed")
 	for section := range conf {

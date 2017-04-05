@@ -7,6 +7,7 @@ import (
 	"os"
 	"path"
 	"sync"
+	"text/template"
 
 	"github.com/lrstanley/girc"
 	"github.com/ubqt-systems/ubqtlib"
@@ -34,10 +35,9 @@ type State struct {
 	tablist []byte
 	input   []byte
 	event   chan []byte
-	srvFmt  string
-	chanFmt string
-	ntfyFmt string
-	modeFmt string
+	chanFmt *template.Template
+	ntfyFmt *template.Template
+	servFmt *template.Template
 }
 
 // ClientWrite - Handle writes on ctl, input to send to channel/mutate program state
