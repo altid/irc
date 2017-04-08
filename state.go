@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"log"
+	"path"
+	"os"
 	"strconv"
 	"strings"
 	"text/template"
@@ -14,9 +16,9 @@ import (
 
 func parseOptions(srv *ubqtlib.Srv, conf ini.File, st *State) {
 	//Set some pretty printed defaults
-	chanFmt := `[#5F87A7]({{index .Params 0}}) {{.Trailing}}`
-	ntfyFmt := `[#5F87A7]({{index .Params 0}}) {{.Trailing}}`
-	servFmt := `[#5F87A7]({{index .Params 0}}) {{.Trailing}}`
+	chanFmt := `[#5F87A7]({{.Name}}) {{.Data}}`
+	ntfyFmt := `[#5F87A7]({{.Name}}) {{.Data}}`
+	servFmt := `--[#5F87A7]({{.Name}}) {{.Data}}--`
 	for key, value := range conf["options"] {
 		if value == "show" {
 			srv.AddFile(key)
@@ -70,6 +72,10 @@ func (st *State) initialize(srv *ubqtlib.Srv) error {
 		if !ok {
 			fmt.Println("name entry not found")
 		}
+		pw, ok := conf.Get(section, "Password")
+		if !ok {
+			fmt.Println("password entry not found")
+		}
 		channels, _ := conf.Get(section, "Channels")
 		chanlist := strings.Split(channels, ",")
 		ircConf := girc.Config{
@@ -78,6 +84,7 @@ func (st *State) initialize(srv *ubqtlib.Srv) error {
 			Nick:   nick,
 			User:   user,
 			Name:   name,
+			Password: pw,
 		}
 		client := girc.New(ircConf)
 		client.Handlers.Add(girc.CONNECTED, func(c *girc.Client, e girc.Event) {
@@ -104,7 +111,7 @@ func (st *State) initialize(srv *ubqtlib.Srv) error {
 		client.Handlers.Add(girc.MOTD, st.writeServer)
 		client.Handlers.Add(girc.NAMES, st.writeChannel)
 		client.Handlers.Add(girc.NICK, st.writeChannel)
-		client.Handlers.Add(girc.NOTICE, st.writeChannel)
+		client.Handlers.Add(girc.NOTICE, st.writeServer)
 		client.Handlers.Add(girc.OPER, st.writeServer)
 		client.Handlers.Add(girc.PRIVMSG, st.writeChannel)
 		client.Handlers.Add(girc.SERVER, st.writeServer)
@@ -128,6 +135,9 @@ func (st *State) initialize(srv *ubqtlib.Srv) error {
 			log.Fatalf("an error occured while attempting to connect to %s: %s", client.Server(), err)
 			return err
 		}
+		// Make sure our directory exists
+		filePath := path.Join(*inPath, server)
+		os.MkdirAll(filePath, 0777)
 		// This is a bit odd, as we reassign this for every server.
 		st.irc["default"] = client
 		st.irc[server] = client
