@@ -17,6 +17,7 @@ import (
 func parseOptions(srv *ubqtlib.Srv, conf ini.File, st *State) {
 	//Set some pretty printed defaults
 	chanFmt := `[#5F87A7]({{.Name}}) {{.Data}}`
+	selfFmt := `[#076678]({{.Name}}) {{.Data}}`
 	ntfyFmt := `[#5F87A7]({{.Name}}) {{.Data}}`
 	servFmt := `--[#5F87A7]({{.Name}}) {{.Data}}--`
 	for key, value := range conf["options"] {
@@ -33,6 +34,7 @@ func parseOptions(srv *ubqtlib.Srv, conf ini.File, st *State) {
 	st.chanFmt = template.Must(template.New("chan").Parse(chanFmt))
 	st.ntfyFmt = template.Must(template.New("ntfy").Parse(ntfyFmt))
 	st.servFmt = template.Must(template.New("serv").Parse(servFmt))
+	st.selfFmt = template.Must(template.New("self").Parse(selfFmt))
 }
 
 // initialize - Read config and set up IRC sessions per entry

@@ -22,6 +22,7 @@ func (st *State) writeServer(c *girc.Client, e girc.Event) {
 
 //TODO: Create a struct here, load it with our data, then execute against our string.
 //TODO: Clean input for use with clients - unstring markdown, etc.
+//TODO: Highlights
 func (st *State) writeChannel(c *girc.Client, e girc.Event) {
 	st.event <- []byte("main\n")
 	st.writeFile(c, e)

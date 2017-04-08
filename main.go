@@ -36,6 +36,7 @@ type State struct {
 	input   []byte
 	event   chan []byte
 	chanFmt *template.Template
+	selfFmt *template.Template
 	ntfyFmt *template.Template
 	servFmt *template.Template
 }

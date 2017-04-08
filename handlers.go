@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"path"
 	"os"
-	
-	"github.com/lrstanley/girc"
 )
 
 // handleInput - append valid runes to input type, curtail input at [history]input lines.
@@ -27,10 +25,8 @@ func (st *State) handleInput(data []byte, client string) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	p := make([]string, 1)
-	p[0] = irc.Config.Nick
-	e := &girc.Event{Trailing: string(data), Params: p}
-	err = st.chanFmt.Execute(f, e)
+	e := &message{Data: string(data), Name: irc.Config.Nick}
+	err = st.selfFmt.Execute(f, e)
 	if err != nil {
 		return 0, err
 	}
