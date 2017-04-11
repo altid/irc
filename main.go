@@ -32,7 +32,7 @@ type State struct {
 	sync.Mutex
 	clients map[string]*Client
 	irc     map[string]*girc.Client
-	tablist []byte
+	tablist map[string]string
 	input   []byte
 	event   chan []byte
 	chanFmt *template.Template
@@ -62,7 +62,7 @@ func (st *State) ClientRead(filename string, client string) (buf []byte, err err
 	case "ctl":
 		return []byte("part\njoin\nquit\nbuffer\nignore\n"), nil
 	case "tabs":
-		return st.tablist, nil
+		buf, err = st.tabs(client)
 	case "status":
 		buf, err = st.status(client)
 	case "sidebar":
@@ -106,6 +106,7 @@ func main() {
 	st := &State{}
 	st.clients = make(map[string]*Client)
 	st.irc = make(map[string]*girc.Client)
+	st.tablist = make(map[string]string)
 	st.event = make(chan []byte)
 	srv := ubqtlib.NewSrv()
 	//This way we don't have to track srv outside of our scope here.

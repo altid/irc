@@ -106,3 +106,13 @@ func (st *State) title(client string) ([]byte, error) {
 	buf = append(buf, '\n')
 	return buf, nil
 }
+
+func (st *State) tabs(client string) ([]byte, error) {
+	current := st.clients[client]
+	buf := "[#587624](" + current.channel + ")"
+	for item, color := range st.tablist {
+		buf += color + "(" + item + ")"
+	}
+	buf += "\n"
+	return []byte(buf), nil
+}
