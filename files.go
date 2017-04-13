@@ -38,6 +38,9 @@ func (st *State) writeChannel(c *girc.Client, e girc.Event) {
 }
 
 func (st *State) writeFile(c *girc.Client, e girc.Event) {
+	if e.Params == nil {
+		return
+	}
 	filePath := path.Join(*inPath, c.Config.Server, e.Params[0])
 	f, err := os.OpenFile(filePath, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
 	defer f.Close()

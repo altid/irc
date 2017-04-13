@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"path"
 	"os"
+
+	"github.com/ubqt-systems/cleanmark"
 )
 
 // handleInput - append valid runes to input type, curtail input at [history]input lines.
@@ -25,7 +27,7 @@ func (st *State) handleInput(data []byte, client string) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	e := &message{Data: string(data), Name: irc.Config.Nick}
+	e := &message{Data: string(cleanmark.CleanBytes(data)), Name: irc.Config.Nick}
 	err = st.selfFmt.Execute(f, e)
 	if err != nil {
 		return 0, err
