@@ -69,7 +69,6 @@ func (st *State) handleCtl(b []byte, client string) (int, error) {
 }
 
 func (st *State) status(client string) ([]byte, error) {
-	var buf []byte
 	current := st.clients[client]
 	irc := st.irc[current.server]
 	channel := irc.Lookup(current.channel)
@@ -77,11 +76,8 @@ func (st *State) status(client string) ([]byte, error) {
 		return nil, nil
 	}
 	//TODO: text/template to design the status bar
-	buf = append(buf, '\\')
-	buf = append(buf, []byte(channel.Name)...)
-	buf = append(buf, []byte(channel.Modes.String())...)
-	buf = append(buf, '\n')
-	return buf, nil
+	stat := "[#587624]( mode )" + channel.Modes.String() + "\n"
+	return []byte(stat), nil
 }
 
 func (st *State) sidebar(client string) ([]byte, error) {
