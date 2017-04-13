@@ -6,6 +6,7 @@ import (
 	"path"
 
 	"github.com/lrstanley/girc"
+	"github.com/ubqt-systems/cleanmark"
 )
 
 type message struct {
@@ -25,11 +26,11 @@ func (st *State) writeServer(c *girc.Client, e girc.Event) {
 //TODO: Highlights
 //TODO: Update tabs
 /* - tabs layout should be as follows
-	We have our client.channels
-	map of regular channels
-	map of highlight channels
-	(Maybe map, or just uniquely keyed arrays)
-*/  
+We have our client.channels
+map of regular channels
+map of highlight channels
+(Maybe map, or just uniquely keyed arrays)
+*/
 func (st *State) writeChannel(c *girc.Client, e girc.Event) {
 	st.event <- []byte("main\n")
 	st.writeFile(c, e)
@@ -44,7 +45,7 @@ func (st *State) writeFile(c *girc.Client, e girc.Event) {
 		fmt.Printf("err %s", err)
 		return
 	}
-	m := &message{Name: e.Source.Name, Data: e.Trailing}
+	m := &message{Name: e.Source.Name, Data: cleanmark.CleanString(e.Trailing)}
 	err = st.chanFmt.Execute(f, m)
 	if err != nil {
 		fmt.Printf("err %s", err)
