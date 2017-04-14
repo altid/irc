@@ -2,8 +2,8 @@ package main
 
 import (
 	"bytes"
-	"path"
 	"os"
+	"path"
 
 	"github.com/ubqt-systems/cleanmark"
 )
@@ -17,10 +17,18 @@ func (st *State) handleInput(data []byte, client string) (int, error) {
 			return st.handleCtl(data, client)
 		}
 	}
+	// We have a regular channel message at this point - make sure to remove tabs entry
 	current := st.clients[client]
+	if _, ok := st.tablist[current.channel]; ok {
+		st.Lock()
+		delete(st.tablist, current.channel)
+		st.Unlock()
+	}
+	// Find our server, send formatted message
 	irc := st.irc[current.server]
 	irc.Commands.Message(current.channel, string(data))
 	st.input = append(st.input, data...)
+	// Ensure we log our data
 	filePath := path.Join(*inPath, current.server, current.channel)
 	f, err := os.OpenFile(filePath, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
 	defer f.Close()
@@ -32,6 +40,7 @@ func (st *State) handleInput(data []byte, client string) (int, error) {
 	if err != nil {
 		return 0, err
 	}
+	// Finally notify our events file of the update
 	st.event <- []byte("main\n")
 	return len(data), nil
 }
@@ -109,7 +118,9 @@ func (st *State) tabs(client string) ([]byte, error) {
 	current := st.clients[client]
 	buf := "[#587624](" + current.channel + ")"
 	for item, color := range st.tablist {
-		buf += color + "(" + item + ")"
+		if item != current.channel {
+			buf += " " + color + "(" + item + ")"
+		}
 	}
 	buf += "\n"
 	return []byte(buf), nil

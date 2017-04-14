@@ -33,6 +33,10 @@ func (st *State) handleJoin(channel string, client string) {
 		return
 	}
 	current.channel = channel
+	st.event <- []byte("title\n")
+	st.event <- []byte("sidebar\n")
+	st.event <- []byte("status\n")
+	st.event <- []byte("main\n")
 }
 
 func (st *State) handlePart(channel string, client string) {
@@ -43,13 +47,35 @@ func (st *State) handlePart(channel string, client string) {
 		fmt.Println("Part failed")
 		return
 	}
+	// Delete tabs entry if it exists
+	if _, ok := st.tablist[channel]; ok {
+		st.Lock()
+		delete(st.tablist, channel)
+		st.Unlock()
+		st.event <- []byte("tabs\n")
+	}
 	current.channel = irc.Channels()[0]
+	st.event <- []byte("title\n")
+	st.event <- []byte("status\n")
+	st.event <- []byte("sidebar\n")
+	st.event <- []byte("main\n")
 }
 
 // TODO: Handle cases where we swap to a buffer
 // on another network - range st.c and test if buffer exists
 func (st *State) handleBuffer(channel string, client string) {
 	st.clients[client].channel = channel
+	// If item exists, remove
+	if _, ok := st.tablist[channel]; ok {
+		st.Lock()
+		delete(st.tablist, channel)
+		st.Unlock()	
+		st.event <- []byte("tabs\n")
+	}
+	st.event <- []byte("sidebar\n")
+	st.event <- []byte("status\n")
+	st.event <- []byte("title\n")
+	st.event <- []byte("tabs\n")
 }
 
 // TODO: Store a hardcoded ignore list that we source on startup, handle here
