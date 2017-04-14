@@ -67,8 +67,9 @@ func (st *State) handlePart(channel string, client string) {
 // on another network - range st.c and test if buffer exists
 func (st *State) handleBuffer(channel string, client string) {
 	st.clients[client].channel = channel
-	// If item exists, remove
-	cleanChannel := cleanmark.CleanString(channel)
+	// Remove previous current channel from tablist
+	current := st.clients[client]
+	cleanChannel := cleanmark.CleanString(current.channel)
 	if _, ok := st.tablist[cleanChannel]; ok {
 		st.Lock()
 		delete(st.tablist, cleanChannel)
