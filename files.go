@@ -45,6 +45,7 @@ func (st *State) writeFile(c *girc.Client, e girc.Event) {
 	}
 	var filePath string
 	m := &message{Name: e.Params[0]}
+	format := st.chanFmt
 	switch e.Command {
 		//case "ACTION":
 		//	girc has a pretty print for actions, use that.
@@ -57,6 +58,7 @@ func (st *State) writeFile(c *girc.Client, e girc.Event) {
 //TODO: Check for highlight in string if PRIVMSG as well, store hl and Get.Nick so we don't have to do twice
 				m.Name = c.Config.Server
 			}
+			st.updateTabs(m.Name, false)
 			filePath = path.Join(*inPath, c.Config.Server, m.Name)
 		//	will have to seperate out between server, and chanserv stuff.
 		//  like #go-nuts motd thing vs freenode messages
@@ -64,12 +66,20 @@ func (st *State) writeFile(c *girc.Client, e girc.Event) {
 			m.Name = c.Config.Server
 			filePath = path.Join(*inPath, c.Config.Server, m.Name)
 		case "PRIVMSG":
-			if m.Name == c.GetNick() {
+			nick := c.GetNick()
+			if m.Name == nick {
 				m.Name = "~" + e.Source.Name
 				st.event <- []byte("tabs\n")
+				st.updateTabs(m.Name, true)
 				filePath = path.Join(*inPath, c.Config.Server, m.Name)
 			} else {
 				filePath = path.Join(*inPath, c.Config.Server, e.Params[0])
+				if strings.Contains(e.Trailing, nick) {
+					st.updateTabs(m.Name, true)	
+					format = st.highFmt
+				} else {
+					st.updateTabs(m.Name, false)
+				}
 				m.Name = e.Source.Name
 			}
 	}
@@ -82,15 +92,9 @@ func (st *State) writeFile(c *girc.Client, e girc.Event) {
 	}
 	//TODO: Break this out into per-case basis. May have diff info each time?
 	m.Data = cleanmark.CleanString(e.Trailing) + "\n"
-	err = st.chanFmt.Execute(f, m)
+	err = format.Execute(f, m)
 	if err != nil {
 		fmt.Printf("err %s", err)
 		return
 	}
-	// Update tabs -- must move out to case
-	if strings.Contains(e.Trailing, c.GetNick()) {
-		st.updateTabs(m.Name, true)
-	} else {
-		st.updateTabs(m.Name, false)
-	}		
 }
