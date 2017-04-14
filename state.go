@@ -18,8 +18,8 @@ func newState() *State {
 	client := make(map[string]*Client)
 	irc := make(map[string]*girc.Client)
 	tab := make(map[string]string)
-	event = make(chan []byte)
-	return &State{clients: client, irc: irc, tablist: tab, event: event)
+	event := make(chan []byte)
+	return &State{clients: client, irc: irc, tablist: tab, event: event}
 }
 
 func parseOptions(srv *ubqtlib.Srv, conf ini.File, st *State) {
