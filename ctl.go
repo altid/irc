@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/lrstanley/girc"
+	"github.com/ubqt-systems/cleanmark"
 )
 
 func (st *State) handleSet(b [][]byte, client string) {
@@ -48,9 +49,10 @@ func (st *State) handlePart(channel string, client string) {
 		return
 	}
 	// Delete tabs entry if it exists
-	if _, ok := st.tablist[channel]; ok {
+	cleanChannel := cleanmark.CleanString(channel)
+	if _, ok := st.tablist[cleanChannel]; ok {
 		st.Lock()
-		delete(st.tablist, channel)
+		delete(st.tablist, cleanChannel)
 		st.Unlock()
 		st.event <- []byte("tabs\n")
 	}
@@ -66,9 +68,10 @@ func (st *State) handlePart(channel string, client string) {
 func (st *State) handleBuffer(channel string, client string) {
 	st.clients[client].channel = channel
 	// If item exists, remove
-	if _, ok := st.tablist[channel]; ok {
+	cleanChannel := cleanmark.CleanString(channel)
+	if _, ok := st.tablist[cleanChannel]; ok {
 		st.Lock()
-		delete(st.tablist, channel)
+		delete(st.tablist, cleanChannel)
 		st.Unlock()	
 		st.event <- []byte("tabs\n")
 	}

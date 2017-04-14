@@ -116,9 +116,10 @@ func (st *State) title(client string) ([]byte, error) {
 
 func (st *State) tabs(client string) ([]byte, error) {
 	current := st.clients[client]
-	buf := "[#587624](" + current.channel + ")"
+	channel := cleanmark.CleanString(current.channel)
+	buf := "[#587624](" + channel + ")"
 	for item, color := range st.tablist {
-		if item != current.channel {
+		if item != channel {
 			buf += " " + color + "(" + item + ")"
 		}
 	}

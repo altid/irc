@@ -15,8 +15,9 @@ type message struct {
 	Data string
 }
 
-func (st *State) updateTabs(name string, hl bool) {
+func (st *State) updateTabs(n string, hl bool) {
 	// Unconditionally add highlights
+	name := cleanmark.CleanString(n)
 	if hl {
 		st.Lock()
 		st.tablist[name] = "[#9d0006]"
@@ -47,40 +48,49 @@ func (st *State) writeFile(c *girc.Client, e girc.Event) {
 	m := &message{Name: e.Params[0]}
 	format := st.chanFmt
 	switch e.Command {
-		//case "ACTION":
-		//	girc has a pretty print for actions, use that.
+		case "ACTION":
+			f, err := os.OpenFile(filePath, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
+			defer f.Close()
+			if err != nil {
+				fmt.Printf("err %s", err)
+				return
+			}
+			m.Name = " * "
+			m.Data = e.StripAction()
+			err = format.Execute(f, m)
+			if err != nil {
+				fmt.Printf("err %s", err)
+			}
+			return
 		case "NOTICE":
 			if m.Name == "ChanServ" {
 				m.Name = e.Params[1]
 				st.event <- []byte("tabs\n")
 			} else {
-//TODO: Things like path and who the message are from are different, so hold in two variables instead.
-//TODO: Check for highlight in string if PRIVMSG as well, store hl and Get.Nick so we don't have to do twice
 				m.Name = c.Config.Server
 			}
 			st.updateTabs(m.Name, false)
 			filePath = path.Join(*inPath, c.Config.Server, m.Name)
-		//	will have to seperate out between server, and chanserv stuff.
-		//  like #go-nuts motd thing vs freenode messages
 		case "MODE":
 			m.Name = c.Config.Server
 			filePath = path.Join(*inPath, c.Config.Server, m.Name)
 		case "PRIVMSG":
 			nick := c.GetNick()
-			if m.Name == nick {
-				m.Name = "~" + e.Source.Name
-				st.event <- []byte("tabs\n")
-				st.updateTabs(m.Name, true)
-				filePath = path.Join(*inPath, c.Config.Server, m.Name)
-			} else {
-				filePath = path.Join(*inPath, c.Config.Server, e.Params[0])
-				if strings.Contains(e.Trailing, nick) {
-					st.updateTabs(m.Name, true)	
-					format = st.highFmt
-				} else {
-					st.updateTabs(m.Name, false)
-				}
-				m.Name = e.Source.Name
+			switch {
+				case e.IsFromUser():
+					m.Name = "~" + e.Source.Name
+					st.event <- []byte("tabs\n")
+					st.updateTabs(m.Name, true)
+					filePath = path.Join(*inPath, c.Config.Server, m.Name)
+				case e.IsFromChannel():
+					filePath = path.Join(*inPath, c.Config.Server, e.Params[0])
+					if strings.Contains(e.Trailing, nick) {
+						st.updateTabs(m.Name, true)	
+						format = st.highFmt
+					} else {
+						st.updateTabs(m.Name, false)
+					}
+					m.Name = e.Source.Name
 			}
 	}
 	fmt.Println(string(e.Bytes()))
@@ -89,9 +99,13 @@ func (st *State) writeFile(c *girc.Client, e girc.Event) {
 	if err != nil {
 		fmt.Printf("err %s", err)
 		return
-	}
-	//TODO: Break this out into per-case basis. May have diff info each time?
+	}		
 	m.Data = cleanmark.CleanString(e.Trailing) + "\n"
+	m.Name = cleanmark.CleanString(m.Name)
+	if e.IsAction() {
+		m.Data = cleanmark.CleanString(e.StripAction() + "\n")
+		m.Name = " \\* " + e.Source.Name
+	}
 	err = format.Execute(f, m)
 	if err != nil {
 		fmt.Printf("err %s", err)

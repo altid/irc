@@ -62,6 +62,12 @@ func (st *State) ClientOther(filename string, client string) (*os.File, error) {
 func (st *State) ClientConnect(client string) {
 	def := st.clients["default"]
 	st.clients[client] = &Client{server: def.server, channel: def.channel}
+	//TODO: This may have to go under a flag; headless clients may cause confusion with this
+	if _, ok := st.tablist[def.channel]; ok {
+		st.Lock()
+		delete(st.tablist, def.channel)
+		st.Unlock()
+	}
 }
 
 // ClientDisconnect - called when client disconnects
