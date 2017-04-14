@@ -14,6 +14,14 @@ import (
 	"github.com/vaughan0/go-ini"
 )
 
+func newState() *State {
+	client := make(map[string]*Client)
+	irc := make(map[string]*girc.Client)
+	tab := make(map[string]string)
+	event = make(chan []byte)
+	return &State{clients: client, irc: irc, tablist: tab, event: event)
+}
+
 func parseOptions(srv *ubqtlib.Srv, conf ini.File, st *State) {
 	//Set some pretty printed defaults
 	chanFmt := `[#5F87A7]({{.Name}}) {{.Data}}`

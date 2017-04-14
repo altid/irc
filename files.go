@@ -27,7 +27,7 @@ func (st *State) updateTabs(name string, hl bool) {
 	// Else, add channel if it doesn't exist (guards highlight overwrites, etc)
 	if _, ok := st.tablist[name]; !ok {
 		st.Lock()
-		st.tablist[name] = "[#222222]"
+		st.tablist[name] = "[#928374]"
 		st.Unlock()
 		st.event <- []byte("tabs\n")
 	}
@@ -43,7 +43,7 @@ func (st *State) writeFile(c *girc.Client, e girc.Event) {
 	if e.Params == nil {
 		return
 	}
-	var string filePath
+	var filePath string
 	m := &message{Name: e.Params[0]}
 	switch e.Command {
 		//case "ACTION":
@@ -54,13 +54,14 @@ func (st *State) writeFile(c *girc.Client, e girc.Event) {
 				st.event <- []byte("tabs\n")
 			} else {
 //TODO: Things like path and who the message are from are different, so hold in two variables instead.
-				m.Name = "server"
+//TODO: Check for highlight in string if PRIVMSG as well, store hl and Get.Nick so we don't have to do twice
+				m.Name = c.Config.Server
 			}
 			filePath = path.Join(*inPath, c.Config.Server, m.Name)
 		//	will have to seperate out between server, and chanserv stuff.
 		//  like #go-nuts motd thing vs freenode messages
 		case "MODE":
-			m.Name = "server"
+			m.Name = c.Config.Server
 			filePath = path.Join(*inPath, c.Config.Server, m.Name)
 		case "PRIVMSG":
 			if m.Name == c.GetNick() {
@@ -68,7 +69,8 @@ func (st *State) writeFile(c *girc.Client, e girc.Event) {
 				st.event <- []byte("tabs\n")
 				filePath = path.Join(*inPath, c.Config.Server, m.Name)
 			} else {
-				
+				filePath = path.Join(*inPath, c.Config.Server, e.Params[0])
+				m.Name = e.Source.Name
 			}
 	}
 	fmt.Println(string(e.Bytes()))
