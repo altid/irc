@@ -65,7 +65,6 @@ func (st *State) writeFile(c *girc.Client, e girc.Event) {
 		case "NOTICE":
 			if m.Name == "ChanServ" {
 				m.Name = e.Params[1]
-				st.event <- []byte("tabs\n")
 			} else {
 				m.Name = c.Config.Server
 			}
@@ -79,10 +78,10 @@ func (st *State) writeFile(c *girc.Client, e girc.Event) {
 			switch {
 				case e.IsFromUser():
 					m.Name = "~" + e.Source.Name
-					st.event <- []byte("tabs\n")
 					st.updateTabs(m.Name, true)
 					filePath = path.Join(*inPath, c.Config.Server, m.Name)
 				case e.IsFromChannel():
+					st.event <- []byte("feed\n")
 					filePath = path.Join(*inPath, c.Config.Server, e.Params[0])
 					if strings.Contains(e.Trailing, nick) {
 						st.updateTabs(m.Name, true)	

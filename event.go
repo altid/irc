@@ -6,7 +6,7 @@ func listenEvents(st *State, srv *ubqtlib.Srv) {
 	for {
 		select {
 		case buf := <-st.event:
-			srv.SendEvent(buf)
+			go srv.SendEvent(buf)
 		}
 	}
 }
