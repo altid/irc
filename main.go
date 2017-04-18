@@ -32,7 +32,7 @@ type State struct {
 	selfFmt *template.Template
 	ntfyFmt *template.Template
 	servFmt *template.Template
-	highFmt   *template.Template
+	highFmt *template.Template
 }
 
 func main() {
@@ -61,3 +61,4 @@ func main() {
 		os.Exit(1)
 	}
 }
+

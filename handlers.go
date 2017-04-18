@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"os"
 	"path"
+	"strings"
 
 	"github.com/ubqt-systems/cleanmark"
 )
@@ -79,6 +80,9 @@ func (st *State) handleCtl(b []byte, client string) (int, error) {
 
 func (st *State) status(client string) ([]byte, error) {
 	current := st.clients[client]
+	if current.channel == current.server {
+		return nil, nil
+	}
 	irc := st.irc[current.server]
 	channel := irc.Lookup(current.channel)
 	if channel == nil {
@@ -91,27 +95,28 @@ func (st *State) status(client string) ([]byte, error) {
 
 func (st *State) sidebar(client string) ([]byte, error) {
 	current := st.clients[client]
+	// If we are on server buffer, do not populate sidebar
+	if current.channel == current.server {
+		return nil, nil
+	}
 	irc := st.irc[current.server]
 	channel := irc.Lookup(current.channel)
 	if channel == nil {
 		return nil, nil
 	}
-	var buf []byte
-	list := channel.NickList()
-	for _, item := range list {
-		buf = append(buf, []byte(item)...)
-		buf = append(buf, '\n')
-	}
-	return buf, nil
+	list := strings.Join(channel.NickList(), "\n")
+	cleanList := cleanmark.CleanString(list)
+	return []byte(cleanList), nil
 }
 
 func (st *State) title(client string) ([]byte, error) {
 	current := st.clients[client]
+	if current.channel == current.server {
+		return nil, nil
+	}
 	irc := st.irc[current.server]
 	channel := irc.Lookup(current.channel)
-	buf := []byte(channel.Topic)
-	buf = append(buf, '\n')
-	return buf, nil
+	return []byte(channel.Topic + "\n"), nil
 }
 
 func (st *State) tabs(client string) ([]byte, error) {
@@ -126,3 +131,4 @@ func (st *State) tabs(client string) ([]byte, error) {
 	buf += "\n"
 	return []byte(buf), nil
 }
+
