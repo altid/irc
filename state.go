@@ -158,7 +158,7 @@ func (st *State) initialize(srv *ubqtlib.Srv) error {
 		//TODO: If we have a password, scrub it out here
 		st.clients["default"] = &Client{server: server, channel: chanlist[0]}
 		// Fire off IRC connection
-		go client.Loop()
+		go client.Connect()
 	}
 	return nil
 }
