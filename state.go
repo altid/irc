@@ -98,7 +98,7 @@ func (st *State) initialize(srv *ubqtlib.Srv) error {
 			Nick:     nick,
 			User:     user,
 			Name:     name,
-			Password: pw,
+			ServerPass: pw,
 		}
 		client := girc.New(ircConf)
 		client.Handlers.Add(girc.CONNECTED, func(c *girc.Client, e girc.Event) {
