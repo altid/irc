@@ -93,11 +93,11 @@ func (st *State) initialize(srv *ubqtlib.Srv) error {
 		channels, _ := conf.Get(section, "Channels")
 		chanlist := strings.Split(channels, ",")
 		ircConf := girc.Config{
-			Server:   server,
-			Port:     port,
-			Nick:     nick,
-			User:     user,
-			Name:     name,
+			Server:     server,
+			Port:       port,
+			Nick:       nick,
+			User:       user,
+			Name:       name,
 			ServerPass: pw,
 		}
 		client := girc.New(ircConf)

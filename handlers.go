@@ -131,4 +131,3 @@ func (st *State) tabs(client string) ([]byte, error) {
 	buf += "\n"
 	return []byte(buf), nil
 }
-
