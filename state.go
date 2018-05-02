@@ -2,27 +2,31 @@ package main
 
 import (
 	"fmt"
-	"log"
+	//"log"
 	"os"
 	"path"
+	"sync"
 	"strconv"
 	"strings"
 	"text/template"
 
 	"github.com/lrstanley/girc"
-	"github.com/ubqt-systems/ubqtlib"
 	"github.com/vaughan0/go-ini"
 )
 
-func newState() *State {
-	client := make(map[string]*Client)
-	irc := make(map[string]*girc.Client)
-	tab := make(map[string]string)
-	event := make(chan []byte)
-	return &State{clients: client, irc: irc, tablist: tab, event: event}
+type State struct {
+	sync.Mutex
+	irc		map[string]*girc.Client
+	tablist map[string]string
+	done    chan error
+	chanFmt *template.Template
+	selfFmt*template.Template
+	ntfyFmt *template.Template
+	servFmt *template.Template
+	highFmt *template.Template
 }
 
-func parseOptions(srv *ubqtlib.Srv, conf ini.File, st *State) {
+func (st *State) parseFormat(conf ini.File) {
 	//Set some pretty printed defaults
 	chanFmt := `[#5F87A7]({{.Name}}) {{.Data}}`
 	selfFmt := `[#076678]({{.Name}}) {{.Data}}`
@@ -30,9 +34,6 @@ func parseOptions(srv *ubqtlib.Srv, conf ini.File, st *State) {
 	ntfyFmt := `[#5F87A7]({{.Name}}) {{.Data}}`
 	servFmt := `--[#5F87A7]({{.Name}}) {{.Data}}--`
 	for key, value := range conf["options"] {
-		if value == "show" {
-			srv.AddFile(key)
-		}
 		switch key {
 		case "channelfmt":
 			chanFmt = value
@@ -40,6 +41,8 @@ func parseOptions(srv *ubqtlib.Srv, conf ini.File, st *State) {
 			ntfyFmt = value
 		case "highfmt":
 			highFmt = value
+		case "selffmt":
+			selfFmt = value
 		}
 	}
 	st.chanFmt = template.Must(template.New("chan").Parse(chanFmt))
@@ -49,116 +52,126 @@ func parseOptions(srv *ubqtlib.Srv, conf ini.File, st *State) {
 	st.highFmt = template.Must(template.New("high").Parse(highFmt))
 }
 
+func (st *State) parseOptions(conf ini.File, section string) (*girc.Config) {
+	server, ok := conf.Get(section, "Server")
+	if ! ok {
+		// TODO: Log instead
+		fmt.Println("Server entry not found")
+	}
+	p, ok := conf.Get(section, "Port")
+	port, _ := strconv.Atoi(p)
+	if !ok {
+		fmt.Println("No port set, using default")
+		port = 6667
+	}
+	nick, ok := conf.Get(section, "Nick")
+	if !ok {
+		fmt.Println("nick entry not found")
+	}
+	user, ok := conf.Get(section, "User")
+	if !ok {
+		fmt.Println("user entry not found")
+	}
+	name, ok := conf.Get(section, "Name")
+	if !ok {
+		fmt.Println("name entry not found")
+	}
+	pw, ok := conf.Get(section, "Password")
+	if !ok {
+		fmt.Println("password entry not found")
+	}
+	return &girc.Config{Server: server, Port: port, Nick: nick, User: user, Name: name, ServerPass: pw}
+}
+
+func (st *State) parseChannels(conf ini.File, section string) []string {
+	channels, _ := conf.Get(section, "Channels")
+	return strings.Split(channels, ",")
+}
+
+func (st *State) Initialize(chanlist []string, conf *girc.Config, section string) error {
+	client := girc.New(*conf)
+	client.Handlers.Add(girc.CONNECTED, func(c *girc.Client, e girc.Event) {
+		for _, channel := range chanlist {
+			if strings.Contains(channel, " ") {
+				// We have a password
+				channel := strings.Fields(channel)
+				c.Cmd.JoinKey(channel[0], channel[1])
+			} else {
+				c.Cmd.Join(channel)
+			}
+		}
+		// TODO: Write to our channel to alert the main thread that we're ready to go
+		// So that we don't attempt to write on input before we're ready
+	})
+	client.Handlers.Add(girc.JOIN, st.writeFeed)
+	client.Handlers.Add(girc.PART, st.closeFeed)
+	client.Handlers.Add(girc.QUIT, st.quitServer)
+	client.Handlers.Add(girc.MOTD, st.writeServer)
+	client.Handlers.Add(girc.ADMIN, st.writeServer)
+	client.Handlers.Add(girc.AWAY, st.writeFeed)
+	client.Handlers.Add(girc.INFO, st.writeServer)
+	client.Handlers.Add(girc.INVITE, st.writeServer)
+	client.Handlers.Add(girc.ISON, st.writeServer)
+	client.Handlers.Add(girc.KICK, st.writeFeed)
+	client.Handlers.Add(girc.KILL, st.writeServer)
+	client.Handlers.Add(girc.LIST, st.writeServer)
+	client.Handlers.Add(girc.LUSERS, st.writeServer)
+	client.Handlers.Add(girc.MODE, st.mode)
+	client.Handlers.Add(girc.OPER, st.writeServer)
+	client.Handlers.Add(girc.TIME, st.writeServer)
+	client.Handlers.Add(girc.NAMES, st.writeServer)
+	client.Handlers.Add(girc.NICK, st.writeServer)
+	client.Handlers.Add(girc.NOTICE, st.writeFeed)
+	client.Handlers.Add(girc.PRIVMSG, st.writeFeed)
+	client.Handlers.Add(girc.SERVER, st.writeServer)
+	client.Handlers.Add(girc.SERVICE, st.writeServer)
+	client.Handlers.Add(girc.SERVLIST, st.writeServer)
+	client.Handlers.Add(girc.SQUERY, st.writeServer)
+	client.Handlers.Add(girc.STATS, st.writeServer)
+	client.Handlers.Add(girc.SUMMON, st.writeServer)
+	client.Handlers.Add(girc.TOPIC, st.topic)
+	client.Handlers.Add(girc.USERHOST, st.writeServer)
+	client.Handlers.Add(girc.USERS, st.writeServer)
+	client.Handlers.Add(girc.VERSION, st.writeServer)
+	client.Handlers.Add(girc.WALLOPS, st.writeServer)
+	client.Handlers.Add(girc.WHO, st.writeServer)
+	client.Handlers.Add(girc.WHOIS, st.writeServer)
+	client.Handlers.Add(girc.WHOWAS, st.writeServer)
+	// Ensure our filepath exists
+	chanpath := path.Join(*inPath, section)
+	os.MkdirAll(chanpath, 0777)
+	if _, err := os.Stat(chanpath); os.IsNotExist(err) {
+		return err
+	}
+	client.Connect()
+	return nil
+}
+
+func newState() *State {
+	irc := make(map[string]*girc.Client)
+	tab := make(map[string]string)
+	done := make(chan error)
+	return &State{irc: irc, tablist: tab, done: done}
+}
+
 // initialize - Read config and set up IRC sessions per entry
-// we also log to a filesystem, and set up defaults
-func (st *State) initialize(srv *ubqtlib.Srv) error {
-	//st.ctl = getCtl()
+func (st *State) Loop() error {
 	conf, err := ini.LoadFile(*conf)
 	if err != nil {
 		return err
 	}
-	parseOptions(srv, conf, st)
-	srv.AddFile("ctl")
-	srv.AddFile("feed")
+	st.parseFormat(conf)
+	
+	var ircConf *girc.Config
 	for section := range conf {
-		if section == "options" {
+		switch section {
+		case "options":
 			continue
+		default: 
+			ircConf = st.parseOptions(conf, section)
+			chanlist := st.parseChannels(conf, section)
+			err = st.Initialize(chanlist, ircConf, section)		
 		}
-		server, ok := conf.Get(section, "Server")
-		if !ok {
-			fmt.Println("server entry not found")
-		}
-		p, ok := conf.Get(section, "Port")
-		port, _ := strconv.Atoi(p)
-		if !ok {
-			fmt.Println("No port set, using 6667")
-			port = 6667
-		}
-		nick, ok := conf.Get(section, "Nick")
-		if !ok {
-			fmt.Println("nick entry not found")
-		}
-		user, ok := conf.Get(section, "User")
-		if !ok {
-			fmt.Println("user entry not found")
-		}
-		name, ok := conf.Get(section, "Name")
-		if !ok {
-			fmt.Println("name entry not found")
-		}
-		pw, ok := conf.Get(section, "Password")
-		if !ok {
-			fmt.Println("password entry not found")
-		}
-		channels, _ := conf.Get(section, "Channels")
-		chanlist := strings.Split(channels, ",")
-		ircConf := girc.Config{
-			Server:     server,
-			Port:       port,
-			Nick:       nick,
-			User:       user,
-			Name:       name,
-			ServerPass: pw,
-		}
-		client := girc.New(ircConf)
-		client.Handlers.Add(girc.CONNECTED, func(c *girc.Client, e girc.Event) {
-			for _, channel := range chanlist {
-				if strings.Contains(channel, " ") {
-					// We have a password
-					channel := strings.Fields(channel)
-					c.Commands.JoinKey(channel[0], channel[1])
-				} else {
-					c.Commands.Join(channel)
-				}
-			}
-		})
-		client.Handlers.Add(girc.ADMIN, st.writeFile)
-		client.Handlers.Add(girc.AWAY, st.writeFile)
-		client.Handlers.Add(girc.INFO, st.writeFile)
-		client.Handlers.Add(girc.INVITE, st.writeFile)
-		client.Handlers.Add(girc.ISON, st.writeFile)
-		client.Handlers.Add(girc.KICK, st.writeFile)
-		client.Handlers.Add(girc.KILL, st.writeFile)
-		client.Handlers.Add(girc.LIST, st.writeFile)
-		client.Handlers.Add(girc.LUSERS, st.writeFile)
-		client.Handlers.Add(girc.MODE, st.writeFile)
-		client.Handlers.Add(girc.MOTD, st.writeFile)
-		client.Handlers.Add(girc.NAMES, st.writeFile)
-		client.Handlers.Add(girc.NICK, st.writeFile)
-		client.Handlers.Add(girc.NOTICE, st.writeFile)
-		client.Handlers.Add(girc.OPER, st.writeFile)
-		client.Handlers.Add(girc.PRIVMSG, st.writeFile)
-		client.Handlers.Add(girc.SERVER, st.writeFile)
-		client.Handlers.Add(girc.SERVICE, st.writeFile)
-		client.Handlers.Add(girc.SERVLIST, st.writeFile)
-		client.Handlers.Add(girc.SQUERY, st.writeFile)
-		client.Handlers.Add(girc.STATS, st.writeFile)
-		client.Handlers.Add(girc.SUMMON, st.writeFile)
-		client.Handlers.Add(girc.TIME, st.writeFile)
-		client.Handlers.Add(girc.TOPIC, st.writeFile)
-		client.Handlers.Add(girc.USER, st.writeFile)
-		client.Handlers.Add(girc.USERHOST, st.writeFile)
-		client.Handlers.Add(girc.USERS, st.writeFile)
-		client.Handlers.Add(girc.VERSION, st.writeFile)
-		client.Handlers.Add(girc.WALLOPS, st.writeFile)
-		client.Handlers.Add(girc.WHO, st.writeFile)
-		client.Handlers.Add(girc.WHOIS, st.writeFile)
-		client.Handlers.Add(girc.WHOWAS, st.writeFile)
-		err = client.Connect()
-		if err != nil {
-			log.Fatalf("an error occured while attempting to connect to %s: %s", client.Server(), err)
-			return err
-		}
-		// Make sure our directory exists
-		filePath := path.Join(*inPath, server)
-		os.MkdirAll(filePath, 0777)
-		// This is a bit odd, as we reassign this for every server.
-		st.irc["default"] = client
-		st.irc[server] = client
-		//TODO: If we have a password, scrub it out here
-		st.clients["default"] = &Client{server: server, channel: chanlist[0]}
-		// Fire off IRC connection
-		go client.Connect()
 	}
 	return nil
 }
