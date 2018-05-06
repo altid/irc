@@ -21,10 +21,11 @@ func main() {
 		os.Exit(1)
 	}
 	st := newState()
-	err := st.Loop()
+	err := st.OutLoop()
 	if err != nil {
 		// TODO: Use log
 		fmt.Println(err)
 		os.Exit(1)
 	}
+	st.InLoop()
 }

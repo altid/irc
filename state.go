@@ -103,7 +103,7 @@ func (st *State) Initialize(chanlist []string, conf *girc.Config, section string
 		// TODO: Write to our channel to alert the main thread that we're ready to go
 		// So that we don't attempt to write on input before we're ready
 	})
-	client.Handlers.Add(girc.JOIN, st.writeFeed)
+	client.Handlers.Add(girc.JOIN, st.join)
 	client.Handlers.Add(girc.PART, st.closeFeed)
 	client.Handlers.Add(girc.QUIT, st.quitServer)
 	client.Handlers.Add(girc.MOTD, st.writeServer)
@@ -138,7 +138,7 @@ func (st *State) Initialize(chanlist []string, conf *girc.Config, section string
 	client.Handlers.Add(girc.WHOIS, st.writeServer)
 	client.Handlers.Add(girc.WHOWAS, st.writeServer)
 	// Ensure our filepath exists
-	chanpath := path.Join(*inPath, section)
+	chanpath := path.Join(*inPath, conf.Server)
 	os.MkdirAll(chanpath, 0777)
 	if _, err := os.Stat(chanpath); os.IsNotExist(err) {
 		return err
@@ -155,7 +155,7 @@ func newState() *State {
 }
 
 // initialize - Read config and set up IRC sessions per entry
-func (st *State) Loop() error {
+func (st *State) OutLoop() error {
 	conf, err := ini.LoadFile(*conf)
 	if err != nil {
 		return err
