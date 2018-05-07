@@ -22,6 +22,8 @@ func (st *State) join(c *girc.Client, e girc.Event) {
 	if err != nil {
 		// Update status to reflect path failure - shouldn't happen
 	}
+	// TODO: get mode here somehow
+	// TODO: write status, title, sidebar, add input file and watch
 }
 
 func writeFile(m *message, fp string, format *template.Template) {
@@ -86,7 +88,8 @@ func (st *State) writeFeed(c *girc.Client, e girc.Event) {
 
 // Run through formatter and output to irc.freenode.net/server for example 
 func (st *State) writeServer(c *girc.Client, e girc.Event) {
-	fmt.Println(e.String())
+	filePath := path.Join(*inPath, c.Config.Server, "server", "feed")
+	writeFile(&message{Name: "-Server-", Data: e.Trailing}, filePath, st.chanFmt) 
 }
 
 // Remove watch
@@ -96,6 +99,7 @@ func (st *State) closeFeed(c *girc.Client, e girc.Event) {
 
 // Log to feed as well as update `status` when it relates to user
 func (st *State) mode(c *girc.Client, e girc.Event) {
+	// Output to status with current channel, mode, etc
 	fmt.Println(e.String())
 }
 
