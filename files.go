@@ -2,10 +2,12 @@ package main
 
 import (
 	"os"
+	"strings"
 	"path"
 	"fmt"
+	"text/template"
 	"github.com/lrstanley/girc"
-	"github.com/ubqt-systems/cleanmark"
+	//"github.com/ubqt-systems/cleanmark"
 )
 
 type message struct {
@@ -16,83 +18,69 @@ type message struct {
 func (st *State) join(c *girc.Client, e girc.Event) {
 	// Make sure our directory exists.
 	buffer := path.Join(*inPath, c.Config.Server, e.Params[0])
-	err := os.MkdirAll(buffer, 0666)
+	err := os.MkdirAll(buffer, 0777)
 	if err != nil {
 		// Update status to reflect path failure - shouldn't happen
 	}
 }
 
-// FPRINTF all the things to file.
-// TODO: All of these must send a related event so we can update our clients
+func writeFile(m *message, fp string, format *template.Template) {
+	f, err := os.OpenFile(fp, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0666)
+	defer f.Close()
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	err = format.Execute(f, m)
+	if err != nil {
+		// TODO: Log failure
+		fmt.Println(err)
+	}
+	fmt.Fprint(f, "\n")
+}
+
+// TODO: Need to create privmsg dirs for pm's
 func (st *State) writeFeed(c *girc.Client, e girc.Event) {
 	if e.Params == nil {
 		return
 	}
-	var filePath string
-	m = &message{Name: e.Params[0]}
-	format := st.chanfmt
 	switch e.Command {
-	case "ACTION":
-	f, err := os.OpenFile(filePath, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
-		defer f.Close()
-		if err != nil {
-			fmt.Printf("err %s", err)
-			return
-		}
-		m.Name = " * "
-		m.Data = e.StripAction()
-		err = format.Execute(f, m)
-		if err != nil {
-			fmt.Printf("err %s", err)
-		}
-		return
 	case "NOTICE":
-		if m.Name == "ChanServ" {
-			m.Name = e.Params[1]
+		var name string
+		if e.Params[0] == "ChanServ" {
+			name = e.Params[1]
 		} else {
-			m.Name = c.Config.Server
+			name = c.Config.Server
 		}
-		st.updateTabs(m.Name, false)
-		filePath = path.Join(*inPath, c.Config.Server, m.Name)
+		filePath := path.Join(*inPath, c.Config.Server, "server", "feed")
+		writeFile(&message{Name: name, Data: e.Trailing}, filePath, st.ntfyFmt) 
 	case "MODE":
-		m.Name = c.Config.Server
-		filePath = path.Join(*inPath, c.Config.Server, m.Name)
+		filePath := path.Join(*inPath, c.Config.Server, "server", "feed")
+		writeFile(&message{Name: c.Config.Server, Data: e.Trailing}, filePath, st.chanFmt)
 	case "PRIVMSG":
+		name := e.Params[0]
+		format := st.chanFmt
+		data := e.Trailing
 		nick := c.GetNick()
+		filePath := path.Join(*inPath, c.Config.Server, e.Params[0], "feed")
 		if e.IsFromUser() {
-			m.Name = "~" + e.Source.Name
-			st.updateTabs(m.Name, true)
-			filePath = path.Join(*inPath, c.Config.Server, m.Name)
+			// Assure we create the directory
+			dir := path.Join(*inPath, c.Config.Server, "~" + e.Source.Name)
+			filePath = path.Join(dir, "feed")
+			os.MkdirAll(dir, 0777)
 		}
 		if e.IsFromChannel() {
-			st.event <- []byte("feed\n")
-			filePath = path.Join(*inPath, c.Config.Server, e.Params[0])
 			if strings.Contains(e.Trailing, nick) {
-				st.updateTabs(m.Name, true)
 				format = st.highFmt
-			} else {
-				st.updateTabs(m.Name, false)
 			}
-			m.Name = e.Source.Name
+			name = e.Source.Name
 		}
-	}
-	fmt.Println(string(e.Bytes()))
-	f, err := os.OpenFile(filePath, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0666)
-defer f.Close()
-	if err != nil {
-		fmt.Printf("err %s", err)
-		return
-	}
-	m.Data = cleanmark.CleanString(e.Trailing) + "\n"
-	m.Name = cleanmark.CleanString(m.Name)
-	if e.IsAction() {
-		m.Data = cleanmark.CleanString(e.StripAction() + "\n")
-		m.Name = " \\* " + e.Source.Name
-	}
-	err = format.Execute(f, m)
-	if err != nil {
-		fmt.Printf("err %s", err)
-		return
+		// TODO: Test if we're at an action here and update `name` accordingly.
+		if e.IsAction() {
+			format = st.actiFmt
+			data = e.StripAction() 
+		}
+		writeFile(&message{Name: name, Data: data}, filePath, format)
 	}
 }
 

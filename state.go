@@ -24,6 +24,7 @@ type State struct {
 	ntfyFmt *template.Template
 	servFmt *template.Template
 	highFmt *template.Template
+	actiFmt *template.Template
 }
 
 func (st *State) parseFormat(conf ini.File) {
@@ -33,6 +34,7 @@ func (st *State) parseFormat(conf ini.File) {
 	highFmt := `[#9d0007]({{.Name}}) {{.Data}}`
 	ntfyFmt := `[#5F87A7]({{.Name}}) {{.Data}}`
 	servFmt := `--[#5F87A7]({{.Name}}) {{.Data}}--`
+	actiFmt := `[#5F87A7( * {{.Name}}) {{.Data}}`
 	for key, value := range conf["options"] {
 		switch key {
 		case "channelfmt":
@@ -43,6 +45,8 @@ func (st *State) parseFormat(conf ini.File) {
 			highFmt = value
 		case "selffmt":
 			selfFmt = value
+		case "actifmt":
+			actiFmt = value
 		}
 	}
 	st.chanFmt = template.Must(template.New("chan").Parse(chanFmt))
@@ -50,6 +54,7 @@ func (st *State) parseFormat(conf ini.File) {
 	st.servFmt = template.Must(template.New("serv").Parse(servFmt))
 	st.selfFmt = template.Must(template.New("self").Parse(selfFmt))
 	st.highFmt = template.Must(template.New("high").Parse(highFmt))
+	st.actiFmt = template.Must(template.New("acti").Parse(actiFmt))
 }
 
 func (st *State) parseOptions(conf ini.File, section string) (*girc.Config) {
@@ -100,6 +105,8 @@ func (st *State) Initialize(chanlist []string, conf *girc.Config, section string
 				c.Cmd.Join(channel)
 			}
 		}
+		// Create the directory for the server-specific buffer
+		os.MkdirAll(path.Join(*inPath, c.Config.Server, "server"), 0666)
 		// TODO: Write to our channel to alert the main thread that we're ready to go
 		// So that we don't attempt to write on input before we're ready
 	})
