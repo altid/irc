@@ -34,7 +34,7 @@ func (st *State) parseFormat(conf ini.File) {
 	highFmt := `[#9d0007]({{.Name}}) {{.Data}}`
 	ntfyFmt := `[#5F87A7]({{.Name}}) {{.Data}}`
 	servFmt := `--[#5F87A7]({{.Name}}) {{.Data}}--`
-	actiFmt := `[#5F87A7( * {{.Name}}) {{.Data}}`
+	actiFmt := `[#5F87A7( \* {{.Name}}) {{.Data}}`
 	for key, value := range conf["options"] {
 		switch key {
 		case "channelfmt":
@@ -106,7 +106,6 @@ func (st *State) Initialize(chanlist []string, conf *girc.Config, section string
 			}
 		}
 		// Create the directory for the server-specific buffer
-		os.MkdirAll(path.Join(*inPath, c.Config.Server, "server"), 0666)
 		// TODO: Write to our channel to alert the main thread that we're ready to go
 		// So that we don't attempt to write on input before we're ready
 	})
@@ -150,6 +149,7 @@ func (st *State) Initialize(chanlist []string, conf *girc.Config, section string
 	if _, err := os.Stat(chanpath); os.IsNotExist(err) {
 		return err
 	}
+	os.MkdirAll(path.Join(chanpath, "server"), 0777)
 	client.Connect()
 	return nil
 }

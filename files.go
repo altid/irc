@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"text/template"
 	"github.com/lrstanley/girc"
-	//"github.com/ubqt-systems/cleanmark"
+	"github.com/ubqt-systems/cleanmark"
 )
 
 type message struct {
@@ -17,6 +17,9 @@ type message struct {
 
 func (st *State) join(c *girc.Client, e girc.Event) {
 	// Make sure our directory exists.
+	// See if this is  called on user join
+	// TODO: Don't mkdir on other user, just on our own user.
+	// TODO: Add other user to map[username]timestamp, for Smart filters
 	buffer := path.Join(*inPath, c.Config.Server, e.Params[0])
 	err := os.MkdirAll(buffer, 0777)
 	if err != nil {
@@ -33,6 +36,8 @@ func writeFile(m *message, fp string, format *template.Template) {
 		fmt.Println(err)
 		return
 	}
+	m.Name = cleanmark.CleanString(m.Name)
+	m.Data = cleanmark.CleanString(m.Data)
 	err = format.Execute(f, m)
 	if err != nil {
 		// TODO: Log failure
@@ -67,6 +72,7 @@ func (st *State) writeFeed(c *girc.Client, e girc.Event) {
 		filePath := path.Join(*inPath, c.Config.Server, e.Params[0], "feed")
 		if e.IsFromUser() {
 			// Assure we create the directory
+			name = e.Source.Name
 			dir := path.Join(*inPath, c.Config.Server, "~" + e.Source.Name)
 			filePath = path.Join(dir, "feed")
 			os.MkdirAll(dir, 0777)

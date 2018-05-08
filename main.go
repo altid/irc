@@ -10,7 +10,6 @@ import (
 var (
 	conf    = flag.String("c", "irc.ini", "Configuration file")
 	inPath  = flag.String("p", path.Join(os.Getenv("HOME"), "irc"), "Path for file system")
-	debug   = flag.Bool("d", false, "Enable debugging output")
 	verbose = flag.Bool("v", false, "Enable verbose output")
 )
 
