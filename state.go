@@ -104,6 +104,11 @@ func (st *State) Initialize(chanlist []string, conf *girc.Config, section string
 			} else {
 				c.Cmd.Join(channel)
 			}
+			buffer := path.Join(*inPath, c.Config.Server, channel)
+			err := os.MkdirAll(buffer, 0777)
+			if err != nil {
+				// Log it
+			}
 		}
 		// Create the directory for the server-specific buffer
 		// TODO: Write to our channel to alert the main thread that we're ready to go

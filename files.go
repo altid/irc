@@ -16,17 +16,7 @@ type message struct {
 }
 
 func (st *State) join(c *girc.Client, e girc.Event) {
-	// Make sure our directory exists.
-	// See if this is  called on user join
-	// TODO: Don't mkdir on other user, just on our own user.
 	// TODO: Add other user to map[username]timestamp, for Smart filters
-	buffer := path.Join(*inPath, c.Config.Server, e.Params[0])
-	err := os.MkdirAll(buffer, 0777)
-	if err != nil {
-		// Update status to reflect path failure - shouldn't happen
-	}
-	// TODO: get mode here somehow
-	// TODO: write status, title, sidebar, add input file and watch
 }
 
 func writeFile(m *message, fp string, format *template.Template) {
@@ -95,7 +85,7 @@ func (st *State) writeFeed(c *girc.Client, e girc.Event) {
 // Run through formatter and output to irc.freenode.net/server for example 
 func (st *State) writeServer(c *girc.Client, e girc.Event) {
 	filePath := path.Join(*inPath, c.Config.Server, "server", "feed")
-	writeFile(&message{Name: "-Server-", Data: e.Trailing}, filePath, st.chanFmt) 
+	writeFile(&message{Name: "Server", Data: e.Trailing}, filePath, st.chanFmt) 
 }
 
 // Remove watch
@@ -110,10 +100,13 @@ func (st *State) mode(c *girc.Client, e girc.Event) {
 }
 
 // Remove all watches
-func (st *State) quitServer(c *girc.Client, e girc.Event) {}
+func (st *State) quitServer(c *girc.Client, e girc.Event) {
+	// TODO: close all threads and delete input/ctl files
+}
 
 // Log to channel and update out `title`
 func (st *State) topic(c *girc.Client, e girc.Event) {
+	// Writefile title
 	fmt.Println(e.String())
 }
 
