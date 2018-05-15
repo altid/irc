@@ -25,6 +25,7 @@ type State struct {
 	servFmt *template.Template
 	highFmt *template.Template
 	actiFmt *template.Template
+	modeFmt *template.Template
 }
 
 func (st *State) parseFormat(conf ini.File) {
@@ -35,6 +36,7 @@ func (st *State) parseFormat(conf ini.File) {
 	ntfyFmt := `[#5F87A7]({{.Name}}) {{.Data}}`
 	servFmt := `--[#5F87A7]({{.Name}}) {{.Data}}--`
 	actiFmt := `[#5F87A7( \* {{.Name}}) {{.Data}}`
+	modeFmt := `--[#787878](Mode [{{.Data}}] by {{.Name}})`
 	for key, value := range conf["options"] {
 		switch key {
 		case "channelfmt":
@@ -47,6 +49,8 @@ func (st *State) parseFormat(conf ini.File) {
 			selfFmt = value
 		case "actifmt":
 			actiFmt = value
+		case "modefmt":
+			modeFmt = value
 		}
 	}
 	st.chanFmt = template.Must(template.New("chan").Parse(chanFmt))
@@ -55,6 +59,7 @@ func (st *State) parseFormat(conf ini.File) {
 	st.selfFmt = template.Must(template.New("self").Parse(selfFmt))
 	st.highFmt = template.Must(template.New("high").Parse(highFmt))
 	st.actiFmt = template.Must(template.New("acti").Parse(actiFmt))
+	st.modeFmt = template.Must(template.New("mode").Parse(modeFmt))
 }
 
 func (st *State) parseOptions(conf ini.File, section string) (*girc.Config) {

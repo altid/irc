@@ -96,12 +96,22 @@ func (st *State) closeFeed(c *girc.Client, e girc.Event) {
 // Log to feed as well as update `status` when it relates to user
 func (st *State) mode(c *girc.Client, e girc.Event) {
 	// Output to status with current channel, mode, etc
-	fmt.Println(e.String())
+	parnum := len(e.Params)
+	if parnum == 1 {
+		return
+	}
+	filePath := path.Join(*inPath, c.Config.Server, e.Params[0])
+	name := e.Params[parnum-1]
+	if name == c.GetNick() {
+		//currentChannel := c.LookupChannel(e.Params[0])
+		// TODO: statFmt write new status file with given data.
+	}
+	writeFile(&message{Name: e.Source.Name, Data: strings.Join(e.Params[1:], " ")}, path.Join(filePath, "feed"), st.modeFmt)
 }
 
 // Remove all watches
 func (st *State) quitServer(c *girc.Client, e girc.Event) {
-	// TODO: close all threads and delete input/ctl files
+	// TODO: close all threads and delete all but feed file
 }
 
 // Log to channel and update out `title`
