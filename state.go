@@ -119,7 +119,7 @@ func (st *State) Initialize(chanlist []string, conf *girc.Config, section string
 	// TODO: Update timestamps for named client on all of these, and test whether to show event
 	// See if JOIN events get shown for our clients as well
 	client.Handlers.Add(girc.JOIN, st.join)
-	client.Handlers.Add(girc.PART, st.closeFeed)
+	client.Handlers.Add(girc.PART, st.part)
 	client.Handlers.Add(girc.QUIT, st.quitServer)
 	client.Handlers.Add(girc.AWAY, st.writeFeed)
 

@@ -8,6 +8,7 @@ import (
 	"strings"
 	"path"
 	"fmt"
+	"time"
 	"text/template"
 	"github.com/lrstanley/girc"
 	"github.com/ubqt-systems/cleanmark"
@@ -20,6 +21,26 @@ type message struct {
 
 func (st *State) join(c *girc.Client, e girc.Event) {
 	// TODO: Add other user to map[username]timestamp, for Smart filters
+	if c.GetNick() == e.Source.Name {
+		go InitBuffer(c, e)
+	}
+}
+
+func InitBuffer(c *girc.Client, e girc.Event) {
+	// TODO: Have a timed block that waits til we have a non-empty string for each value
+	// This sleep is a necessity to let the data propagate until then
+	time.Sleep(time.Second * 3)
+	joined := c.LookupChannel(e.Params[0])
+	filePath := path.Join(*inPath, c.Config.Server, e.Params[0])
+	data := cleanmark.CleanString(e.Source.Name + " (" + joined.Modes.String() + ")")
+	ioutil.WriteFile(path.Join(filePath, "status"), []byte(data), 0666)
+	data = cleanmark.CleanString(joined.Topic)
+	ioutil.WriteFile(path.Join(filePath, "title"), []byte(data), 0666)
+	//joined.Trusted(c) - list of members who are voiced
+	//joined.Admins(c) - list of members who are at least halfops
+	//joined.UserList - list of all members
+	// TODO: Loop through joined.Admins and joined.Trusted, add them to the file at the top - and remove the named entries from UserList
+	// Finally, add all entries left from UserList
 }
 
 func writeFile(m *message, fp string, format *template.Template) {
@@ -39,7 +60,6 @@ func writeFile(m *message, fp string, format *template.Template) {
 	fmt.Fprint(f, "\n")
 }
 
-// TODO: Need to create privmsg dirs for pm's
 func (st *State) writeFeed(c *girc.Client, e girc.Event) {
 	if e.Params == nil {
 		return
@@ -92,8 +112,9 @@ func (st *State) writeServer(c *girc.Client, e girc.Event) {
 }
 
 // Remove watch
-func (st *State) closeFeed(c *girc.Client, e girc.Event) {
-	fmt.Println(e.String())
+func (st *State) part(c *girc.Client, e girc.Event) {
+	// TODO: If this is us parting, remove title/status/unregister event, etc
+	//fmt.Println(e.String())
 }
 
 // Log to feed as well as update `status` when it relates to user
@@ -104,11 +125,6 @@ func (st *State) mode(c *girc.Client, e girc.Event) {
 		return
 	}
 	filePath := path.Join(*inPath, c.Config.Server, e.Params[0])
-	name := e.Params[parnum-1]
-	if name == c.GetNick() {
-		//currentChannel := c.LookupChannel(e.Params[0])
-		// TODO: statFmt write new status file with given data.
-	}
 	writeFile(&message{Name: e.Source.Name, Data: strings.Join(e.Params[1:], " ")}, path.Join(filePath, "feed"), st.modeFmt)
 }
 
