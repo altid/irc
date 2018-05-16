@@ -20,6 +20,7 @@ func main() {
 		os.Exit(1)
 	}
 	st := newState()
+	go st.CtlLoop()
 	err := st.OutLoop()
 	if err != nil {
 		// TODO: Use log
