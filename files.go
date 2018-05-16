@@ -19,12 +19,21 @@ type message struct {
 	Data string
 }
 
+func SendEvent(data string) {
+	f, err := os.OpenFile(path.Join(*inPath, "events"), os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0660)
+	if err != nil {
+		// Logging
+	}
+	defer f.Close()
+	fmt.Fprintln(f, data)
+}
+
 func (st *State) join(c *girc.Client, e girc.Event) {
 	// TODO: Add other user to map[username]timestamp, for Smart filters
 	if c.GetNick() == e.Source.Name {
 		go InitBuffer(c, e)
 	} else {
-		st.SendEvent(path.Join(c.Config.Server, "feed"))
+		SendEvent(path.Join(c.Config.Server, e.Params[0], "feed"))
 	}
 }
 
@@ -44,11 +53,11 @@ func InitBuffer(c *girc.Client, e girc.Event) {
 	// TODO: Loop through joined.Admins and joined.Trusted, add them to the file at the top - and remove the named entries from UserList
 	// Finally, add all entries left from UserList
 	// Send events for all files updated here
-	st.SendEvent(path.Join(c.Config.Server, "status"))
-	st.SendEvent(path.Join(c.Config.Server, "title"))
-	st.SendEvent(path.Join(c.Config.Server, "feed"))
-	//st.SendEvent(path.Join(c.Config.Server, "sidebar"))
-	//st.SendEvent(path.Join(c.Config.Server, "tabs"))
+	SendEvent(path.Join(c.Config.Server, e.Params[0], "status"))
+	SendEvent(path.Join(c.Config.Server, e.Params[0], "title"))
+	SendEvent(path.Join(c.Config.Server, e.Params[0], "feed"))
+	//SendEvent(path.Join(c.Config.Server, e.Params[0], "sidebar"))
+	//SendEvent(path.Join(c.Config.Server, e.Params[0], "tabs"))
 }
 
 func writeFile(m *message, fp string, format *template.Template) {
@@ -66,7 +75,7 @@ func writeFile(m *message, fp string, format *template.Template) {
 		fmt.Println(err)
 	}
 	fmt.Fprint(f, "\n")
-	st.SendEVent(path.Join(c.Config.Server, "feed")
+	SendEvent(fp)
 }
 
 func (st *State) writeFeed(c *girc.Client, e girc.Event) {
