@@ -112,40 +112,36 @@ func (st *State) Initialize(chanlist []string, conf *girc.Config, section string
 			buffer := path.Join(*inPath, c.Config.Server, channel)
 			err := os.MkdirAll(buffer, 0777)
 			if err != nil {
-				// Log it
+				// TODO: Logging
 			}
 		}
-		// Create the directory for the server-specific buffer
-		// TODO: Write to our channel to alert the main thread that we're ready to go
-		// So that we don't attempt to write on input before we're ready
 	})
+	// TODO: Update timestamps for named client on all of these, and test whether to show event
+	// See if JOIN events get shown for our clients as well
 	client.Handlers.Add(girc.JOIN, st.join)
 	client.Handlers.Add(girc.PART, st.closeFeed)
 	client.Handlers.Add(girc.QUIT, st.quitServer)
+	client.Handlers.Add(girc.AWAY, st.writeFeed)
+
+	// clean and write to server
 	client.Handlers.Add(girc.MOTD, st.writeServer)
 	client.Handlers.Add(girc.ADMIN, st.writeServer)
-	client.Handlers.Add(girc.AWAY, st.writeFeed)
 	client.Handlers.Add(girc.INFO, st.writeServer)
 	client.Handlers.Add(girc.INVITE, st.writeServer)
 	client.Handlers.Add(girc.ISON, st.writeServer)
-	client.Handlers.Add(girc.KICK, st.writeFeed)
 	client.Handlers.Add(girc.KILL, st.writeServer)
 	client.Handlers.Add(girc.LIST, st.writeServer)
 	client.Handlers.Add(girc.LUSERS, st.writeServer)
-	client.Handlers.Add(girc.MODE, st.mode)
-	client.Handlers.Add(girc.OPER, st.writeServer)
-	client.Handlers.Add(girc.TIME, st.writeServer)
 	client.Handlers.Add(girc.NAMES, st.writeServer)
 	client.Handlers.Add(girc.NICK, st.writeServer)
-	client.Handlers.Add(girc.NOTICE, st.writeFeed)
-	client.Handlers.Add(girc.PRIVMSG, st.writeFeed)
+	client.Handlers.Add(girc.OPER, st.writeServer)
 	client.Handlers.Add(girc.SERVER, st.writeServer)
 	client.Handlers.Add(girc.SERVICE, st.writeServer)
 	client.Handlers.Add(girc.SERVLIST, st.writeServer)
 	client.Handlers.Add(girc.SQUERY, st.writeServer)
 	client.Handlers.Add(girc.STATS, st.writeServer)
 	client.Handlers.Add(girc.SUMMON, st.writeServer)
-	client.Handlers.Add(girc.TOPIC, st.topic)
+	client.Handlers.Add(girc.TIME, st.writeServer)
 	client.Handlers.Add(girc.USERHOST, st.writeServer)
 	client.Handlers.Add(girc.USERS, st.writeServer)
 	client.Handlers.Add(girc.VERSION, st.writeServer)
@@ -153,6 +149,14 @@ func (st *State) Initialize(chanlist []string, conf *girc.Config, section string
 	client.Handlers.Add(girc.WHO, st.writeServer)
 	client.Handlers.Add(girc.WHOIS, st.writeServer)
 	client.Handlers.Add(girc.WHOWAS, st.writeServer)
+	client.Handlers.Add(girc.KICK, st.writeFeed)
+
+	// Need extra parsing under these
+	client.Handlers.Add(girc.NOTICE, st.writeFeed)
+	client.Handlers.Add(girc.PRIVMSG, st.writeFeed)
+	client.Handlers.Add(girc.TOPIC, st.topic)
+	client.Handlers.Add(girc.MODE, st.mode)
+
 	// Ensure our filepath exists
 	chanpath := path.Join(*inPath, conf.Server)
 	os.MkdirAll(chanpath, 0777)

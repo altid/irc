@@ -1,7 +1,10 @@
+// TODO: Handle most things right from state.go instead
+// Most things do not need to be broken out to a function.
 package main
 
 import (
 	"os"
+	"io/ioutil"
 	"strings"
 	"path"
 	"fmt"
@@ -114,10 +117,12 @@ func (st *State) quitServer(c *girc.Client, e girc.Event) {
 	// TODO: close all threads and delete all but feed file
 }
 
-// Log to channel and update out `title`
+// Log to channel and update `title` file.
 func (st *State) topic(c *girc.Client, e girc.Event) {
-	// Writefile title
-	fmt.Println(e.String())
+	filePath := path.Join(*inPath, c.Config.Server, e.Params[0])
+	writeFile(&message{Name: e.Source.Name, Data: "has changed the topic to \"" + e.Trailing + "\""}, path.Join(filePath, "feed"), st.chanFmt) 
+	data := cleanmark.CleanString(e.Trailing)
+	ioutil.WriteFile(path.Join(filePath, "title"), []byte(data), 0666)
 }
 
 func (st *State) InLoop() {
