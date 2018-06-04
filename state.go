@@ -65,7 +65,7 @@ func (st *State) parseFormat(conf ini.File) {
 func (st *State) parseOptions(conf ini.File, section string) (*girc.Config) {
 	server, ok := conf.Get(section, "Server")
 	if ! ok {
-		// TODO: Log instead
+		// TODO: Logging
 		fmt.Println("Server entry not found")
 	}
 	p, ok := conf.Get(section, "Port")
@@ -103,7 +103,8 @@ func (st *State) Initialize(chanlist []string, conf *girc.Config, section string
 	client.Handlers.Add(girc.CONNECTED, func(c *girc.Client, e girc.Event) {
 		for _, channel := range chanlist {
 			if strings.Contains(channel, " ") {
-				// We have a password
+				// A space in the string implies a password entry
+				// TODO: Switch logic to act on number of members in channel[]
 				channel := strings.Fields(channel)
 				c.Cmd.JoinKey(channel[0], channel[1])
 			} else {

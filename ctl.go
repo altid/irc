@@ -9,6 +9,7 @@ import (
 )
 
 // Act on it!
+// TODO: Make sure we have enough context to act on correct server
 func (st *State) Control(b byte) {
 	switch b[0] {
 	// Join
