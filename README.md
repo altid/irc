@@ -37,8 +37,6 @@ ircfs/
 		feed
 ```
 
-TODO: Add example.conf
-
 ### Runtime Usage
 
 By writing to the base level ctl file, ircfs/ctl, one can connect, disconnect, and reload servers.
