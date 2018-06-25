@@ -1,8 +1,8 @@
 package main
 
 import (
-	"fmt"
 	"flag"
+	"log"
 	"os"
 	"path"
 )
@@ -23,9 +23,7 @@ func main() {
 	go st.CtlLoop()
 	err := st.OutLoop()
 	if err != nil {
-		// TODO: Use log
-		fmt.Println(err)
-		os.Exit(1)
+		log.Fatal(err)
 	}
 	st.InLoop()
 }

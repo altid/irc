@@ -2,7 +2,7 @@ package main
 
 import (
 	"bufio"
-	"fmt"
+	"log"
 	"path"
 	"os"
 	"time"
@@ -10,7 +10,7 @@ import (
 
 // Act on it!
 // TODO: Make sure we have enough context to act on correct server
-func (st *State) Control(b byte) {
+func (st *State) Control(b []byte) {
 	switch b[0] {
 	// Join
 	// Part
@@ -26,8 +26,7 @@ func (st *State) CtlLoop() {
 	f, err := os.OpenFile(filePath, os.O_CREATE|os.O_RDWR, 0666)
 	defer f.Close()
 	if err != nil {
-		fmt.Println("Error!")
-		// TODO: Log and exit, ctl file is kinda essential
+		log.Fatal(err)
 	}
 	buffer := bufio.NewReader(f)
 	// Cheapo epoll

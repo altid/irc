@@ -1,10 +1,11 @@
-// TODO: Handle most things right from state.go instead
+// TODO: Handle most things right from state.go instea
 // Most things do not need to be broken out to a function.
 package main
 
 import (
 	"os"
 	"io/ioutil"
+	"log"
 	"strings"
 	"path"
 	"fmt"
@@ -22,7 +23,7 @@ type message struct {
 func SendEvent(data string) {
 	f, err := os.OpenFile(path.Join(*inPath, "events"), os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0660)
 	if err != nil {
-		// Logging
+		log.Print(err)
 	}
 	defer f.Close()
 	fmt.Fprintln(f, data)

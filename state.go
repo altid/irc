@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	//"log"
+	"log"
 	"os"
 	"path"
 	"sync"
@@ -65,8 +65,7 @@ func (st *State) parseFormat(conf ini.File) {
 func (st *State) parseOptions(conf ini.File, section string) (*girc.Config) {
 	server, ok := conf.Get(section, "Server")
 	if ! ok {
-		// TODO: Logging
-		fmt.Println("Server entry not found")
+		log.Println("Server entry not found!")
 	}
 	p, ok := conf.Get(section, "Port")
 	port, _ := strconv.Atoi(p)
@@ -113,7 +112,7 @@ func (st *State) Initialize(chanlist []string, conf *girc.Config, section string
 			buffer := path.Join(*inPath, c.Config.Server, channel)
 			err := os.MkdirAll(buffer, 0777)
 			if err != nil {
-				// TODO: Logging
+				log.Print(err)
 			}
 		}
 	})
@@ -195,5 +194,5 @@ func (st *State) OutLoop() error {
 			err = st.Initialize(chanlist, ircConf, section)		
 		}
 	}
-	return nil
+	return err
 }
