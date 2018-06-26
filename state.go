@@ -97,7 +97,7 @@ func (st *State) parseChannels(conf ini.File, section string) []string {
 	return strings.Split(channels, ",")
 }
 
-func (st *State) Initialize(chanlist []string, conf *girc.Config, section string) error {
+func (st *State) Initialize(chanlist []string, conf *girc.Config, section string) {
 	client := girc.New(*conf)
 	client.Handlers.Add(girc.CONNECTED, func(c *girc.Client, e girc.Event) {
 		for _, channel := range chanlist {
@@ -117,7 +117,6 @@ func (st *State) Initialize(chanlist []string, conf *girc.Config, section string
 		}
 	})
 	// TODO: Update timestamps for named client on all of these, and test whether to show event
-	// See if JOIN events get shown for our clients as well
 	client.Handlers.Add(girc.JOIN, st.join)
 	client.Handlers.Add(girc.PART, st.part)
 	client.Handlers.Add(girc.QUIT, st.quitServer)
@@ -161,11 +160,11 @@ func (st *State) Initialize(chanlist []string, conf *girc.Config, section string
 	chanpath := path.Join(*inPath, conf.Server)
 	os.MkdirAll(chanpath, 0777)
 	if _, err := os.Stat(chanpath); os.IsNotExist(err) {
-		return err
+		log.Print(err)
 	}
 	os.MkdirAll(path.Join(chanpath, "server"), 0777)
 	client.Connect()
-	return nil
+	st.CtlLoop(conf.Server)
 }
 
 func newState() *State {
@@ -191,7 +190,7 @@ func (st *State) OutLoop() error {
 		default: 
 			ircConf = st.parseOptions(conf, section)
 			chanlist := st.parseChannels(conf, section)
-			err = st.Initialize(chanlist, ircConf, section)		
+			go st.Initialize(chanlist, ircConf, section)		
 		}
 	}
 	return err
