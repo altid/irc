@@ -24,10 +24,11 @@ func (st *State) Control(b []byte, server string) {
 			fmt.Println("here")
 			break
 		}
+		fmt.Println("We here now")
 		if isValidRequest(b, "join") {
 			// TODO: Validate legal channel name, and that we don't have a password or multiple channels here. Seperate by word, test each word, then pass through after?
 			// TODO: Break out joinin ga channel to a dedicated function for both initialization and future joins like here.
-			fmt.Println("Joining %s\n", string(b[5:]))
+			fmt.Printf("Joining %s - %s\n", server, string(b[5:]))
 			srv := st.irc[server]
 			srv.Cmd.Join(string(b[5:]))
 			filePath := path.Join(*inPath, server, (string(b[5:])))
@@ -66,9 +67,9 @@ func (st *State) Control(b []byte, server string) {
 // This is the main control loop that will listen for writes to
 // *inpath/ctl, and act on those. Other listeners will exist on the ctl for each given server that we connect to.
 func (st *State) CtlLoop(srv string) {
-	filePath := path.Join(*inPath, "ctl")
-	if srv != "default" {	
-		filePath = path.Join(*inPath, srv, "ctl")
+	filePath := path.Join(*inPath, srv, "ctl")
+	if srv == "default" {
+		filePath = path.Join(*inPath, "ctl")
 	}
 	f, err := os.OpenFile(filePath, os.O_CREATE|os.O_RDWR, 0666)
 	defer f.Close()

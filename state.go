@@ -163,7 +163,10 @@ func (st *State) Initialize(chanlist []string, conf *girc.Config, section string
 		log.Print(err)
 	}
 	os.MkdirAll(path.Join(chanpath, "server"), 0777)
-	client.Connect()
+
+	// Fire off listeners and add our client to master map
+	st.irc[conf.Server] = client
+	go client.Connect()
 	st.CtlLoop(conf.Server)
 }
 

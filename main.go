@@ -20,10 +20,10 @@ func main() {
 		os.Exit(1)
 	}
 	st := newState()
-	go st.CtlLoop("default")
 	err := st.OutLoop()
 	if err != nil {
 		log.Fatal(err)
 	}
+	go st.CtlLoop("default")
 	st.InLoop()
 }
