@@ -1,5 +1,11 @@
 package main
 
+// TODO: Change to a ctl loop per server (irc.freenode.net), leaving the client to granularily connect to whichever.
+// Instead of inpath/irc, we will inpath/irc.freenode.net
+// inpath/irc.freenode.net/ctl, event, etc instead of an aggregated one. We can still connect to various services through ircfs to keep configuration sane.
+// This requires slight logic changes, for event handling and how ctl is set up - but aside from that will be simple to implement, and allow further generalization to the client.
+
+
 import (
 	"bufio"
 	"bytes"
