@@ -1,5 +1,3 @@
-// TODO: Handle most things right from state.go instea
-// Most things do not need to be broken out to a function.
 package main
 
 import (
@@ -30,7 +28,7 @@ func SendEvent(data string) {
 }
 
 func (st *State) join(c *girc.Client, e girc.Event) {
-	// TODO: Add other user to map[username]timestamp, for Smart filters
+	// TODO - Smart Filters: Add other user to map[username]timestamp, for Smart filters
 	if c.GetNick() == e.Source.Name {
 		go InitBuffer(c, e)
 	} else {
@@ -132,8 +130,7 @@ func (st *State) writeServer(c *girc.Client, e girc.Event) {
 
 // Remove watch
 func (st *State) part(c *girc.Client, e girc.Event) {
-	// TODO: If this is us parting, remove title/status/unregister event, etc
-	//fmt.Println(e.String())
+	// TODO - Cleanup files: If this is us parting, remove title/status/unregister event, etc
 }
 
 // Log to feed as well as update `status` when it relates to user
