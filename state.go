@@ -3,13 +3,13 @@ package main
 // TODO: Move all file creation/directory to appropriate files
 // Read on an event loop to augment state where necessary  
 
+// TODO: Read through each server entry
+
 import (
-	"fmt"
 	"log"
 	"os"
 	"path"
 	"sync"
-	"strconv"
 	"strings"
 
 	"github.com/lrstanley/girc"
@@ -23,42 +23,7 @@ type State struct {
 	done    chan error
 	cfg *Cfg
 }
-
-func (st *State) parseOptions(conf ini.File, section string) (*girc.Config) {
-	server, ok := conf.Get(section, "Server")
-	if ! ok {
-		log.Println("Server entry not found!")
-	}
-	p, ok := conf.Get(section, "Port")
-	port, _ := strconv.Atoi(p)
-	if !ok {
-		fmt.Println("No port set, using default")
-		port = 6667
-	}
-	nick, ok := conf.Get(section, "Nick")
-	if !ok {
-		fmt.Println("nick entry not found")
-	}
-	user, ok := conf.Get(section, "User")
-	if !ok {
-		fmt.Println("user entry not found")
-	}
-	name, ok := conf.Get(section, "Name")
-	if !ok {
-		fmt.Println("name entry not found")
-	}
-	pw, ok := conf.Get(section, "Password")
-	if !ok {
-		fmt.Println("password entry not found")
-	}
-	return &girc.Config{Server: server, Port: port, Nick: nick, User: user, Name: name, ServerPass: pw}
-}
-
-func (st *State) parseChannels(conf ini.File, section string) []string {
-	channels, _ := conf.Get(section, "Channels")
-	return strings.Split(channels, ",")
-}
-
+// TODO: Try to break all of this out of st *State
 func (st *State) Initialize(chanlist []string, conf *girc.Config, section string) {
 	client := girc.New(*conf)
 	client.Handlers.Add(girc.CONNECTED, func(c *girc.Client, e girc.Event) {
@@ -132,31 +97,33 @@ func (st *State) Initialize(chanlist []string, conf *girc.Config, section string
 	st.CtlLoop(conf.Server)
 }
 
-func newState() *State {
-	irc := make(map[string]*girc.Client)
-	tab := make(map[string]string)
-	done := make(chan error)
-	return &State{irc: irc, tablist: tab, done: done}
-}
-
 // initialize - Read config and set up IRC sessions per entry
-func (st *State) OutLoop() error {
+func OutLoop() {
 	conf, err := ini.LoadFile(*conf)
 	if err != nil {
-		return err
+		log.Fatal(err)
 	}
-	st.cfg = ParseFormat(conf)
 	
 	var ircConf *girc.Config
 	for section := range conf {
-		switch section {
-		case "options":
+		if section == "options" {
 			continue
-		default: 
-			ircConf = st.parseOptions(conf, section)
-			chanlist := st.parseChannels(conf, section)
-			go st.Initialize(chanlist, ircConf, section)		
 		}
+		ircConf = ParseServer(conf, section)
+		chanlist := ParseChannels(conf, section)
+		go Initialize(chanlist, ircConf, section)
 	}
-	return err
 }
+
+func newState() *State {
+	conf, err := ini.LoadFile(*conf)
+	if err != nil {
+		log.Fatal(err)
+	}
+	irc := make(map[string]*girc.Client)
+	tab := make(map[string]string)
+	done := make(chan error)
+	return &State{irc: irc, tablist: tab, done: done, cfg: ParseFormat(conf)}
+}
+
+

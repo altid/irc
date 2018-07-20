@@ -5,8 +5,7 @@ import (
 	"os"
 )
 
-func FileCleanup(name string) {
+func FileCleanup(name string) error {
 	filePath := path.Join(*inPath, name)
-	err := os.Remove(filePath)
-	return err
+	return os.Remove(filePath)
 }

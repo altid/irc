@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"log"
 	"os"
 	"path"
 )
@@ -23,10 +22,7 @@ func main() {
 		os.Exit(1)
 	}
 	st := newState()
-	err := st.OutLoop()
-	if err != nil {
-		log.Fatal(err)
-	}
-	go st.CtlLoop("default")
-	st.InLoop()
+	
+	// TODO: Init() in all files to set up our listeners. 
+	st.Run()
 }

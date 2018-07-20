@@ -7,7 +7,7 @@ package main
 
 // TODO: Read in on new event loop. Connection/disconnection/timeouts etc
 // Remove and add ctl files where they belong based on these events, here. All ctl will be compartmentalized here.
-
+// Try to only include ctl bits in here. Augmenting state should be done from functions that exist in that source code.
 
 import (
 	"bufio"
@@ -92,14 +92,6 @@ func (st *State) CtlLoop(srv string) {
 			st.Control(b, srv)
 		}
 		time.Sleep(50 * time.Millisecond)
-	}
-}
-
-func FileCleanup(name string) {
-	filePath := path.Join(*inPath, name)
-	err := os.Remove(filePath)
-	if err != nil {
-		log.Fatal(err)
 	}
 }
 
