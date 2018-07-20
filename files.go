@@ -1,5 +1,7 @@
 package main
 
+// TODO: Switch to events loop for adding/removing directories and associated files
+
 import (
 	"os"
 	"io/ioutil"
@@ -90,13 +92,13 @@ func (st *State) writeFeed(c *girc.Client, e girc.Event) {
 			name = c.Config.Server
 		}
 		filePath := path.Join(c.Config.Server, "server", "feed")
-		writeFile(&message{Name: name, Data: e.Trailing}, filePath, st.ntfyFmt) 
+		writeFile(&message{Name: name, Data: e.Trailing}, filePath, st.cfg.ntfyFmt) 
 	case "MODE":
 		filePath := path.Join(c.Config.Server, "server", "feed")
-		writeFile(&message{Name: c.Config.Server, Data: e.Trailing}, filePath, st.chanFmt)
+		writeFile(&message{Name: c.Config.Server, Data: e.Trailing}, filePath, st.cfg.chanFmt)
 	case "PRIVMSG":
 		name := e.Params[0]
-		format := st.chanFmt
+		format := st.cfg.chanFmt
 		data := e.Trailing
 		nick := c.GetNick()
 		filePath := path.Join(c.Config.Server, e.Params[0], "feed")
@@ -109,13 +111,13 @@ func (st *State) writeFeed(c *girc.Client, e girc.Event) {
 		}
 		if e.IsFromChannel() {
 			if strings.Contains(e.Trailing, nick) {
-				format = st.highFmt
+				format = st.cfg.highFmt
 			}
 			name = e.Source.Name
 		}
 		// TODO: Test if we're at an action here and update `name` accordingly.
 		if e.IsAction() {
-			format = st.actiFmt
+			format = st.cfg.actiFmt
 			data = e.StripAction() 
 		}
 		writeFile(&message{Name: name, Data: data}, filePath, format)
@@ -125,7 +127,7 @@ func (st *State) writeFeed(c *girc.Client, e girc.Event) {
 // Run through formatter and output to irc.freenode.net/server for example 
 func (st *State) writeServer(c *girc.Client, e girc.Event) {
 	filePath := path.Join(c.Config.Server, "server", "feed")
-	writeFile(&message{Name: "Server", Data: e.Trailing}, filePath, st.chanFmt) 
+	writeFile(&message{Name: "Server", Data: e.Trailing}, filePath, st.cfg.chanFmt) 
 }
 
 // Remove watch
@@ -141,7 +143,7 @@ func (st *State) mode(c *girc.Client, e girc.Event) {
 		return
 	}
 	filePath := path.Join(c.Config.Server, e.Params[0])
-	writeFile(&message{Name: e.Source.Name, Data: strings.Join(e.Params[1:], " ")}, path.Join(filePath, "feed"), st.modeFmt)
+	writeFile(&message{Name: e.Source.Name, Data: strings.Join(e.Params[1:], " ")}, path.Join(filePath, "feed"), st.cfg.modeFmt)
 }
 
 // Remove all watches
@@ -152,7 +154,7 @@ func (st *State) quitServer(c *girc.Client, e girc.Event) {
 // Log to channel and update `title` file.
 func (st *State) topic(c *girc.Client, e girc.Event) {
 	filePath := path.Join(c.Config.Server, e.Params[0])
-	writeFile(&message{Name: e.Source.Name, Data: "has changed the topic to \"" + e.Trailing + "\""}, path.Join(filePath, "feed"), st.chanFmt) 
+	writeFile(&message{Name: e.Source.Name, Data: "has changed the topic to \"" + e.Trailing + "\""}, path.Join(filePath, "feed"), st.cfg.chanFmt) 
 	data := cleanmark.CleanString(e.Trailing)
 	ioutil.WriteFile(path.Join(*inPath, filePath, "title"), []byte(data), 0666)
 }

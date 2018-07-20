@@ -5,6 +5,9 @@ package main
 // inpath/irc.freenode.net/ctl, event, etc instead of an aggregated one. We can still connect to various services through ircfs to keep configuration sane.
 // This requires slight logic changes, for event handling and how ctl is set up - but aside from that will be simple to implement, and allow further generalization to the client.
 
+// TODO: Read in on new event loop. Connection/disconnection/timeouts etc
+// Remove and add ctl files where they belong based on these events, here. All ctl will be compartmentalized here.
+
 
 import (
 	"bufio"

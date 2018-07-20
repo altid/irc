@@ -1,5 +1,8 @@
 package main
 
+// TODO: Move all file creation/directory to appropriate files
+// Read on an event loop to augment state where necessary  
+
 import (
 	"fmt"
 	"log"
@@ -8,7 +11,6 @@ import (
 	"sync"
 	"strconv"
 	"strings"
-	"text/template"
 
 	"github.com/lrstanley/girc"
 	"github.com/vaughan0/go-ini"
@@ -19,47 +21,7 @@ type State struct {
 	irc		map[string]*girc.Client
 	tablist map[string]string
 	done    chan error
-	chanFmt *template.Template
-	selfFmt*template.Template
-	ntfyFmt *template.Template
-	servFmt *template.Template
-	highFmt *template.Template
-	actiFmt *template.Template
-	modeFmt *template.Template
-}
-
-func (st *State) parseFormat(conf ini.File) {
-	//Set some pretty printed defaults
-	chanFmt := `[#5F87A7]({{.Name}}) {{.Data}}`
-	selfFmt := `[#076678]({{.Name}}) {{.Data}}`
-	highFmt := `[#9d0007]({{.Name}}) {{.Data}}`
-	ntfyFmt := `[#5F87A7]({{.Name}}) {{.Data}}`
-	servFmt := `--[#5F87A7]({{.Name}}) {{.Data}}--`
-	actiFmt := `[#5F87A7( \* {{.Name}}) {{.Data}}`
-	modeFmt := `--[#787878](Mode [{{.Data}}] by {{.Name}})`
-	for key, value := range conf["options"] {
-		switch key {
-		case "channelfmt":
-			chanFmt = value
-		case "notificationfmt":
-			ntfyFmt = value
-		case "highfmt":
-			highFmt = value
-		case "selffmt":
-			selfFmt = value
-		case "actifmt":
-			actiFmt = value
-		case "modefmt":
-			modeFmt = value
-		}
-	}
-	st.chanFmt = template.Must(template.New("chan").Parse(chanFmt))
-	st.ntfyFmt = template.Must(template.New("ntfy").Parse(ntfyFmt))
-	st.servFmt = template.Must(template.New("serv").Parse(servFmt))
-	st.selfFmt = template.Must(template.New("self").Parse(selfFmt))
-	st.highFmt = template.Must(template.New("high").Parse(highFmt))
-	st.actiFmt = template.Must(template.New("acti").Parse(actiFmt))
-	st.modeFmt = template.Must(template.New("mode").Parse(modeFmt))
+	cfg *Cfg
 }
 
 func (st *State) parseOptions(conf ini.File, section string) (*girc.Config) {
@@ -183,7 +145,7 @@ func (st *State) OutLoop() error {
 	if err != nil {
 		return err
 	}
-	st.parseFormat(conf)
+	st.cfg = ParseFormat(conf)
 	
 	var ircConf *girc.Config
 	for section := range conf {
