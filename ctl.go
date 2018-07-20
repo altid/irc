@@ -18,7 +18,6 @@ import (
 
 func isValidRequest(b []byte, s string) bool {
 	return bytes.HasPrefix(bytes.ToLower(b), []byte(s))
-
 }
 
 // TODO: Make sure we have enough context to act on correct server
@@ -99,6 +98,6 @@ func (st *State) Cleanup() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	// TODO: Send close to all channels left open
-	// So we can remove ctl from all connected channels, etc.
+	// TODO: Iterate through all connected servers and close connection, clean up input/ctl
+	close(st.done)
 }
