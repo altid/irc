@@ -92,12 +92,19 @@ func (st *State) CtlLoop(srv string) {
 	}
 }
 
-func (st *State) Cleanup() {
-	filePath := path.Join(*inPath, "ctl")
+func FileCleanup(name string) {
+	filePath := path.Join(*inPath, name)
 	err := os.Remove(filePath)
 	if err != nil {
 		log.Fatal(err)
 	}
-	// TODO: Iterate through all connected servers and close connection, clean up input/ctl
+}
+
+func (st *State) Cleanup() {
+	FileCleanup("ctl")
+	for name, server := range st.irc {
+		FileCleanup(path.Join(name, "ctl"))
+		server.Close()
+	}
 	close(st.done)
 }

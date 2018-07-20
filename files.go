@@ -156,7 +156,3 @@ func (st *State) topic(c *girc.Client, e girc.Event) {
 	data := cleanmark.CleanString(e.Trailing)
 	ioutil.WriteFile(path.Join(*inPath, filePath, "title"), []byte(data), 0666)
 }
-
-func (st *State) InLoop() {
-	<-st.done
-}
