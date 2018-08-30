@@ -14,6 +14,8 @@ Inotifywatch for all files named input
 Ghetto inotify 
   - this is roughly similar to the normal inotifywatch solution, it wouldn't hit the limitations on watches, but it would need querying of the server state before action.
 
+Listen on event channel for new/closing, then open an input loop in a goroutine that also carries a close channel.  (Map of all open channels, closing send kill and input loop cleans itself up, including deleting the file)
+
 */ 
 
 func (st *State) InLoop() {

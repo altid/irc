@@ -23,6 +23,7 @@ func isValidRequest(b []byte, s string) bool {
 	return bytes.HasPrefix(bytes.ToLower(b), []byte(s))
 }
 
+// TODO: We need to handle CTCP things as well here
 // TODO: Make sure we have enough context to act on correct server
 func (st *State) Control(b []byte, server string) {
 	// TODO: Check for irc.freenode.net/#ubqt vs #ubqt in girc
