@@ -7,7 +7,6 @@ import (
 	"strings"
 	"text/template"
 	
-	"github.com/lrstanley/girc"
 	"github.com/vaughan0/go-ini"
 )
 
@@ -64,7 +63,8 @@ func ParseChannels(conf ini.File, section string) []string {
 	return strings.Split(channels, ",")
 }
 
-func ParseServer(conf ini.File, section string) (*girc.Config) {
+//func ParseServer(conf ini.File, section string) (*girc.Config) {
+func ParseServer(conf ini.File, section string) () {
     server, ok := conf.Get(section, "Server")
     if ! ok {
         log.Println("Server entry not found!")
@@ -91,6 +91,6 @@ func ParseServer(conf ini.File, section string) (*girc.Config) {
     if !ok {
         fmt.Println("password entry not found")
     }
-    return &girc.Config{Server: server, Port: port, Nick: nick, User: user, Name: name, ServerPass: pw}
+    //return &girc.Config{Server: server, Port: port, Nick: nick, User: user, Name: name, ServerPass: pw}
 }
 
