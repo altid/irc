@@ -2,18 +2,18 @@ package main
 
 import (
 	"flag"
-	"os"
+	"log"
 	"path"
+	"os"
+
+	"github.com/vaughan0/go-ini"
+	"github.com/go-irc/irc"
 )
 
 var (
-	conf    = flag.String("c", "irc.ini", "Configuration file")
+	config  = flag.String("c", "irc.ini", "Configuration file")
 	inPath  = flag.String("p", path.Join(os.Getenv("HOME"), "irc"), "Path for file system")
-	verbose = flag.Bool("v", false, "Enable verbose output")
 )
-
-// BUG: There's currently no checking in the setup phase of the ctl files. It will read and execute all commands it finds
-// TODO: Scan to end of file on start before reading
 
 func main() {
 	flag.Parse()
@@ -21,8 +21,32 @@ func main() {
 		flag.Usage()
 		os.Exit(1)
 	}
-	st := newState()
-	
-	// TODO: Init() in all files to set up our listeners. 
-	st.Run()
+	conf, err := ini.LoadFile(*config)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Main template stuff
+	//format := GetFormat(conf)
+
+	// Parse each server entry
+	for section := range conf {
+		if section == "options" {
+			continue
+		}
+		conn, err := GetConnection(conf, section)
+		if err != nil {
+			log.Printf("Error on server %s, %s\n", section, err)
+		}
+		config, buffers := GetConfig(conf, section)
+		config.Handler = InitHandler(buffers)
+		client := irc.NewClient(conn, config)
+		// Start up input listeners here
+		//InitInput(buffers, format)
+		//go client.Run()
+		client.Run()
+	}
+
+	// Start up control listener in final loop
+
 }

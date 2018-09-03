@@ -1,18 +1,16 @@
 package main
 
 import (
-	"fmt"
 	"log"
-	"strconv"
-	"strings"
+	"net"
 	"text/template"
 	
 	"github.com/vaughan0/go-ini"
+	"github.com/go-irc/irc"
 )
 
 // Hold our default configurations
-// NOthing server-specific here
-type Cfg struct { 
+type Format struct { 
 	chanFmt *template.Template
 	selfFmt *template.Template
 	ntfyFmt *template.Template
@@ -22,7 +20,7 @@ type Cfg struct {
 	modeFmt *template.Template
 }
 
-func ParseFormat(conf ini.File) *Cfg {
+func GetFormat(conf ini.File) *Format {
     //Set some pretty printed defaults
     chanFmt := `[#5F87A7]({{.Name}}) {{.Data}}`
     selfFmt := `[#076678]({{.Name}}) {{.Data}}`
@@ -47,7 +45,7 @@ func ParseFormat(conf ini.File) *Cfg {
             modeFmt = value
         }
     }
-	return &Cfg{
+	return &Format{
     	chanFmt: template.Must(template.New("chan").Parse(chanFmt)),
     	ntfyFmt: template.Must(template.New("ntfy").Parse(ntfyFmt)),
     	servFmt: template.Must(template.New("serv").Parse(servFmt)),
@@ -58,39 +56,40 @@ func ParseFormat(conf ini.File) *Cfg {
 	}
 }
 
-func ParseChannels(conf ini.File, section string) []string {
-	channels, _ := conf.Get(section, "Channels")
-	return strings.Split(channels, ",")
-}
-
-//func ParseServer(conf ini.File, section string) (*girc.Config) {
-func ParseServer(conf ini.File, section string) () {
+func GetConnection(conf ini.File, section string) (net.Conn, error) {
     server, ok := conf.Get(section, "Server")
     if ! ok {
         log.Println("Server entry not found!")
     }
-    p, ok := conf.Get(section, "Port")
-    port, _ := strconv.Atoi(p)
+    port, ok := conf.Get(section, "Port")
     if !ok {
-        fmt.Println("No port set, using default")
-        port = 6667
+        log.Println("No port set, using default")
+        port = "6667"
     }
+	addr := server + ":" + port
+	return net.Dial("tcp", addr)
+}
+
+func GetConfig(conf ini.File, section string) (irc.ClientConfig, string) { 
     nick, ok := conf.Get(section, "Nick")
     if !ok {
-        fmt.Println("nick entry not found")
+        log.Println("nick entry not found")
     }
     user, ok := conf.Get(section, "User")
     if !ok {
-        fmt.Println("user entry not found")
+        log.Println("user entry not found")
     }
     name, ok := conf.Get(section, "Name")
     if !ok {
-        fmt.Println("name entry not found")
+        log.Println("name entry not found")
     }
     pw, ok := conf.Get(section, "Password")
     if !ok {
-        fmt.Println("password entry not found")
+        log.Println("password entry not found")
     }
-    //return &girc.Config{Server: server, Port: port, Nick: nick, User: user, Name: name, ServerPass: pw}
+	buffers, ok := conf.Get(section, "Channels")
+	if !ok {
+		log.Println("Write `join #mychannel` to the ctl file to connect to channels")
+	}
+    return irc.ClientConfig{Nick: nick, User: user, Name: name, Pass: pw}, buffers
 }
-
