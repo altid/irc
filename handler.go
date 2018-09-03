@@ -11,7 +11,7 @@ func InitHandler(channels string) (irc.Handler) {
 		// This is sent on server connection, join channels here
 		case "001":
 			c.Writef("JOIN %s\n", channels) 
-		//case "INVITE"
+		//case "INVITE":
 		//case "NOTICE":
 		//case "PRIVMSG":
 		//case "JOIN":
