@@ -1,24 +1,25 @@
 package main
 
 import(
-	"fmt"
 	"github.com/go-irc/irc"
 )
 
-func InitHandler(channels string) (irc.Handler) {
+func InitHandler(channels string, server string, format *Format) (irc.Handler) {
 	return irc.HandlerFunc(func(c *irc.Client, m *irc.Message) {
 		switch m.Command {
 		// This is sent on server connection, join channels here
 		case "001":
 			c.Writef("JOIN %s\n", channels) 
-		//case "INVITE":	
-		//case "NOTICE":
+			return
+		case "NOTICE":
+			WriteToFile(&Msg{Name: m.Prefix.Name, Data: m.Trailing()}, server, "feed", format.ntfyFmt)
 		//case "PRIVMSG":
 		// - :ACTION
 		// - :TOPIC
 		// - :FINGER
 		// - etcetera
 		//case "JOIN":
+		// if the user is us, initdirectory
 		// JOIN for our user implies we're joining a channel. We need to clear out sidebar so we can harvest the name list without a FSM
 		//case "PART":
 		//case "KICK"
@@ -44,7 +45,7 @@ func InitHandler(channels string) (irc.Handler) {
 			c.Writef("PONG %s", m.Params[0])
 		//case "QUIT"
 		default: // Log to server for all other messages so far
-			fmt.Printf("%s\n", m.String())
+			WriteToFile(&Msg{Name: m.Prefix.String(), Data: m.Trailing()}, server, "feed", format.servFmt)
 		}
 	})
 }

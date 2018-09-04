@@ -27,7 +27,7 @@ func main() {
 	}
 
 	// Main template stuff
-	//format := GetFormat(conf)
+	format := GetFormat(conf)
 
 	// Parse each server entry
 	for section := range conf {
@@ -38,11 +38,12 @@ func main() {
 		if err != nil {
 			log.Printf("Error on server %s, %s\n", section, err)
 		}
+		serveraddr := GetSrvAddr(conf, section)
 		config, buffers := GetConfig(conf, section)
-		config.Handler = InitHandler(buffers)
+		config.Handler = InitHandler(buffers, serveraddr, format)
 		client := irc.NewClient(conn, config)
 		// Start up input listeners here
-		//InitInput(buffers, format)
+		//InitInput(buffers, format, serveraddr)
 		//go client.Run()
 		client.Run()
 	}

@@ -56,11 +56,16 @@ func GetFormat(conf ini.File) *Format {
 	}
 }
 
+func GetSrvAddr(conf ini.File, section string) (string) {
+	server, ok := conf.Get(section, "Server")
+	if ! ok {
+		log.Println("Server entry not found!")
+	}
+	return server
+}
+
 func GetConnection(conf ini.File, section string) (net.Conn, error) {
-    server, ok := conf.Get(section, "Server")
-    if ! ok {
-        log.Println("Server entry not found!")
-    }
+    server := GetSrvAddr(conf, section)
     port, ok := conf.Get(section, "Port")
     if !ok {
         log.Println("No port set, using default")
