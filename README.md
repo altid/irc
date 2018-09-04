@@ -5,8 +5,7 @@
 
 `ircfs -c <myconf.ini> -d <dir>`
 
-This will set up a directory with <dir> as the base
-
+This will set up a directory with `<dir>` as the base
 
 For each server defined in your configuration INI file, it will create a directory:
 
