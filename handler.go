@@ -1,6 +1,9 @@
 package main
 
 import(
+	"fmt"
+	"time"
+
 	"github.com/go-irc/irc"
 )
 
@@ -18,19 +21,37 @@ func InitHandler(channels string, server string, format *Format) (irc.Handler) {
 		// - :TOPIC
 		// - :FINGER
 		// - etcetera
+		//if from channel
+		//WriteToFile(channel feed)
+		//if from user
+		//initdirectory
+		//WriteToFile(user feed)
 		//case "JOIN":
 		// if the user is us, initdirectory
 		// JOIN for our user implies we're joining a channel. We need to clear out sidebar so we can harvest the name list without a FSM
 		//case "PART":
+			//WriteToFile(channel feed)
 		//case "KICK"
+			//WriteToFile(channel feed)
 		//case "MODE"
-		//case "TIME"
+			//WriteToFile(channel status)
+			//WriteToFile(channel feed)
+		case "TIME":
+			t := time.Now()
+			c.Write(fmt.Sprintf("TIME %s\n", t.Format("14:33:14 19-Mar-2010")))
 		//case "TOPIC"
-		//case "VERSION"
+			//WriteToFile(channel title)
+			//WriteToFile(channel feed)
+		case "VERSION":
+			c.Write("ubqt-ircfs v0.0.0")
 		//case "FINGER"
+			//WriteToFile(server feed)
 		//case "USERINFO"
+			//WriteToFile(server feed)
 		//case "CLIENTINFO"
-		//case "SOURCE"
+			//WriteToFile(server feed)
+		case "SOURCE":
+			c.Write("https://github.com/ubqt-systems/ircfs")
 		//case "301" // <client> <nick> :<message> //away message reply
 		//case "305" // no longer away
 		//case "306" // now away

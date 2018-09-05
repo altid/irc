@@ -94,7 +94,7 @@ func GetConfig(conf ini.File, section string) (irc.ClientConfig, string) {
     }
 	buffers, ok := conf.Get(section, "Channels")
 	if !ok {
-		log.Println("Write `join #mychannel` to the ctl file to connect to channels")
+		log.Println("No channels listed in configuration")
 	}
     return irc.ClientConfig{Nick: nick, User: user, Name: name, Pass: pw}, buffers
 }
