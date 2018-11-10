@@ -15,7 +15,12 @@ type Msg struct {
 }
 
 func WriteToFile(msg *Msg, server string, filename string, format *template.Template) {
-	f, err := os.OpenFile(path.Join(*inPath, server, filename), os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0666)
+	dirpath := path.Join(*inPath, server)
+	// Make sure path to file exists
+	if _, err := os.Stat(dirpath); os.IsNotExist(err) {
+		os.MkdirAll(dirpath, 0755)
+	}
+	f, err := os.OpenFile(path.Join(dirpath, filename), os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0666)
 	defer f.Close()
 	if err != nil {
 		log.Println(err)

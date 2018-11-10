@@ -5,14 +5,15 @@ import (
 	"log"
 	"path"
 	"os"
+	"os/user"
 
 	"github.com/vaughan0/go-ini"
 	"github.com/go-irc/irc"
 )
 
 var (
+	inPath  = flag.String("p", "irc", "path for filesystem - can be relative to home, or complete path to existing directory")
 	config  = flag.String("c", "irc.ini", "Configuration file")
-	inPath  = flag.String("p", path.Join(os.Getenv("HOME"), "irc"), "Path for file system")
 )
 
 func main() {
@@ -21,6 +22,16 @@ func main() {
 		flag.Usage()
 		os.Exit(1)
 	}
+
+	// Check if inPath exists, else attempt to set relative to users' home directory.
+	if _, err := os.Stat(*inPath); os.IsNotExist(err) {
+		user, err := user.Current()
+		if err != nil {
+			log.Fatal(err)
+		}
+		*inPath = path.Join(user.HomeDir, *inPath)
+	}
+
 	conf, err := ini.LoadFile(*config)
 	if err != nil {
 		log.Fatal(err)
