@@ -3,17 +3,18 @@ package main
 import (
 	"flag"
 	"log"
+	"net"
 	"path"
 	"os"
 	"os/user"
 
-	"github.com/vaughan0/go-ini"
 	"github.com/go-irc/irc"
+	"github.com/mischief/ndb"
 )
 
 var (
 	inPath  = flag.String("p", "irc", "path for filesystem - can be relative to home, or complete path to existing directory")
-	config  = flag.String("c", "irc.ini", "Configuration file")
+	config  = flag.String("c", "config", "Configuration file")
 )
 
 func main() {
@@ -22,8 +23,7 @@ func main() {
 		flag.Usage()
 		os.Exit(1)
 	}
-
-	// Check if inPath exists, else attempt to set relative to users' home directory.
+	// Test inPath exists, else set relative to homedir
 	if _, err := os.Stat(*inPath); os.IsNotExist(err) {
 		user, err := user.Current()
 		if err != nil {
@@ -31,34 +31,32 @@ func main() {
 		}
 		*inPath = path.Join(user.HomeDir, *inPath)
 	}
-
-	conf, err := ini.LoadFile(*config)
+	if _, err := os.Stat(*config); os.IsNotExist(err) {
+		user, err := user.Current()
+		if err != nil {
+			log.Fatal(err)
+		}
+		*config = path.Join(user.HomeDir, *inPath, *config)
+	}
+	conf, err := ndb.Open(*config)
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	// Main template stuff
-	format := GetFormat(conf)
-
-	// Parse each server entry
-	for section := range conf {
-		if section == "options" {
+	formats := GetFormats(conf)
+	servers := GetServers(conf)
+	for key, srv := range servers {
+		srv.conf.Handler = srv.InitHandlers(formats)
+		srv.Input()
+		addr := srv.addr + ":" + srv.port
+		conn, err := net.Dial("tcp", addr)
+		if err != nil {
+			log.Println(err)
+			delete(servers, key)
 			continue
 		}
-		conn, err := GetConnection(conf, section)
-		if err != nil {
-			log.Printf("Error on server %s, %s\n", section, err)
-		}
-		serveraddr := GetSrvAddr(conf, section)
-		config, buffers := GetConfig(conf, section)
-		config.Handler = InitHandler(buffers, serveraddr, format)
-		client := irc.NewClient(conn, config)
-		// Start up input listeners here
-		//InitInput(buffers, format, serveraddr)
+		client := irc.NewClient(conn, srv.conf)
 		//go client.Run()
 		client.Run()
 	}
-
-	// Start up control listener in final loop
-
+	//ControlLoop(servers)
 }

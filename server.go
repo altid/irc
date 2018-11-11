@@ -1,0 +1,51 @@
+package main
+
+import (
+	"fmt"
+	"github.com/go-irc/irc"
+	"github.com/mischief/ndb"
+)
+
+type Server struct {
+	addr string
+	port string
+	conf irc.ClientConfig
+	ctl chan string
+	channels string
+}
+
+func (s Server) Input() {
+	// Input loops for a given channel
+	// Will run a goroutine for each channel of a server
+}
+
+func GetServers(ndb *ndb.Ndb) map[string]*Server {
+	servers := make(map[string]*Server)
+	
+	for _, rec := range ndb.Search("service", "irc") {
+		ctl := make(chan string)
+		conf := &irc.ClientConfig{}
+		server := &Server{port: "6667", ctl: ctl, conf: *conf}
+		for _, tup := range rec {
+			switch tup.Attr {
+			case "address":
+				server.addr = tup.Val
+			case "port":
+				server.port = tup.Val
+			case "channel":
+				fmt.Println(tup.Val)
+				server.channels = tup.Val
+			case "nick":
+				server.conf.Nick = tup.Val
+			case "password":
+				server.conf.Pass = tup.Val
+			case "user":
+				server.conf.User = tup.Val
+			case "name":
+				server.conf.Name = tup.Val
+			}
+		}
+		servers[server.addr] = server
+	}
+	return servers
+}

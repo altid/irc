@@ -7,15 +7,17 @@ import(
 	"github.com/go-irc/irc"
 )
 
-func InitHandler(channels string, server string, format *Format) (irc.Handler) {
+func (s *Server)InitHandlers(format *Format) (irc.Handler) {
 	return irc.HandlerFunc(func(c *irc.Client, m *irc.Message) {
 		switch m.Command {
 		// This is sent on server connection, join channels here
+		// TODO: Check join on multiple entries in ndb
 		case "001":
-			c.Writef("JOIN %s\n", channels) 
+			c.Writef("JOIN #ubqt")
+			//c.Writef("JOIN %s\n", s.channels...) 
 			return
 		case "NOTICE":
-			WriteToFile(&Msg{Name: m.Prefix.Name, Data: m.Trailing()}, server, "feed", format.ntfyFmt)
+			WriteToFile(&Data{Name: m.Prefix.Name, Message: m.Trailing()}, s.addr, "feed", format.ntfyFmt)
 		//case "PRIVMSG":
 		// - :ACTION
 		// - :TOPIC
@@ -66,7 +68,7 @@ func InitHandler(channels string, server string, format *Format) (irc.Handler) {
 			c.Writef("PONG %s", m.Params[0])
 		//case "QUIT"
 		default: // Log to server for all other messages so far
-			WriteToFile(&Msg{Name: m.Prefix.String(), Data: m.Trailing()}, server, "feed", format.servFmt)
+			WriteToFile(&Data{Name: m.Prefix.String(), Message: m.Trailing()}, s.addr, "feed", format.servFmt)
 		}
 	})
 }

@@ -9,12 +9,12 @@ import(
 
 )
 
-type Msg struct {
+type Data struct {
 	Name string
-	Data string
+	Message string
 }
 
-func WriteToFile(msg *Msg, server string, filename string, format *template.Template) {
+func WriteToFile(d *Data, server string, filename string, format *template.Template) {
 	dirpath := path.Join(*inPath, server)
 	// Make sure path to file exists
 	if _, err := os.Stat(dirpath); os.IsNotExist(err) {
@@ -26,7 +26,7 @@ func WriteToFile(msg *Msg, server string, filename string, format *template.Temp
 		log.Println(err)
 		return
 	}
-	err = format.Execute(f, msg)
+	err = format.Execute(f, d)
 	if err != nil {
 		log.Println(err)
 	}
