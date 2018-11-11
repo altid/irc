@@ -1,49 +1,64 @@
 # ircfs
 --------
 
-## Usage
+## Overview
 
-### Startup
-`ircfs -c <configuration> -d <dir>`
+`ircfs -c <myconf.ini> -d <dir>`
 
-This will set up a directory with <dir> as the base.
-For each server defined in your <configuration> file, it will create a directory:
+This will set up a directory with `<dir>` as the base
+
+For each server defined in your configuration INI file, it will create a directory:
 
 ```
-ircfs/
+<dir>/
 	irc.freenode.net/
 	irc.oftc.net/
 	...
 ```
 
-Additionally, each server can auto connect to channels, based on the configuration settings, leading to the following structure.
+Upon connection, it will attempt to join any channels listed in the INI
+It will result in a structure similar to this.
 
 ```
-ircfs/
-	ctl
+<dir>/
 	irc.freenode.net/
-		input
-		feed
-		#ubqt/
-			status
-			title
-			feed
-			sidebar
-			input
+		ctl          // Used for control messages to server. Use in append-only to have a ctl history.
+		feed         // The server log
+		#ubqt/       // An IRC "channel"
+			status   // File containing the username/mode, and other information about the session
+			title    // File containing the topic of the given channel
+			feed     // The buffer log
+			sidebar  // List of nicknames and their modes in a channel
+			input    // Used to send messages to the channel. Use in append-only to have an input history.
 		#foo/
 			...
 	irc.oftc.net/
-		input
+		ctl
 		feed
 ```
 
-### Runtime Usage
+## Usage
 
-By writing to the base level ctl file, ircfs/ctl, one can connect, disconnect, and reload servers.
-`printf '%s\n' "/reconnect irc.oftc.net" > ircfs/ctl
-Joining channels, leaving channels, and related is achieved by writing to the input file on your current buffer or server.
-`printf '%s\n' "/join #ubqt" > ircfs/irc.freenode.net/input`
+### Writing To Channel
 
-(The choice to break out to input and ctl is arbitrary in reference to the ircfs itself, but lends itself well to the design of a ubqt system on a whole.)
+To write a message to the channel #ubqt on Freenode, you'd do the following:
+`printf '%s\n' "This is a message that I wish to write to the normal channel" > <dir>/irc.freenode.net/\#ubqt/input`
 
-Simply writing to the input of an arbitrary buffer will send to that channel. Messages prefaced with a `/` are commands, such as `/join /part /quit /ignore`.
+### Direct Message To User
+
+To send a message to "halfwit" on Freenode, you'd do the following:
+`printf '%s\n' "msg halfwit I'm just a poor boy no body loves me" > <dir>/irc.freenode.net/ctl`
+
+### Controlling A Session
+
+Several examples:
+```
+printf '%s\n' "join #ubqt" > <dir>/irc.freenode.net/ctl
+printf '%s\n' "part #ubqt" > <dir>/irc.freenode.net/ctl
+printf '%s\n' "reconnect" > <dir>/irc/freenode.net/ctl
+# Reload the configuration. This will affect all connected servers
+printf '%s\n' "reload" > <dir>/irc.freenode.net/ctl 
+# This will quit the application outright
+printf '%s\n' "quit" > <dir>/irc.freenode.net/ctl
+```
+
