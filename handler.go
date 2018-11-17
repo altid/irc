@@ -2,73 +2,116 @@ package main
 
 import(
 	"fmt"
+	"path"
+	"strings"
 	"time"
 
 	"github.com/go-irc/irc"
 )
+// TODO: Just log to user/chan/server all messages based on params[0] = currentnick, 
+// is.FromChannel(). Good enough.
+// Privmsg is a mess, it is what it is. 
+func privmsg(srv *Server, c *irc.Client, m *irc.Message) *Data {
+	switch { //params: <target>,target <text>
+	case m.Params[0] == c.CurrentNick(): // dm - requires further filtering
+		switch m.Params[1] {
+		// These whitespaces are magic, don't touch them!
+		case "VERSION":
+		case "FINGER":
+			return NewData(m.Prefix.Name, m.Params[1], srv.addr, "server", "feed")
+		default:
+			return NewData(m.Prefix.Name, m.Params[1], srv.addr, path.Join("messages", m.Prefix.Name), "feed")
+		}
+	case c.FromChannel(m): // channel
+		filePath := path.Join("channels", strings.TrimLeft(m.Params[0], "#"))
+		return NewData(m.Prefix.Name, m.Params[1], srv.addr, filePath, "feed")
+	}
+	return NewData(m.Prefix.Name, m.Params[1], srv.addr, "server", "feed")
+}
 
-func (s *Server)InitHandlers(format *Format) (irc.Handler) {
+func modemsg(srv *Server, c *irc.Client, m *irc.Message) *Data {
+	// TODO: Set up status bar here as well
+	switch { //params: <target> [<modestring>[<mode arguments>]]
+	case m.Params[0] == c.CurrentNick():
+		return NewData(m.Prefix.Name, m.Params[1], srv.addr, "server", "feed")
+	}
+	filePath := path.Join("channels", strings.TrimLeft(m.Params[0], "#"))
+	return NewData(m.Prefix.Name, m.Params[1], srv.addr, filePath, "feed")
+}
+
+func joinchannels(c *irc.Client, srv *Server) {
+	for _, channel := range srv.channels {
+		// TODO: Sanitize our lists
+		c.Writef("JOIN %s\n", channel)
+	}
+}
+
+	
+func (srv *Server)InitHandlers(format *Format) (irc.Handler) {
 	return irc.HandlerFunc(func(c *irc.Client, m *irc.Message) {
 		switch m.Command {
-		// This is sent on server connection, join channels here
-		// TODO: Check join on multiple entries in ndb
 		case "001":
-			c.Writef("JOIN #ubqt")
-			//c.Writef("JOIN %s\n", s.channels...) 
+			joinchannels(c, srv)
+		case "PRIVMSG":
+			writeToFile(privmsg(srv, c, m), format.chanFmt)
+		case "ACTION":
+			writeToFile(privmsg(srv, c, m), format.actiFmt)
+ 		case "PART":
+		case "QUIT":
+		case "KICK":
+		case "JOIN":
+			// If this is our user joining, we want to clean up nicknames list
+			// Set up input
+			//if ! srv.joinpartquit {
+				//WriteToFile(NewData(m.Prefix.Name, m.Params[1], srv.addr, path.Join("channels", strings.TrimLeft(m.Params[0], "#")), "feed"), format.chanFmt)
 			return
-		case "NOTICE":
-			WriteToFile(&Data{Name: m.Prefix.Name, Message: m.Trailing()}, s.addr, "feed", format.ntfyFmt)
-		//case "PRIVMSG":
-		// - :ACTION
-		// - :TOPIC
-		// - :FINGER
-		// - etcetera
-		//if from channel
-		//WriteToFile(channel feed)
-		//if from user
-		//initdirectory
-		//WriteToFile(user feed)
-		//case "JOIN":
-		// if the user is us, initdirectory
-		// JOIN for our user implies we're joining a channel. We need to clear out sidebar so we can harvest the name list without a FSM
-		//case "PART":
-			//WriteToFile(channel feed)
-		//case "KICK"
-			//WriteToFile(channel feed)
-		//case "MODE"
-			//WriteToFile(channel status)
-			//WriteToFile(channel feed)
+		case "NOTICE": // <target> <text>
+			writeToFile(NewData(m.Prefix.Name, m.Params[1], srv.addr, "server", "feed"), format.ntfyFmt)
+
+		case "MODE": // <target> [<modestring>[<mode arguments>]]
+			writeToFile(modemsg(srv, c, m), format.modeFmt)
 		case "TIME":
 			t := time.Now()
 			c.Write(fmt.Sprintf("TIME %s\n", t.Format("14:33:14 19-Mar-2010")))
-		//case "TOPIC"
-			//WriteToFile(channel title)
-			//WriteToFile(channel feed)
+		case "TOPIC": // <channel> <topic>
+			filePath := path.Join("channels", strings.TrimLeft(m.Params[0], "#"))
+			message := "has changed the topic to \"" + m.Params[1] + "\""
+			setTopic(srv.addr, filePath, m.Params[1])
+			writeToFile(NewData(m.Prefix.Name, message, srv.addr, filePath, "feed"), format.chanFmt)
 		case "VERSION":
-			c.Write("ubqt-ircfs v0.0.0")
-		//case "FINGER"
-			//WriteToFile(server feed)
-		//case "USERINFO"
-			//WriteToFile(server feed)
-		//case "CLIENTINFO"
-			//WriteToFile(server feed)
-		case "SOURCE":
-			c.Write("https://github.com/ubqt-systems/ircfs")
-		//case "301" // <client> <nick> :<message> //away message reply
-		//case "305" // no longer away
-		//case "306" // now away
-		//case "332" // topic - log to channel, as well as set up title
-		//case "333" // who set the topic, when - log to channel
-		//case "375" // Start of message of the day
-		//case "372" // MOTD
-		//case "376" // End of MOTD, MODE
-		//case "353" // List of names - set up sidebar
-		//case "366" // End of name list
+			c.Write("ubqt-ircfs 0.0.0 https://github.com/ubqt-systems/ircfs")
+		case "USERINFO":
+			c.Write("USERINFO %s\n", srv.conf.Name)
+		case "CLIENTINFO":
+			c.Write("CLIENTINFO PING SOURCE TIME USERINFO VERSION")
+		//case "301": // <client> <nick> :<message> //away message reply
+		//case "305": // no longer away
+		//case "306": // 
+		case "332": // <client> <channel> :<topic>
+			filePath := path.Join("channels", strings.TrimLeft(m.Params[1], "#"))
+			message := "topic - " + m.Params[2]
+			setTopic(srv.addr, filePath, m.Params[2])
+			writeToFile(NewData(m.Prefix.Name, message, srv.addr, filePath, "feed"), format.chanFmt)
+		case "333": // <client> <channel> <nick> <setat>
+			filePath := path.Join("channels", strings.TrimLeft(m.Params[1], "#"))
+			message := " set topic at " + m.Params[3]
+			writeToFile(NewData(m.Params[2], message, srv.addr, filePath, "feed"), format.chanFmt)
+		case "375": // Start of message ofthe day
+		case "372": // MOTD
+		case "376": // End of MOTD, MODE
+			msgToFile(path.Join(srv.addr, "server", "feed"), m.Trailing())
+		case "353": // <client> <symbol> <channel> :[prefix]<nick>{ [prefix]<nick>}
+			filePath := path.Join(srv.addr, "channels", strings.TrimLeft(m.Params[2], "#"))
+			msgToFile(path.Join(filePath, "feed"), m.Params[3])
+			msgToFile(path.Join(filePath, "sidebar"), m.Params[3])
+		case "366": // <client> <channel> End of names
+			filePath := path.Join(srv.addr, "channels", strings.TrimLeft(m.Params[1], "#"), "feed")
+			msgToFile(filePath, m.Trailing())
 		case "PING":
 			c.Writef("PONG %s", m.Params[0])
-		//case "QUIT"
-		default: // Log to server for all other messages so far
-			WriteToFile(&Data{Name: m.Prefix.String(), Message: m.Trailing()}, s.addr, "feed", format.servFmt)
+		case "SOURCE":
+			c.Write("https://github.com/ubqt-systems/ircfs")
 		}
 	})
 }
+

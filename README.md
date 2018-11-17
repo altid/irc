@@ -60,5 +60,7 @@ printf '%s\n' "reconnect" > <dir>/irc/freenode.net/ctl
 printf '%s\n' "reload" > <dir>/irc.freenode.net/ctl 
 # This will quit the application outright
 printf '%s\n' "quit" > <dir>/irc.freenode.net/ctl
-```
+``` 
 
+TODO: This will have some changes in the future, as things formalise with the rest of the ecosystem.
+A large change that is currently planned is that ircfs will only store the feed of a particular channel, with the rest only persisting the lifetime of the program itself - this will facilitate most of the server living on faster storage, such as a ramdisk.

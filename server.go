@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"github.com/go-irc/irc"
 	"github.com/mischief/ndb"
 )
@@ -11,7 +10,8 @@ type Server struct {
 	port string
 	conf irc.ClientConfig
 	ctl chan string
-	channels string
+	channels []string
+	joinpartquit bool
 }
 
 func (s Server) Input() {
@@ -21,7 +21,6 @@ func (s Server) Input() {
 
 func GetServers(ndb *ndb.Ndb) map[string]*Server {
 	servers := make(map[string]*Server)
-	
 	for _, rec := range ndb.Search("service", "irc") {
 		ctl := make(chan string)
 		conf := &irc.ClientConfig{}
@@ -32,9 +31,8 @@ func GetServers(ndb *ndb.Ndb) map[string]*Server {
 				server.addr = tup.Val
 			case "port":
 				server.port = tup.Val
-			case "channel":
-				fmt.Println(tup.Val)
-				server.channels = tup.Val
+			case "channels":
+				server.channels = append(server.channels, tup.Val)
 			case "nick":
 				server.conf.Nick = tup.Val
 			case "password":

@@ -15,6 +15,7 @@ type Format struct {
 	highFmt *template.Template
 	actiFmt *template.Template
 	modeFmt *template.Template
+	titlFmt *template.Template
 }
 
 func getTemplate(format string, name string) (*template.Template) {
@@ -30,6 +31,7 @@ func GetFormats(ndb *ndb.Ndb) *Format {
 	servFmt := `--[grey]({{.Name}}) {{.Message}}--`
 	actiFmt := `[lightblue]( \* {{.Name}}) {{.Message}}`
 	modeFmt := `--[grey](Mode [{{.Message}}] by {{.Name}})`
+	titlFmt := `{{.Message}}`
 
 	records := ndb.Search("format", "default")
 	for _, rec := range records {
@@ -49,6 +51,8 @@ func GetFormats(ndb *ndb.Ndb) *Format {
 				actiFmt = tuple.Val
 			case "mode":
 				modeFmt = tuple.Val
+			case "title":
+				titlFmt = tuple.Val
 			}
 		}
 	}
@@ -61,5 +65,6 @@ func GetFormats(ndb *ndb.Ndb) *Format {
     	highFmt: getTemplate(highFmt, "highlight"),
     	actiFmt: getTemplate(actiFmt, "action"),
     	modeFmt: getTemplate(modeFmt, "mode"),
+	titlFmt: getTemplate(titlFmt, "title"),
     }
 }

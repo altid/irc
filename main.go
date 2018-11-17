@@ -4,9 +4,7 @@ import (
 	"flag"
 	"log"
 	"net"
-	"path"
 	"os"
-	"os/user"
 
 	"github.com/go-irc/irc"
 	"github.com/mischief/ndb"
@@ -22,21 +20,6 @@ func main() {
 	if flag.Lookup("h") != nil {
 		flag.Usage()
 		os.Exit(1)
-	}
-	// Test inPath exists, else set relative to homedir
-	if _, err := os.Stat(*inPath); os.IsNotExist(err) {
-		user, err := user.Current()
-		if err != nil {
-			log.Fatal(err)
-		}
-		*inPath = path.Join(user.HomeDir, *inPath)
-	}
-	if _, err := os.Stat(*config); os.IsNotExist(err) {
-		user, err := user.Current()
-		if err != nil {
-			log.Fatal(err)
-		}
-		*config = path.Join(user.HomeDir, *inPath, *config)
 	}
 	conf, err := ndb.Open(*config)
 	if err != nil {

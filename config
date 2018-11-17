@@ -6,17 +6,16 @@
 
 ## Example on freenode
 service=irc address=irc.freenode.net port=6667 nick=misch user=misch name=misch
-	channel="#ubqt,#hwwm"
-
+	channels="#ubqt"
 
 ## Example server with password protected channels 
 ## Query factotum for password (requires factotum, such as plan9port's to be running)
 #service=irc address=irc.test.net port=6667 nick=haffie user=haffie name=haffie !password?
-#	channel=#test1,#test4
+#	channels=#test1,#test4
 ## Use password on channel
-#	channel=#test2 password=Thisispw2
+#	channels=#test2 password=Thisispw2
 ## Query factotum for channel password as well
-#	channel=#test3 !password?
+#	channels=#test3 !password?
 
 
 # {{.Name}} and {{.Message}} - https://godoc.org/text/template format specifiers
@@ -30,5 +29,5 @@ format=default
 	highlight="[red]( {{.Name}}) {{.Message}}"
 	self="[blue]( {{.Name}}) {{.Message}}"
 	action="[lightblue]( *{{.Name}}*) {{.Message}}"
-	notify="[grey](---)[lightblue]({{.Name}}){{.Message}}"
+	notify="[grey](---)[lightblue]({{.Name}})[grey]({{.Message}})"
 #TODO: set status bar format, mode, title
