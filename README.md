@@ -3,11 +3,11 @@
 
 ## Overview
 
-`ircfs -c <myconf.ini> -d <dir>`
+`ircfs -c <myconf> -d <dir>`
 
 This will set up a directory with `<dir>` as the base
 
-For each server defined in your configuration INI file, it will create a directory:
+For each server defined in your config file, it will create a directory:
 
 ```
 <dir>/
