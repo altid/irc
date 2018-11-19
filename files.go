@@ -1,19 +1,20 @@
 package main
 
-import(
+import (
 	"fmt"
 	"log"
 	"os"
 	"os/user"
 	"path"
+	"strings"
 	"text/template"
 )
 
 type Data struct {
-	Name string
+	Name    string
 	Message string
-	file string
-	srv string
+	file    string
+	srv     string
 }
 
 func NewData(name, message, srv, fileprefix, filesuffix string) *Data {
@@ -31,7 +32,7 @@ func init() {
 		*inPath = path.Join(usr.HomeDir, *inPath)
 	}
 	if _, err := os.Stat(*config); os.IsNotExist(err) {
-	usr, err := user.Current()
+		usr, err := user.Current()
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -39,7 +40,7 @@ func init() {
 	}
 }
 
-func writeToFile(d *Data, format *template.Template) {
+func writeToFile(nick string, d *Data, format *template.Template) {
 	filepath := path.Join(*inPath, d.srv, d.file)
 	dirpath := path.Dir(filepath)
 	// Make sure path to file exists
@@ -57,6 +58,28 @@ func writeToFile(d *Data, format *template.Template) {
 		log.Println(err)
 	}
 	fmt.Fprint(f, "\n")
+	if strings.Contains(d.Message, nick) {
+		dirpath = path.Dir(d.file)
+		filepath = path.Join(dirpath, "highlight")
+		d2 := &Data{srv: d.srv, file: filepath}
+		writeToEvent(d2)
+	}
+}
+
+func writeToEvent(d *Data) {
+	file := path.Base(d.srv)
+	filepath := path.Join(*inPath, file, "event")
+	dirpath := path.Dir(filepath)
+	if _, err := os.Stat(dirpath); os.IsNotExist(err) {
+		os.MkdirAll(dirpath, 0755)
+	}
+	f, err := os.OpenFile(filepath, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0666)
+	defer f.Close()
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	fmt.Fprintf(f, "%s\n", path.Join(d.srv, d.file))
 }
 
 func msgToFile(buff, msg string) {
@@ -70,7 +93,21 @@ func msgToFile(buff, msg string) {
 	if err != nil {
 		log.Println(err)
 	}
-	fmt.Fprintf(f, msg + "\n")
+	fmt.Fprintf(f, msg+"\n")
+}
+
+func msgToEvent(buff string) {
+	dirpath := path.Join(*inPath, path.Base(buff))
+	if _, err := os.Stat(dirpath); os.IsNotExist(err) {
+		os.MkdirAll(dirpath, 0755)
+	}
+	filepath := path.Join(dirpath, "event")
+	f, err := os.OpenFile(filepath, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0666)
+	defer f.Close()
+	if err != nil {
+		log.Println(err)
+	}
+	fmt.Fprintf(f, "%s\n", buff)
 }
 
 func setTopic(srv, buff, topic string) {
@@ -84,6 +121,7 @@ func setTopic(srv, buff, topic string) {
 	if err != nil {
 		log.Println(err)
 	}
-	fmt.Fprintf(f, topic + "\n")
+	fmt.Fprintf(f, topic+"\n")
 }
+
 // TODO: Input loop here

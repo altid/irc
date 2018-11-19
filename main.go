@@ -11,8 +11,8 @@ import (
 )
 
 var (
-	inPath  = flag.String("p", "irc", "path for filesystem - can be relative to home, or complete path to existing directory")
-	config  = flag.String("c", "config", "Configuration file")
+	inPath = flag.String("p", "irc", "path for filesystem - can be relative to home, or complete path to existing directory")
+	config = flag.String("c", "config", "Configuration file")
 )
 
 func main() {

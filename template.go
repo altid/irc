@@ -7,7 +7,7 @@ import (
 )
 
 // Hold our default configurations
-type Format struct { 
+type Format struct {
 	chanFmt *template.Template
 	selfFmt *template.Template
 	ntfyFmt *template.Template
@@ -18,7 +18,7 @@ type Format struct {
 	titlFmt *template.Template
 }
 
-func getTemplate(format string, name string) (*template.Template) {
+func getTemplate(format string, name string) *template.Template {
 	return template.Must(template.New(name).Parse(format))
 }
 
@@ -58,13 +58,13 @@ func GetFormats(ndb *ndb.Ndb) *Format {
 	}
 
 	return &Format{
-    	chanFmt: getTemplate(chanFmt, "channel"),
-    	ntfyFmt: getTemplate(ntfyFmt, "notify"),
-    	servFmt: getTemplate(servFmt, "server"),
-    	selfFmt: getTemplate(selfFmt, "self"),
-    	highFmt: getTemplate(highFmt, "highlight"),
-    	actiFmt: getTemplate(actiFmt, "action"),
-    	modeFmt: getTemplate(modeFmt, "mode"),
-	titlFmt: getTemplate(titlFmt, "title"),
-    }
+		chanFmt: getTemplate(chanFmt, "channel"),
+		ntfyFmt: getTemplate(ntfyFmt, "notify"),
+		servFmt: getTemplate(servFmt, "server"),
+		selfFmt: getTemplate(selfFmt, "self"),
+		highFmt: getTemplate(highFmt, "highlight"),
+		actiFmt: getTemplate(actiFmt, "action"),
+		modeFmt: getTemplate(modeFmt, "mode"),
+		titlFmt: getTemplate(titlFmt, "title"),
+	}
 }

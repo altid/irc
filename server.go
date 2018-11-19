@@ -6,12 +6,12 @@ import (
 )
 
 type Server struct {
-	addr string
-	port string
-	conf irc.ClientConfig
-	ctl chan string
+	addr     string
+	port     string
+	conf     irc.ClientConfig
+	ctl      chan string
 	channels []string
-	joinpartquit bool
+	filter   string
 }
 
 func (s Server) Input() {
@@ -24,13 +24,15 @@ func GetServers(ndb *ndb.Ndb) map[string]*Server {
 	for _, rec := range ndb.Search("service", "irc") {
 		ctl := make(chan string)
 		conf := &irc.ClientConfig{}
-		server := &Server{port: "6667", ctl: ctl, conf: *conf}
+		server := &Server{port: "6667", ctl: ctl, conf: *conf, filter: "none"}
 		for _, tup := range rec {
 			switch tup.Attr {
 			case "address":
 				server.addr = tup.Val
 			case "port":
 				server.port = tup.Val
+			case "filter":
+				server.filter = tup.Val
 			case "channels":
 				server.channels = append(server.channels, tup.Val)
 			case "nick":

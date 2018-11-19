@@ -3,9 +3,13 @@
 # Indented lines bind to the header above them, as if they were all written on the same line
 # See below for examples
 
-
+# filter can be either smart, all, or none to filter JOIN/PART/QUIT messages.
+# smart will only show these for recently active users
+# none will not show any, and all will show all messages
+# default is all
 ## Example on freenode
 service=irc address=irc.freenode.net port=6667 nick=misch user=misch name=misch
+	filter=all
 	channels="#ubqt"
 
 ## Example server with password protected channels 

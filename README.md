@@ -16,7 +16,7 @@ For each server defined in your config file, it will create a directory:
 	...
 ```
 
-Upon connection, it will attempt to join any channels listed in the INI
+Upon connection, it will attempt to join any channels listed in config
 It will result in a structure similar to this.
 
 ```
