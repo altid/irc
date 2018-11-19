@@ -27,9 +27,10 @@ func main() {
 	}
 	formats := GetFormats(conf)
 	servers := GetServers(conf)
+	os.MkdirAll(*inPath, 0755)
+	defer os.RemoveAll(*inPath)
 	for key, srv := range servers {
 		srv.conf.Handler = srv.InitHandlers(formats)
-		srv.Input()
 		addr := srv.addr + ":" + srv.port
 		conn, err := net.Dial("tcp", addr)
 		if err != nil {
@@ -38,6 +39,7 @@ func main() {
 			continue
 		}
 		client := irc.NewClient(conn, srv.conf)
+		srv.client = client
 		//go client.Run()
 		client.Run()
 	}

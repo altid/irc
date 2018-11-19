@@ -23,7 +23,7 @@ func privmsg(srv *Server, c *irc.Client, m *irc.Message) *Data {
 		default:
 			filePath := path.Join("messages", m.Prefix.Name)
 			// DMs warrant highlights
-			writeToEvent(NewData("", "", srv.addr, filePath, "highlight"))
+			writeToEvent(NewData(m.Prefix.Name, m.Params[1], srv.addr, filePath, "notification"))
 			return NewData(m.Prefix.Name, m.Params[1], srv.addr, filePath, "feed")
 		}
 	case c.FromChannel(m): // channel
@@ -87,8 +87,9 @@ func (srv *Server) InitHandlers(format *Format) irc.Handler {
 			}
 		case "JOIN":
 			// Initialize our directory - add to tabs
-			if m.Params[0] == c.CurrentNick() {
-				return
+			if m.Prefix.Name == c.CurrentNick() {
+				filePath := path.Join("channels", strings.TrimLeft(m.Params[0], "#"), "input")
+				go HandleInput(srv, filePath, m.Params[0])
 			}
 			//if filter(srv, c, m) {
 			//	filePath := path.Join("channels", strings.TrimLeft(m.Params[0], "#"))

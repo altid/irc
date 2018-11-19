@@ -9,14 +9,10 @@ type Server struct {
 	addr     string
 	port     string
 	conf     irc.ClientConfig
+	client   *irc.Client
 	ctl      chan string
 	channels []string
 	filter   string
-}
-
-func (s Server) Input() {
-	// Input loops for a given channel
-	// Will run a goroutine for each channel of a server
 }
 
 func GetServers(ndb *ndb.Ndb) map[string]*Server {

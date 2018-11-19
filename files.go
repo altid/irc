@@ -1,5 +1,7 @@
 package main
 
+// Just a bunch of file write utilities to handle specific scenarios
+
 import (
 	"fmt"
 	"log"
@@ -58,17 +60,42 @@ func writeToFile(nick string, d *Data, format *template.Template) {
 		log.Println(err)
 	}
 	fmt.Fprint(f, "\n")
-	if strings.Contains(d.Message, nick) {
+	switch { // This isn't the most pretty thing, find a better way in the future
+	case strings.Contains(d.Message, nick):
 		dirpath = path.Dir(d.file)
-		filepath = path.Join(dirpath, "highlight")
+		filepath = path.Join(dirpath, "notification")
 		d2 := &Data{srv: d.srv, file: filepath}
 		writeToEvent(d2)
+		WriteToNotification(format, d)
+	case d.file == "notification":
+		WriteToNotification(format, d)
 	}
 }
 
+func WriteToNotification(format *template.Template, d *Data) {
+	filepath := path.Join(*inPath, d.srv, d.file)
+	dirpath := path.Dir(filepath)
+	filepath = path.Join(dirpath, "notification")
+	// Make sure path to file exists
+	if _, err := os.Stat(dirpath); os.IsNotExist(err) {
+		os.MkdirAll(dirpath, 0755)
+	}
+	f, err := os.OpenFile(filepath, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0666)
+	defer f.Close()
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	err = format.Execute(f, d)
+	if err != nil {
+		log.Println(err)
+	}
+	fmt.Fprint(f, "\n")
+}
+
 func writeToEvent(d *Data) {
-	file := path.Base(d.srv)
-	filepath := path.Join(*inPath, file, "event")
+	paths := strings.Split(d.srv, string(os.PathSeparator))
+	filepath := path.Join(*inPath, paths[0], "event")
 	dirpath := path.Dir(filepath)
 	if _, err := os.Stat(dirpath); os.IsNotExist(err) {
 		os.MkdirAll(dirpath, 0755)
@@ -97,7 +124,8 @@ func msgToFile(buff, msg string) {
 }
 
 func msgToEvent(buff string) {
-	dirpath := path.Join(*inPath, path.Base(buff))
+	paths := strings.Split(buff, string(os.PathSeparator))
+	dirpath := path.Join(*inPath, paths[0])
 	if _, err := os.Stat(dirpath); os.IsNotExist(err) {
 		os.MkdirAll(dirpath, 0755)
 	}
@@ -122,6 +150,5 @@ func setTopic(srv, buff, topic string) {
 		log.Println(err)
 	}
 	fmt.Fprintf(f, topic+"\n")
+	msgToEvent(path.Join(srv, buff, "title"))
 }
-
-// TODO: Input loop here
