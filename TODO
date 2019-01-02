@@ -1,0 +1,12 @@
+reader.go -
+	since we are 'watching' input files, when they get deleted, we want to disconnect from the channel (close) - this is a means of homogenizing `close` semantics from other backends.
+config.go - done
+
+writer.go - done
+files.go - done
+server.go
+	handlerfunc - parse more edge cases
+	control
+		- Handle all types of control, from /m to /ctcp
+main.go
+	Ideally, daemonize
