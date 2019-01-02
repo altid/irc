@@ -89,11 +89,29 @@ func (s *Server) parseControl(r *Reader, c *irc.Client) {
 		}
 		nick := c.CurrentNick()
 		msg := parseControlLine(nick, line)
-		c.WriteMessage(msg)
-		if msg.Command == "QUIT" {
-			defer close(s.exit)
+		switch msg.Command {
+		case "QUIT":
+			close(s.exit)
 			s.conn.Close()
 			break
+		case "JOIN":
+			c.WriteMessage(msg)
+			srvdir := path.Join(*base, s.addr)
+			logdir := path.Join(s.log, s.addr)
+			err := CreateChannel(msg.Params[0], srvdir, logdir)
+			if err != nil {
+				log.Print(err)
+			}
+			// Request data from the channel on connection
+			// TODO: We may need other data to fill out our files
+			//topic := newCTCP(nick, "TOPIC", msg.Params[0])
+			//c.WriteMessage(topic)
+			mode := newCTCP(nick, "MODE", msg.Params[0])
+			c.WriteMessage(mode)
+			list := newCTCP(nick, "LIST", msg.Params[0])
+			c.WriteMessage(list)
+		default:
+			c.WriteMessage(msg)
 		}
 	}
 }
@@ -112,6 +130,15 @@ func (s *Server) parseInput(current string, r *Reader, c *irc.Client) {
 		c.WriteMessage(msg)
 		writeTo(path.Join(current, "feed"), nick, s, msg, SelfMsg)
 	}
+}
+
+func newCTCP(nick, command, target string) *irc.Message {
+	message := &irc.Message{
+		Prefix: &irc.Prefix{Name: nick},
+		Params: []string{target},
+		Command: command,
+	}
+	return message
 }
 
 // TODO: Handle a metric ton more interesting messages + ctcp

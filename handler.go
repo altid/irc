@@ -15,6 +15,7 @@ func NewHandlerFunc(srv *Server) irc.HandlerFunc {
 	return irc.HandlerFunc(func(c *irc.Client, m *irc.Message) {
 		var fileName string
 		var msgType MessageType
+		fmt.Println(m.String())
 		switch m.Command {
 		case "PRIVMSG":
 			msgType, fileName = parseForCTCP(c, m, srv)
@@ -44,7 +45,7 @@ func NewHandlerFunc(srv *Server) irc.HandlerFunc {
 				log.Print(err)
 				return
 			}
-			srv.parseControl(reader, c)
+			go srv.parseControl(reader, c)
 			msgType = ServerMsg
 			fileName = path.Join("server", "feed")
 			c.Writef("JOIN %s\n", srv.buffers)
@@ -70,7 +71,9 @@ func NewHandlerFunc(srv *Server) irc.HandlerFunc {
 */
 		// Title
 		case "TOPIC":
-			writeTo(path.Join(m.Params[0], "title"), "", srv, m, TitleMsg)
+			fileName = path.Join(m.Params[0], "title")
+			os.Remove(fileName)
+			writeTo(fileName, "", srv, m, TitleMsg)
 			msgType = ChanMsg
 			fileName = path.Join(m.Params[0], "feed")
 			fmt.Printf("From TOPIC %s\n", m.String())
