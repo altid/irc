@@ -179,7 +179,6 @@ func newServerConf(conf *ndb.Ndb) ([]*Config, error) {
 		}
 		if len(conf.Pass) > 5 && conf.Pass[:5] == "pass=" {
 			conf.Pass = conf.Pass[5:]
-			log.Print(conf.Pass)
 		}
 		if conf.Pass == "factotum" {
 			UserPwd, err := libauth.Getuserpasswd("proto=pass service=irc server=%s user=%s", conf.Addr, conf.User)

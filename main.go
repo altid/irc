@@ -39,11 +39,11 @@ func main() {
 	// Try to clean up all we can on exit
 	defer os.RemoveAll(*base)
 	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt, syscall.SIGKILL)
+	signal.Notify(c, os.Interrupt, syscall.SIGKILL, syscall.SIGINT)
 	go func() {
 		for sig := range c {
 			switch sig {
-			case syscall.SIGKILL:
+			case syscall.SIGKILL, syscall.SIGINT:
 			 	os.RemoveAll(*base)
 				os.Exit(0)
 			}
@@ -64,9 +64,4 @@ func main() {
 	// server.go
 	servers := GetServers(config)
 	servers.Run()
-
-	// ctrl.go
-	ctrl := NewCtrl(servers)
-	ctrl.Listen()
-
 }
