@@ -2,12 +2,13 @@ package main
 
 import (
 	"fmt"
-	"strings"
-	"os"
-	"time"
-	"path"
 	"log"
+	"os"
+	"path"
+	"strings"
 	"text/template"
+	"time"
+
 	"github.com/go-irc/irc"
 )
 
@@ -38,7 +39,7 @@ func NewHandlerFunc(srv *Server) irc.HandlerFunc {
 			}
 		case "PING", "PING ZNC": // we hide PING/PONG
 			c.Writef("PONG %s", m.Params[0])
-			return	
+			return
 		case "001": // Successfully connected to server
 			reader, err := NewReader(path.Join(*base, srv.addr, "ctrl"))
 			if err != nil {
@@ -57,18 +58,18 @@ func NewHandlerFunc(srv *Server) irc.HandlerFunc {
 		// Status
 		case "MODE", "324":
 			msgType, fileName = parseForUserMode(m)
-// These both require helpers to check files for strings, and append to files - add to files.go
-/* TODO: Update status bar
-		case "305": //BACK
-		case "306": //AWAY
-*/
-/* TODO: Parse list of names, update with join/part on a given channel
-		// Sidebar
-		//case "353": list of names
-			//<client> <symbol> <channel> :[prefix]<nick>{ [prefix]<nick>}
-		//case "366": // End of names
-			//<client> <channel>
-*/
+			// These both require helpers to check files for strings, and append to files - add to files.go
+			/* TODO: Update status bar
+			case "305": //BACK
+			case "306": //AWAY
+			*/
+			/* TODO: Parse list of names, update with join/part on a given channel
+			// Sidebar
+			//case "353": list of names
+				//<client> <symbol> <channel> :[prefix]<nick>{ [prefix]<nick>}
+			//case "366": // End of names
+				//<client> <channel>
+			*/
 		// Title
 		case "TOPIC":
 			fileName = path.Join(m.Params[0], "title")
@@ -120,53 +121,53 @@ func parseForCTCP(c *irc.Client, m *irc.Message, s *Server) (MessageType, string
 		return ActionMsg, path.Join(m.Params[0], "feed")
 	case "CLIENTINFO":
 		c.WriteMessage(&irc.Message{
-			Prefix: prefix,
+			Prefix:  prefix,
 			Command: "CLIENTINFO",
-			Params: []string{ m.Prefix.Name, "ACTION CLIENTINFO FINGER PING SOURCE TIME USER INFO VERSION"},
+			Params:  []string{m.Prefix.Name, "ACTION CLIENTINFO FINGER PING SOURCE TIME USER INFO VERSION"},
 		})
 		return ServerMsg, path.Join("server", "feed")
 	case "DDC":
 		return None, ""
 	case "FINGER":
 		c.WriteMessage(&irc.Message{
-			Prefix: prefix,
+			Prefix:  prefix,
 			Command: "FINGER",
-			Params: []string{ m.Prefix.Name, "ircfs 0.0.0" },
+			Params:  []string{m.Prefix.Name, "ircfs 0.0.0"},
 		})
 		return ServerMsg, path.Join("server", "feed")
 	case "PING", "PING":
 		c.WriteMessage(&irc.Message{
-			Prefix: prefix,
+			Prefix:  prefix,
 			Command: "PONG",
-			Params: []string{ m.Prefix.Name, m.Params[1]},
+			Params:  []string{m.Prefix.Name, m.Params[1]},
 		})
 		return None, ""
 	case "SOURCE":
 		c.WriteMessage(&irc.Message{
-			Prefix: prefix,
+			Prefix:  prefix,
 			Command: "SOURCE",
-			Params: []string{ m.Prefix.Name, "https://github.com/ubqt-systems/ircfs" },
+			Params:  []string{m.Prefix.Name, "https://github.com/ubqt-systems/ircfs"},
 		})
 		return ServerMsg, path.Join("server", "feed")
 	case "TIME":
 		c.WriteMessage(&irc.Message{
-			Prefix: prefix,
+			Prefix:  prefix,
 			Command: "TIME",
-			Params: []string{ m.Prefix.Name, time.Now().Format(time.RFC3339)},
+			Params:  []string{m.Prefix.Name, time.Now().Format(time.RFC3339)},
 		})
 		return ServerMsg, path.Join("server", "feed")
 	case "VERSION":
 		c.WriteMessage(&irc.Message{
-			Prefix: prefix,
+			Prefix:  prefix,
 			Command: "VERSION",
-			Params: []string{ m.Prefix.Name, "ircfs 0.0.0" },
+			Params:  []string{m.Prefix.Name, "ircfs 0.0.0"},
 		})
 		return ServerMsg, path.Join("server", "feed")
 	case "USERINFO":
 		c.WriteMessage(&irc.Message{
-			Prefix: prefix,
+			Prefix:  prefix,
 			Command: "USERINFO",
-			Params: []string{ m.Prefix.Name, c.CurrentNick()},
+			Params:  []string{m.Prefix.Name, c.CurrentNick()},
 		})
 		return ServerMsg, path.Join("server", "feed")
 	}

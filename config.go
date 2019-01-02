@@ -9,9 +9,9 @@ import (
 	"path"
 	"runtime"
 	"text/template"
-	
-	"github.com/mischief/ndb"
+
 	"bitbucket.org/mischief/libauth"
+	"github.com/mischief/ndb"
 )
 
 // ServerConf is parsed on an initial IRC connection, it holds no runtime state
@@ -27,7 +27,7 @@ type Config struct {
 	Name   string
 	Pass   string
 	Theme  string
-	Fmt map[string]*template.Template
+	Fmt    map[string]*template.Template
 }
 
 // GetConfig - return a usable *Config array
@@ -58,16 +58,16 @@ func NewConfig() ([]*Config, error) {
 func GetConn(conf *Config) (net.Conn, error) {
 	if conf.Ssl == "true" {
 		tlsConfig := &tls.Config{
-			ServerName: conf.Addr + ":" + conf.Port,
+			ServerName:         conf.Addr + ":" + conf.Port,
 			InsecureSkipVerify: true,
 		}
-		conn, err := tls.Dial("tcp", conf.Addr + ":" + conf.Port, tlsConfig)
+		conn, err := tls.Dial("tcp", conf.Addr+":"+conf.Port, tlsConfig)
 		if err != nil {
 			return nil, err
 		}
 		return conn, nil
 	}
-	conn, err := net.Dial("tcp", conf.Addr + ":" + conf.Port)
+	conn, err := net.Dial("tcp", conf.Addr+":"+conf.Port)
 	if err != nil {
 		return nil, err
 	}
@@ -103,7 +103,7 @@ func newFormat(theme string, conf *ndb.Ndb) map[string]*template.Template {
 			log.Print("using default format")
 			return defaultFormat()
 		}
-		format[item]=template
+		format[item] = template
 	}
 	return format
 }
@@ -118,7 +118,7 @@ func defaultFormat() map[string]*template.Template {
 	format["title"], _ = ParseFormat("title", `[#5F87A7]({{.Data}})`)
 	format["self"], _ = ParseFormat("self", `{{.Time}} <[#076678]({{.Name}})> {{.Data}}`)
 	format["mode"], _ = ParseFormat("mode", `{{.Time}} <[#5F87A7]({{.Name}})> {{.Data}}`)
-	return format	
+	return format
 }
 
 // ParseFormat - helper function to set Config.Fmt members
@@ -135,11 +135,11 @@ func newServerConf(conf *ndb.Ndb) ([]*Config, error) {
 	var serverConfigs []*Config
 	for _, rec := range conf.Search("service", "irc") {
 		conf := &Config{
-			Port: "6667",
-			Ssl: "none",
-			Log: path.Join(datadir, "irc"),
+			Port:   "6667",
+			Ssl:    "none",
+			Log:    path.Join(datadir, "irc"),
 			Filter: "none",
-			Theme: "default",
+			Theme:  "default",
 		}
 		for _, tup := range rec {
 			switch tup.Attr {

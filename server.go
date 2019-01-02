@@ -2,11 +2,14 @@ package main
 
 import (
 	"bufio"
+	"context"
 	"log"
 	"net"
 	"path"
-	"text/template"
 	"strings"
+	"sync"
+	"text/template"
+
 	"github.com/go-irc/irc"
 )
 
@@ -28,55 +31,46 @@ func GetServers(confs []*Config) *Servers {
 			Name: conf.Name,
 			Pass: conf.Pass,
 		}
-
 		server := &Server{
-			conf: userconf,
-			theme: conf.Theme,
+			conf:    userconf,
+			theme:   conf.Theme,
 			buffers: conf.Chans,
-			addr: conf.Addr,
-			conn: conn,
-			filter: conf.Filter,
-			log: conf.Log,
-			fmt: conf.Fmt,
-			exit: make(chan struct{}),
+			addr:    conf.Addr,
+			conn:    conn,
+			filter:  conf.Filter,
+			log:     conf.Log,
+			fmt:     conf.Fmt,
 		}
 		server.conf.Handler = NewHandlerFunc(server)
-		servlist = append(servlist, server)	
+		servlist = append(servlist, server)
 	}
 	return &Servers{servers: servlist}
 }
 
 // Run - Attempt to start all servers
 func (s *Servers) Run() {
+	var wg sync.WaitGroup
+	wg.Add(len(s.servers))
 	for _, server := range s.servers {
+		server.ctx = context.Background()
+		server.wg = &wg
 		client := irc.NewClient(server.conn, server.conf)
-		go client.Run()
+		go client.RunContext(server.ctx)
 	}
-	// Hacky, but should do the trick
-	refCount := len(s.servers)
-	for {
-		for i := 0; i < refCount; i++ {
-			select {
-			case <-s.servers[i].exit:
-				refCount--
-			}
-		}
-		if refCount < 1 {
-			break
-		}
-	}
+	wg.Wait()
 }
 
 type Server struct {
-	conn net.Conn
-	conf irc.ClientConfig
-	addr string
-	theme string
+	fmt     map[string]*template.Template
+	ctx     context.Context
+	conn    net.Conn
+	conf    irc.ClientConfig
+	wg      *sync.WaitGroup
+	addr    string
+	theme   string
 	buffers string
-	filter string
-	log string
-	fmt map[string]*template.Template
-	exit chan struct{}
+	filter  string
+	log     string
 }
 
 func (s *Server) parseControl(r *Reader, c *irc.Client) {
@@ -91,8 +85,8 @@ func (s *Server) parseControl(r *Reader, c *irc.Client) {
 		msg := parseControlLine(nick, line)
 		switch msg.Command {
 		case "QUIT":
-			close(s.exit)
-			s.conn.Close()
+			s.wg.Done()
+			s.ctx.Done()
 			break
 		case "JOIN":
 			c.WriteMessage(msg)
@@ -121,8 +115,8 @@ func (s *Server) parseInput(current string, r *Reader, c *irc.Client) {
 		// Create and send a message
 		nick := c.CurrentNick()
 		msg := &irc.Message{
-			Prefix: &irc.Prefix{Name: nick},
-			Params: []string{current, line},
+			Prefix:  &irc.Prefix{Name: nick},
+			Params:  []string{current, line},
 			Command: "PRIVMSG",
 		}
 		c.WriteMessage(msg)
@@ -132,8 +126,8 @@ func (s *Server) parseInput(current string, r *Reader, c *irc.Client) {
 
 func newCTCP(nick, command, target string) *irc.Message {
 	message := &irc.Message{
-		Prefix: &irc.Prefix{Name: nick},
-		Params: []string{target},
+		Prefix:  &irc.Prefix{Name: nick},
+		Params:  []string{target},
 		Command: command,
 	}
 	return message
@@ -149,7 +143,7 @@ func parseControlLine(nick, line string) *irc.Message {
 	switch token[0] {
 	case "msg", "m":
 		message.Command = "PRIVMSG"
-	case "join",  "j":
+	case "join", "j":
 		message.Command = "JOIN"
 	case "part", "p":
 		message.Command = "PART"

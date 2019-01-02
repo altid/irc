@@ -20,7 +20,6 @@ func NewMessage(temp *template.Template, srv *Server, channel, name string) (*Me
 	return message, nil
 }
 
-
 type Message struct {
 	temp *template.Template
 	data chan []byte
@@ -30,7 +29,7 @@ type Message struct {
 func (m *Message) Write(p []byte) (n int, err error) {
 	m.Lock()
 	defer m.Unlock()
-	b := make([]byte, len(p))	
+	b := make([]byte, len(p))
 	n = copy(b, p)
 	m.data <- b
 	return n, nil

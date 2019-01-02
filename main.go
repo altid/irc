@@ -20,6 +20,7 @@ const (
 	ActionMsg
 	None
 )
+
 type MessageType int
 
 var (
@@ -44,7 +45,7 @@ func main() {
 		for sig := range c {
 			switch sig {
 			case syscall.SIGKILL, syscall.SIGINT:
-			 	os.RemoveAll(*base)
+				os.RemoveAll(*base)
 				os.Exit(0)
 			}
 		}
@@ -54,13 +55,11 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-
 	// files.go
 	err = CreateDirs(config)
 	if err != nil {
 		log.Fatal(err)
 	}
-
 	// server.go
 	servers := GetServers(config)
 	servers.Run()
