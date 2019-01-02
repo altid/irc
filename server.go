@@ -102,10 +102,8 @@ func (s *Server) parseControl(r *Reader, c *irc.Client) {
 			if err != nil {
 				log.Print(err)
 			}
-			// Request data from the channel on connection
+			// Request data from the channel
 			// TODO: We may need other data to fill out our files
-			//topic := newCTCP(nick, "TOPIC", msg.Params[0])
-			//c.WriteMessage(topic)
 			mode := newCTCP(nick, "MODE", msg.Params[0])
 			c.WriteMessage(mode)
 			list := newCTCP(nick, "LIST", msg.Params[0])
