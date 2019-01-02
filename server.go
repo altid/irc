@@ -1,47 +1,278 @@
 package main
 
 import (
+	"bufio"
+	"fmt"
+	"log"
+	"net"
+	"os"
+	"path"
+	"strings"
+	"text/template"
+	"time"
+
 	"github.com/go-irc/irc"
-	"github.com/mischief/ndb"
 )
 
-type Server struct {
-	addr     string
-	port     string
-	conf     irc.ClientConfig
-	client   *irc.Client
-	ctl      chan string
-	channels []string
-	filter   string
+type Servers struct {
+	servers []*Server
 }
 
-func GetServers(ndb *ndb.Ndb) map[string]*Server {
-	servers := make(map[string]*Server)
-	for _, rec := range ndb.Search("service", "irc") {
-		ctl := make(chan string)
-		conf := &irc.ClientConfig{}
-		server := &Server{port: "6667", ctl: ctl, conf: *conf, filter: "none"}
-		for _, tup := range rec {
-			switch tup.Attr {
-			case "address":
-				server.addr = tup.Val
-			case "port":
-				server.port = tup.Val
-			case "filter":
-				server.filter = tup.Val
-			case "channels":
-				server.channels = append(server.channels, tup.Val)
-			case "nick":
-				server.conf.Nick = tup.Val
-			case "password":
-				server.conf.Pass = tup.Val
-			case "user":
-				server.conf.User = tup.Val
-			case "name":
-				server.conf.Name = tup.Val
-			}
+func GetServers(confs []*Config) *Servers {
+	var servlist []*Server
+	for _, conf := range confs {
+		conn, err := GetConn(conf)
+		if err != nil {
+			log.Printf("Unable to connect: %s\n", conn)
+			continue
 		}
-		servers[server.addr] = server
+		userconf := irc.ClientConfig{
+			User: conf.User,
+			Nick: conf.Nick,
+			Name: conf.Name,
+			Pass: conf.Pass,
+		}
+
+		server := &Server{
+			conf: userconf,
+			theme: conf.Theme,
+			buffers: conf.Chans,
+			addr: conf.Addr,
+			conn: conn,
+			filter: conf.Filter,
+			log: conf.Log,
+			fmt: conf.Fmt,
+		}
+		server.conf.Handler = NewHandlerFunc(server)
+		servlist = append(servlist, server)	
 	}
-	return servers
+	return &Servers{servers: servlist}
+}
+
+// Run - Attempt to start all servers
+func (s *Servers) Run() {
+	for _, server := range s.servers {
+		client := irc.NewClient(server.conn, server.conf)
+		go client.Run()
+	}
+}
+
+// Make server implement net.Conn interface. then addr port ssl all goes away.
+type Server struct {
+	conn net.Conn
+	conf irc.ClientConfig
+	addr string
+	theme string
+	buffers string
+	filter string
+	log string
+	fmt map[string]*template.Template
+}
+
+func (s *Server) parseControl(r *Reader) {
+
+}
+
+func (s *Server) parseInput(current string, r *Reader, c *irc.Client) {
+	scanner := bufio.NewScanner(r)
+	for scanner.Scan() {
+		line := scanner.Text()
+		// Create and send a message
+		nick := c.CurrentNick()
+		msg := &irc.Message{
+			Prefix: &irc.Prefix{Name: nick},
+			Params: []string{current, line},
+			Command: "PRIVMSG",
+		}
+		c.WriteMessage(msg)
+		writeTo(path.Join(current, "feed"), nick, s, msg, SelfMsg)
+	}
+}
+
+func NewHandlerFunc(srv *Server) irc.HandlerFunc {
+	return irc.HandlerFunc(func(c *irc.Client, m *irc.Message) {
+		var fileName string
+		var msgType MessageType
+		switch m.Command {
+		case "PRIVMSG":
+			msgType, fileName = parseForCTCP(c, m, srv)
+		case "QUIT":
+			// TODO: This should be logged to all channels that are applicable
+			msgType = ChanMsg
+			fileName = path.Join("server", "feed")
+		case "PART", "KICK", "JOIN", "NICK":
+			msgType = ChanMsg
+			switch {
+			case m.Prefix.Name == c.CurrentNick():
+				fileName = path.Join("server", "feed")
+			case c.FromChannel(m):
+				fileName = path.Join(m.Params[0], "feed")
+			default:
+				fileName = path.Join("server", "feed")
+			}
+		case "PING", "PING ZNC": // we hide PING/PONG
+			c.Writef("PONG %s", m.Params[0])
+			return	
+		case "001": // Successfully connected to server
+			reader, err := NewReader(path.Join(*base, srv.addr, "ctrl"))
+			if err != nil {
+				log.Print(err)
+				return
+			}
+			srv.parseControl(reader)
+			msgType = ServerMsg
+			fileName = path.Join("server", "feed")
+			c.Writef("JOIN %s\n", srv.buffers)
+		case "300": //none
+			return
+		case "301", "333": // Client is away, and time when topic set
+			msgType = ChanMsg
+			fileName = path.Join(m.Params[0], "feed")
+		// Status
+		case "MODE", "324":
+			msgType, fileName = parseForUserMode(m)
+// These both require helpers to check files for strings, and append to files - add to files.go
+/* TODO: Update status bar
+		case "305": //BACK
+		case "306": //AWAY
+*/
+/* TODO: Parse list of names, update with join/part on a given channel
+		// Sidebar
+		//case "353": list of names
+			//<client> <symbol> <channel> :[prefix]<nick>{ [prefix]<nick>}
+		//case "366": // End of names
+			//<client> <channel>
+*/
+		// Title
+		case "TOPIC":
+			writeTo(path.Join(m.Params[0], "title"), "", srv, m, TitleMsg)
+			msgType = ChanMsg
+			fileName = path.Join(m.Params[0], "feed")
+			fmt.Printf("From TOPIC %s\n", m.String())
+		case "332": //TOPIC - log to channel and set contents of title
+			writeTo(path.Join(m.Params[1], "title"), "", srv, m, TitleMsg)
+			reader, err := NewReader(path.Join(*base, srv.addr, m.Params[1], "input"))
+			if err != nil {
+				log.Print(err)
+				return
+			}
+			go srv.parseInput(m.Params[1], reader, c)
+			return
+		default:
+			msgType = ServerMsg
+			fileName = path.Join("server", "feed")
+		}
+		if msgType == None {
+			return
+		}
+		writeTo(fileName, m.Prefix.Name, srv, m, msgType)
+	})
+}
+
+func parseForUserMode(m *irc.Message) (MessageType, string) {
+	// Initialise `status`
+	return None, ""
+}
+
+// Another large case to implement CTCP protocol
+func parseForCTCP(c *irc.Client, m *irc.Message, s *Server) (MessageType, string) {
+	prefix := &irc.Prefix{Name: c.CurrentNick()}
+	command := strings.Split(m.Params[1], " ")
+	switch command[0] {
+	case "ACTION":
+		m.Params[1] = strings.Join(command[1:], " ")
+		return ActionMsg, path.Join(m.Params[0], "feed")
+	case "CLIENTINFO":
+		c.WriteMessage(&irc.Message{
+			Prefix: prefix,
+			Command: "CLIENTINFO",
+			Params: []string{ m.Prefix.Name, "ACTION CLIENTINFO FINGER PING SOURCE TIME USER INFO VERSION"},
+		})
+		return ServerMsg, path.Join("server", "feed")
+	case "DDC":
+		return None, ""
+	case "FINGER":
+		c.WriteMessage(&irc.Message{
+			Prefix: prefix,
+			Command: "FINGER",
+			Params: []string{ m.Prefix.Name, "ircfs 0.0.0" },
+		})
+		return ServerMsg, path.Join("server", "feed")
+	case "PING", "PING":
+		c.WriteMessage(&irc.Message{
+			Prefix: prefix,
+			Command: "PONG",
+			Params: []string{ m.Prefix.Name, m.Params[1]},
+		})
+		return None, ""
+	case "SOURCE":
+		c.WriteMessage(&irc.Message{
+			Prefix: prefix,
+			Command: "SOURCE",
+			Params: []string{ m.Prefix.Name, "https://github.com/ubqt-systems/ircfs" },
+		})
+		return ServerMsg, path.Join("server", "feed")
+	case "TIME":
+		c.WriteMessage(&irc.Message{
+			Prefix: prefix,
+			Command: "TIME",
+			Params: []string{ m.Prefix.Name, time.Now().Format(time.RFC3339)},
+		})
+		return ServerMsg, path.Join("server", "feed")
+	case "VERSION":
+		c.WriteMessage(&irc.Message{
+			Prefix: prefix,
+			Command: "VERSION",
+			Params: []string{ m.Prefix.Name, "ircfs 0.0.0" },
+		})
+		return ServerMsg, path.Join("server", "feed")
+	case "USERINFO":
+		c.WriteMessage(&irc.Message{
+			Prefix: prefix,
+			Command: "USERINFO",
+			Params: []string{ m.Prefix.Name, c.CurrentNick()},
+		})
+		return ServerMsg, path.Join("server", "feed")
+	}
+	if c.FromChannel(m) {
+		return ChanMsg, path.Join(m.Params[0], "feed")
+	}
+	// DM
+	return ChanMsg, path.Join(m.Prefix.Name, "feed")
+}
+
+func parseForFormat(srv *Server, msgType MessageType) *template.Template {
+	switch msgType {
+	case SelfMsg:
+		return srv.fmt["self"]
+	case ServerMsg:
+		return srv.fmt["server"]
+	case TitleMsg:
+		return srv.fmt["title"]
+	case StatusMsg:
+		return srv.fmt["mode"]
+	case HighMsg:
+		return srv.fmt["highlight"]
+	case ActionMsg:
+		return srv.fmt["action"]
+	}
+	return srv.fmt["channel"]
+}
+
+func writeTo(fileName, whom string, server *Server, m *irc.Message, msgType MessageType) {
+	srvdir := path.Join(*base, server.addr)
+	if _, err := os.Stat(path.Join(srvdir, fileName)); os.IsNotExist(err) {
+		logdir := path.Join(server.log, server.addr)
+		CreateChannel(path.Dir(fileName), srvdir, logdir)
+		Touch(path.Join(srvdir, fileName))
+	}
+	format := parseForFormat(server, msgType)
+	message, err := NewMessage(format, server, fileName, whom)
+	defer message.Close()
+	if err != nil {
+		log.Printf("Invalid message %s %s\n", err, m.String())
+		return
+	}
+	content := strings.NewReader(m.Trailing())
+	_, err = content.WriteTo(message)
 }

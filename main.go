@@ -3,17 +3,32 @@ package main
 import (
 	"flag"
 	"log"
-	"net"
 	"os"
-
-	"github.com/go-irc/irc"
-	"github.com/mischief/ndb"
+	"os/signal"
+	"syscall"
 )
+
+const (
+	InputMsg MessageType = iota
+	ChanMsg
+	SelfMsg
+	ServerMsg
+	NotifyMsg
+	TitleMsg
+	StatusMsg
+	HighMsg
+	ActionMsg
+	None
+)
+type MessageType int
 
 var (
-	inPath = flag.String("p", "irc", "path for filesystem - can be relative to home, or complete path to existing directory")
-	config = flag.String("c", "config", "Configuration file")
+	base = flag.String("p", "/tmp/irc", "Path for filesystem (Default /tmp/irc)")
 )
+
+func init() {
+	os.MkdirAll(*base, 0755)
+}
 
 func main() {
 	flag.Parse()
@@ -21,27 +36,37 @@ func main() {
 		flag.Usage()
 		os.Exit(1)
 	}
-	conf, err := ndb.Open(*config)
+	// Try to clean up all we can on exit
+	defer os.RemoveAll(*base)
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt, syscall.SIGKILL)
+	go func() {
+		for sig := range c {
+			switch sig {
+			case syscall.SIGKILL:
+			 	os.RemoveAll(*base)
+				os.Exit(0)
+			}
+		}
+	}()
+	// config.go
+	config, err := NewConfig()
 	if err != nil {
 		log.Fatal(err)
 	}
-	formats := GetFormats(conf)
-	servers := GetServers(conf)
-	os.MkdirAll(*inPath, 0755)
-	defer os.RemoveAll(*inPath)
-	for key, srv := range servers {
-		srv.conf.Handler = srv.InitHandlers(formats)
-		addr := srv.addr + ":" + srv.port
-		conn, err := net.Dial("tcp", addr)
-		if err != nil {
-			log.Println(err)
-			delete(servers, key)
-			continue
-		}
-		client := irc.NewClient(conn, srv.conf)
-		srv.client = client
-		//go client.Run()
-		client.Run()
+
+	// files.go
+	err = CreateDirs(config)
+	if err != nil {
+		log.Fatal(err)
 	}
-	//ControlLoop(servers)
+
+	// server.go
+	servers := GetServers(config)
+	servers.Run()
+
+	// ctrl.go
+	ctrl := NewCtrl(servers)
+	ctrl.Listen()
+
 }

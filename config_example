@@ -1,26 +1,26 @@
 # Simple configuration file for ircfs
 # Lines starting with "#" are considered comments, and will not be parsed
-# Indented lines bind to the header above them, as if they were all written on the same line
 # See below for examples
 
 # filter can be either smart, all, or none to filter JOIN/PART/QUIT messages.
 # smart will only show these for recently active users
 # none will not show any, and all will show all messages
 # default is all
+
+# auth can be one of `none`, `pass`, or `factotum`.
+# `none` doesn't attempt to send server password (this can still be done manually via normal messages)
+# `factotum` will use plan9/plan9ports factotum utility to aquire the password
 ## Example on freenode
-service=irc address=irc.freenode.net port=6667 nick=misch user=misch name=misch
-	filter=all
+service=irc address=irc.freenode.net port=6667 auth=pass=hunter2
+	nick=misch user=misch name=misch
 	channels="#ubqt"
+	filter=all
 
-## Example server with password protected channels 
-## Query factotum for password (requires factotum, such as plan9port's to be running)
-#service=irc address=irc.test.net port=6667 nick=haffie user=haffie name=haffie !password?
-#	channels=#test1,#test4
-## Use password on channel
-#	channels=#test2 password=Thisispw2
-## Query factotum for channel password as well
-#	channels=#test3 !password?
-
+## Example server with password protected channels
+# Use a factotum to authenticate with server
+#service=irc address=irc.test.net port=6697 ssl=true auth=factotum
+	nick=haffie user=haffie name=haffie
+#	channels='#test1,#test2,#test3 pass1chan'
 
 # {{.Name}} and {{.Message}} - https://godoc.org/text/template format specifiers
 # These relate to the name of the sender, and the message they typed
@@ -32,6 +32,6 @@ format=default
 	channel="[lightblue]( {{.Name}}) {{.Message}}"
 	highlight="[red]( {{.Name}}) {{.Message}}"
 	self="[blue]( {{.Name}}) {{.Message}}"
-	action="[lightblue]( *{{.Name}}*) {{.Message}}"
+	action="[lightblue]( * {{.Name}}) {{.Message}}"
 	notify="[grey](---)[lightblue]({{.Name}})[grey]({{.Message}})"
-#TODO: set status bar format, mode, title
+#TODO: set status bar format, mode
