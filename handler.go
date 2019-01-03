@@ -170,11 +170,16 @@ func parseForCTCP(c *irc.Client, m *irc.Message, s *Server) (MessageType, string
 		})
 		return ServerMsg, path.Join("server", "feed")
 	}
+	format := ChanMsg
+	file := path.Join(m.Prefix.Name, "feed")
 	if c.FromChannel(m) {
-		return ChanMsg, path.Join(m.Params[0], "feed")
+		file = path.Join(m.Params[0], "feed")
 	}
-	// DM
-	return ChanMsg, path.Join(m.Prefix.Name, "feed")
+	if strings.Contains(m.Params[1], c.CurrentNick()) {
+		s.Event(path.Join(*base, s.addr, path.Dir(file), "notify") + " " + m.Params[1])
+		format = HighMsg
+	}
+	return format, file
 }
 
 func parseForFormat(srv *Server, msgType MessageType) *template.Template {
@@ -211,4 +216,5 @@ func writeTo(fileName, whom string, server *Server, m *irc.Message, msgType Mess
 	}
 	content := strings.NewReader(m.Trailing())
 	_, err = content.WriteTo(message)
+	server.Event(path.Join(srvdir, fileName))
 }

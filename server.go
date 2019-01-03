@@ -5,6 +5,7 @@ import (
 	"context"
 	"log"
 	"net"
+	"os"
 	"path"
 	"path/filepath"
 	"strings"
@@ -84,6 +85,16 @@ type Server struct {
 	buffers string
 	filter  string
 	log     string
+}
+
+func (s *Server) Event(filename string) {
+	fileName := path.Join(*base, s.addr, "event")
+	f, err := os.OpenFile(fileName, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0644)
+	if err != nil {
+		log.Print(err)
+		return
+	}
+	f.WriteString(filename + "\n")
 }
 
 func (s *Server) parseControl(r *Reader, c *irc.Client) {

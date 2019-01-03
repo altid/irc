@@ -48,6 +48,11 @@ func CreateChannel(channel, server, log string) error {
 	chanlog := path.Join(log, channel)
 	Touch(chanlog)
 	feed := path.Join(server, channel, "feed")
+	// We don't log server messages
+	if channel == "server" {
+		Touch(feed)
+		return nil
+	}
 	switch runtime.GOOS {
 	case "plan9":
 		Touch(feed)
