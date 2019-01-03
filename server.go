@@ -6,6 +6,7 @@ import (
 	"log"
 	"net"
 	"path"
+	"path/filepath"
 	"strings"
 	"sync"
 	"text/template"
@@ -47,25 +48,37 @@ func GetServers(confs []*Config) *Servers {
 	return &Servers{servers: servlist}
 }
 
-// Run - Attempt to start all servers
+// Run - Attempt to start all servers, clean up after
 func (s *Servers) Run() {
+	// Context to make sure we clean up everything
+	ctx := context.Background()
 	var wg sync.WaitGroup
 	wg.Add(len(s.servers))
 	for _, server := range s.servers {
-		server.ctx = context.Background()
-		server.wg = &wg
-		client := irc.NewClient(server.conn, server.conf)
-		go client.RunContext(server.ctx)
+		go func() {
+			server.ctx = ctx
+			client := irc.NewClient(server.conn, server.conf)
+			client.RunContext(ctx)
+			wg.Done()
+			// Clean up on server exit
+			glob := path.Join(*base, server.addr, "*", "feed")
+			feeds, err := filepath.Glob(glob)
+			if err != nil {
+				log.Print(err)
+			}
+			for _, feed := range feeds {
+				go DeleteChannel(feed)
+			}
+		}()
 	}
 	wg.Wait()
 }
 
 type Server struct {
 	fmt     map[string]*template.Template
-	ctx     context.Context
 	conn    net.Conn
 	conf    irc.ClientConfig
-	wg      *sync.WaitGroup
+	ctx	context.Context
 	addr    string
 	theme   string
 	buffers string
@@ -85,8 +98,7 @@ func (s *Server) parseControl(r *Reader, c *irc.Client) {
 		msg := parseControlLine(nick, line)
 		switch msg.Command {
 		case "QUIT":
-			s.wg.Done()
-			s.ctx.Done()
+			s.conn.Close()
 			break
 		case "JOIN":
 			c.WriteMessage(msg)

@@ -72,12 +72,10 @@ func Touch(filename string) {
 	}
 }
 
-func deleteChannel(channel, server, log string) {
-	chandir := path.Join(server, channel)
-	feed := path.Join(chandir, "feed")
+func DeleteChannel(filename string) {
 	if runtime.GOOS == "plan9" {
-		command := exec.Command("/bin/unmount", feed)
+		command := exec.Command("/bin/unmount", filename)
 		command.Run()
 	}
-	os.RemoveAll(chandir)
+	os.RemoveAll(path.Dir(filename))
 }

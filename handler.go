@@ -16,7 +16,6 @@ func NewHandlerFunc(srv *Server) irc.HandlerFunc {
 	return irc.HandlerFunc(func(c *irc.Client, m *irc.Message) {
 		var fileName string
 		var msgType MessageType
-		fmt.Println(m.String())
 		switch m.Command {
 		case "PRIVMSG":
 			msgType, fileName = parseForCTCP(c, m, srv)
