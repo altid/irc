@@ -52,17 +52,17 @@ func GetServers(confs []*Config) *Servers {
 // Run - Attempt to start all servers, clean up after
 func (s *Servers) Run() {
 	// Context to make sure we clean up everything
-	ctx := context.Background()
 	var wg sync.WaitGroup
 	wg.Add(len(s.servers))
 	for _, server := range s.servers {
-		go func() {
-			server.ctx = ctx
-			client := irc.NewClient(server.conn, server.conf)
+		go func(s *Server) {
+			defer wg.Done()
+			ctx := context.Background()
+			s.ctx = ctx
+			client := irc.NewClient(s.conn, s.conf)
 			client.RunContext(ctx)
-			wg.Done()
 			// Clean up on server exit
-			glob := path.Join(*base, server.addr, "*", "feed")
+			glob := path.Join(*base, s.addr, "*", "feed")
 			feeds, err := filepath.Glob(glob)
 			if err != nil {
 				log.Print(err)
@@ -70,7 +70,8 @@ func (s *Servers) Run() {
 			for _, feed := range feeds {
 				go DeleteChannel(feed)
 			}
-		}()
+		}(server)
+		log.Printf(server.addr)
 	}
 	wg.Wait()
 }
