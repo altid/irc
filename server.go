@@ -90,6 +90,7 @@ type Server struct {
 func (s *Server) Event(filename string) {
 	fileName := path.Join(*base, s.addr, "event")
 	f, err := os.OpenFile(fileName, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0644)
+	defer f.Close()
 	if err != nil {
 		log.Print(err)
 		return
