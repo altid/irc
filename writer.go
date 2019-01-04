@@ -62,6 +62,6 @@ func (m *Message) wait(fp *os.File, name string) {
 }
 
 func (m *Message) open(srv *Server, name string) (*os.File, error) {
-	filename := path.Join(*base, srv.addr, name)
+	filename := path.Join(*mtpt, srv.addr, name)
 	return os.OpenFile(filename, os.O_WRONLY|os.O_APPEND, 0644)
 }

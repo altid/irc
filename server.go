@@ -5,7 +5,6 @@ import (
 	"context"
 	"log"
 	"net"
-	"os"
 	"path"
 	"path/filepath"
 	"strings"
@@ -62,7 +61,7 @@ func (s *Servers) Run() {
 			client := irc.NewClient(s.conn, s.conf)
 			client.RunContext(ctx)
 			// Clean up on server exit
-			glob := path.Join(*base, s.addr, "*", "feed")
+			glob := path.Join(*mtpt, s.addr, "*", "feed")
 			feeds, err := filepath.Glob(glob)
 			if err != nil {
 				log.Print(err)
@@ -71,7 +70,6 @@ func (s *Servers) Run() {
 				go DeleteChannel(feed)
 			}
 		}(server)
-		log.Printf(server.addr)
 	}
 	wg.Wait()
 }
@@ -86,17 +84,6 @@ type Server struct {
 	buffers string
 	filter  string
 	log     string
-}
-
-func (s *Server) Event(filename string) {
-	fileName := path.Join(*base, s.addr, "event")
-	f, err := os.OpenFile(fileName, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0644)
-	defer f.Close()
-	if err != nil {
-		log.Print(err)
-		return
-	}
-	f.WriteString(filename + "\n")
 }
 
 func (s *Server) parseControl(r *Reader, c *irc.Client) {
@@ -115,7 +102,7 @@ func (s *Server) parseControl(r *Reader, c *irc.Client) {
 			break
 		case "JOIN":
 			c.WriteMessage(msg)
-			srvdir := path.Join(*base, s.addr)
+			srvdir := path.Join(*mtpt, s.addr)
 			logdir := path.Join(s.log, s.addr)
 			err := CreateChannel(msg.Params[0], srvdir, logdir)
 			if err != nil {
@@ -145,7 +132,7 @@ func (s *Server) parseInput(current string, r *Reader, c *irc.Client) {
 			Command: "PRIVMSG",
 		}
 		c.WriteMessage(msg)
-		writeTo(path.Join(current, "feed"), nick, s, msg, SelfMsg)
+		WriteTo(path.Join(current, "feed"), nick, s, msg, SelfMsg)
 	}
 }
 

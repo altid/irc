@@ -7,8 +7,7 @@ import (
 	"time"
 )
 
-// This is called scoped from a specific server
-// TODO: See how much overhead this causes having numerous sleeping goroutines
+// TODO: This becomes a FIFO since it's available on every target but plan9
 type Reader struct {
 	io.ReadCloser
 }

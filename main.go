@@ -24,11 +24,11 @@ const (
 type MessageType int
 
 var (
-	base = flag.String("p", "/tmp/irc", "Path for filesystem (Default /tmp/irc)")
+	mtpt = flag.String("p", "/tmp/irc", "Path for filesystem (Default /tmp/irc)")
 )
 
 func init() {
-	os.MkdirAll(*base, 0755)
+	os.MkdirAll(*mtpt, 0755)
 }
 
 func main() {
@@ -38,14 +38,14 @@ func main() {
 		os.Exit(1)
 	}
 	// Try to clean up all we can on exit
-	defer os.RemoveAll(*base)
+	defer os.RemoveAll(*mtpt)
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGKILL, syscall.SIGINT)
 	go func() {
 		for sig := range c {
 			switch sig {
 			case syscall.SIGKILL, syscall.SIGINT:
-				os.RemoveAll(*base)
+				os.RemoveAll(*mtpt)
 				os.Exit(0)
 			}
 		}

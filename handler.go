@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"log"
-	"os"
 	"path"
 	"strings"
 	"text/template"
@@ -40,7 +39,7 @@ func NewHandlerFunc(srv *Server) irc.HandlerFunc {
 			c.Writef("PONG %s", m.Params[0])
 			return
 		case "001": // Successfully connected to server
-			reader, err := NewReader(path.Join(*base, srv.addr, "ctrl"))
+			reader, err := NewReader(path.Join(*mtpt, srv.addr, "ctrl"))
 			if err != nil {
 				log.Print(err)
 				return
@@ -72,14 +71,14 @@ func NewHandlerFunc(srv *Server) irc.HandlerFunc {
 		// Title
 		case "TOPIC":
 			fileName = path.Join(m.Params[0], "title")
-			os.Remove(fileName)
-			writeTo(fileName, "", srv, m, TitleMsg)
+			Title(fileName, srv, m)
 			msgType = ChanMsg
 			fileName = path.Join(m.Params[0], "feed")
 			fmt.Printf("From TOPIC %s\n", m.String())
 		case "332": //TOPIC - log to channel and set contents of title
-			writeTo(path.Join(m.Params[1], "title"), "", srv, m, TitleMsg)
-			reader, err := NewReader(path.Join(*base, srv.addr, m.Params[1], "input"))
+			fileName = path.Join(m.Params[1], "title")
+			Title(fileName, srv, m)
+			reader, err := NewReader(path.Join(*mtpt, srv.addr, m.Params[1], "input"))
 			if err != nil {
 				log.Print(err)
 				return
@@ -87,7 +86,7 @@ func NewHandlerFunc(srv *Server) irc.HandlerFunc {
 			go srv.parseInput(m.Params[1], reader, c)
 			return
 		case "331": // NOTOPIC
-			reader, err := NewReader(path.Join(*base, srv.addr, m.Params[1], "input"))
+			reader, err := NewReader(path.Join(*mtpt, srv.addr, m.Params[1], "input"))
 			if err != nil {
 				log.Print(err)
 				return
@@ -101,7 +100,7 @@ func NewHandlerFunc(srv *Server) irc.HandlerFunc {
 		if msgType == None {
 			return
 		}
-		writeTo(fileName, m.Prefix.Name, srv, m, msgType)
+		WriteTo(fileName, m.Prefix.Name, srv, m, msgType)
 	})
 }
 
@@ -176,7 +175,8 @@ func parseForCTCP(c *irc.Client, m *irc.Message, s *Server) (MessageType, string
 		file = path.Join(m.Params[0], "feed")
 	}
 	if strings.Contains(m.Params[1], c.CurrentNick()) {
-		s.Event(path.Join(*base, s.addr, path.Dir(file), "notify") + " " + m.Params[1])
+		Event(path.Join(*mtpt, s.addr, path.Dir(file), "notify"), s)
+		WriteTo(path.Join(m.Params[1], "notify"), "", s, m, HighMsg)
 		format = HighMsg
 	}
 	return format, file
@@ -200,21 +200,3 @@ func parseForFormat(srv *Server, msgType MessageType) *template.Template {
 	return srv.fmt["channel"]
 }
 
-func writeTo(fileName, whom string, server *Server, m *irc.Message, msgType MessageType) {
-	srvdir := path.Join(*base, server.addr)
-	if _, err := os.Stat(path.Join(srvdir, fileName)); os.IsNotExist(err) {
-		logdir := path.Join(server.log, server.addr)
-		CreateChannel(path.Dir(fileName), srvdir, logdir)
-		Touch(path.Join(srvdir, fileName))
-	}
-	format := parseForFormat(server, msgType)
-	message, err := NewMessage(format, server, fileName, whom)
-	defer message.Close()
-	if err != nil {
-		log.Printf("Invalid message %s %s\n", err, m.String())
-		return
-	}
-	content := strings.NewReader(m.Trailing())
-	_, err = content.WriteTo(message)
-	server.Event(path.Join(srvdir, fileName))
-}

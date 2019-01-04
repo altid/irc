@@ -64,3 +64,20 @@ printf '%s\n' "quit" >> <dir>/irc.freenode.net/ctl
 ## Current Status
 
 The ctrl file needs to be implemented still, it's at this moment a placeholder. As it stands, the program will block on stdin, after anything is typed it will exit.
+
+## Caveat
+
+Firstly, on plan9, you must run this in the same namespace which you plan on running your servers from (9p-server, and the to-be-implemented html5 server for example) since the bind mounts don't translate across arbitrary namespaces. A simple script such as, 
+
+
+```
+ircfs &
+discordfs &
+docfs &
+9p-server &
+html5-server &
+```
+
+You would then simply Kill(1) the named processes when you're finished with them.
+
+Secondly, this fs uses polling for all input in its current form, which is expensive to do on a networked plan9 device that isn't the file server itself. Consider running on a machine with a very fast connection to the file server, if not the file server itself (future versions will create a 9p file tree on plan9 outright, which will drastically improve this case)
