@@ -17,7 +17,7 @@ func NewReader(name string) (*Reader, error) {
 	if err != nil {
 		return &Reader{}, err
 	}
-	if _, err := f.Seek(0, 2); err != nil {
+	if _, err := f.Seek(0, os.SEEK_END); err != nil {
 		return &Reader{f}, err
 	}
 	return &Reader{f}, err
@@ -27,12 +27,10 @@ func (r *Reader) Read(p []byte) (n int, err error) {
 	for {
 		n, err := r.ReadCloser.Read(p)
 		if n > 0 {
-			if n > 0 {
-				return n, nil
-			} else if err != io.EOF {
-				return n, err
-			}
-			time.Sleep(250 * time.Millisecond)
+			return n, nil
+		} else if err != io.EOF {
+			return n, err
 		}
+		time.Sleep(300 * time.Millisecond)
 	}
 }
