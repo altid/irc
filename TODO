@@ -1,4 +1,4 @@
-reader.go - swap to FIFO for all input/ctrl. We lose input history, but we can implement that in 9p-server and friends instead
+reader.go - done
 config.go - done
 writer.go - done
 files.go - done
@@ -6,15 +6,3 @@ server.go
 	handlerfunc - parse more edge cases
 	control	- Handle all types of control, from /m to /ctcp
 main.go - done
-
-
-TODO: aqwari.net/net/styx to export a 9p file tree when runtime.GOOS == "plan9" 
-reader_plan9.go - NewReader makes "input" node in the file tree
-writer_plan9.go - NewWriter makes regulare "file" node on file tree
-
-server.go - abstract anything that touches an actual file away to the proper source directory (Event, for example)
-files_plan9.go - CreateDirs, CreateChannel, Touch, DeleteChannel
- - this all bodes well for what we're doing
-
-in files_plan9.go add in a var for a different flag, test if it works.
-Touch is only in files.go
