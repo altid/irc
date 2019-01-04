@@ -7,7 +7,6 @@ import (
 	"time"
 )
 
-// TODO: This becomes a FIFO since it's available on every target but plan9
 type Reader struct {
 	io.ReadCloser
 }
