@@ -174,9 +174,11 @@ func parseForCTCP(c *irc.Client, m *irc.Message, s *Server) (MessageType, string
 	if c.FromChannel(m) {
 		file = path.Join(m.Params[0], "feed")
 	}
+	// Highlight
 	if strings.Contains(m.Params[1], c.CurrentNick()) {
-		Event(path.Join(*mtpt, s.addr, path.Dir(file), "notify"), s)
-		WriteTo(path.Join(m.Params[0], "notify"), "", s, m, HighMsg)
+		Event(path.Join(*mtpt, s.addr, m.Params[0], "notify"), s)
+		WriteTo(path.Join(m.Params[0], "notify"), m.Prefix.Name, s, m, HighMsg)
+		file = path.Join(m.Params[0], "feed")
 		format = HighMsg
 	}
 	return format, file
