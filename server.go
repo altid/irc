@@ -155,7 +155,7 @@ func parseControlLine(nick, line string) *irc.Message {
 	switch token[0] {
 	case "msg", "m":
 		message.Command = "PRIVMSG"
-	case "join", "j":
+	case "join", "j", "open", "o":
 		message.Command = "JOIN"
 	case "part", "p":
 		message.Command = "PART"
