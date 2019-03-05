@@ -1,8 +1,0 @@
-reader.go - done
-config.go - done
-writer.go - done
-files.go - done
-server.go
-	handlerfunc - parse more edge cases
-	control	- Handle all types of control, from /m to /ctcp
-main.go - done

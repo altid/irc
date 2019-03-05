@@ -1,168 +1,102 @@
 package main
 
 import (
-	"bufio"
 	"context"
-	"log"
+	"crypto/tls"
+	"fmt"
 	"net"
 	"path"
-	"path/filepath"
 	"strings"
-	"sync"
-	"text/template"
 
 	"github.com/go-irc/irc"
+	"github.com/ubqt-systems/fslib"
 )
 
-type Servers struct {
-	servers []*Server
+type server struct {
+	conn   net.Conn
+	conf   irc.ClientConfig
+	addr   string
+	buffs  string
+	filter string
+	log    string
+	port   string
+	ssl    string
 }
 
-func GetServers(confs []*Config) *Servers {
-	var servlist []*Server
-	for _, conf := range confs {
-		conn, err := GetConn(conf)
-		if err != nil {
-			log.Printf("Unable to connect: %s\n", conn)
-			continue
-		}
-		userconf := irc.ClientConfig{
-			User: conf.User,
-			Nick: conf.Nick,
-			Name: conf.Name,
-			Pass: conf.Pass,
-		}
-		server := &Server{
-			conf:    userconf,
-			theme:   conf.Theme,
-			buffers: conf.Chans,
-			addr:    conf.Addr,
-			conn:    conn,
-			filter:  conf.Filter,
-			log:     conf.Log,
-			fmt:     conf.Fmt,
-		}
-		server.conf.Handler = NewHandlerFunc(server)
-		servlist = append(servlist, server)
+func newServer(c *config) *server {
+	s := &server{
+		addr:   c.addr,
+		buffs:  c.chans,
+		filter: c.filter,
+		log:    c.log,
+		port:   c.port,
+		ssl:    c.ssl,
 	}
-	return &Servers{servers: servlist}
-}
-
-// Run - Attempt to start all servers, clean up after
-func (s *Servers) Run() {
-	// Context to make sure we clean up everything
-	var wg sync.WaitGroup
-	wg.Add(len(s.servers))
-	for _, server := range s.servers {
-		go func(s *Server) {
-			defer wg.Done()
-			ctx := context.Background()
-			s.ctx = ctx
-			client := irc.NewClient(s.conn, s.conf)
-			client.RunContext(ctx)
-			// Clean up on server exit
-			glob := path.Join(*mtpt, s.addr, "*", "feed")
-			feeds, err := filepath.Glob(glob)
-			if err != nil {
-				log.Print(err)
-			}
-			for _, feed := range feeds {
-				go DeleteChannel(feed)
-			}
-		}(server)
+	conf := irc.ClientConfig{
+		User:    c.user,
+		Nick:    c.nick,
+		Name:    c.name,
+		Pass:    c.pass,
+		Handler: handlerFunc(s),
 	}
-	wg.Wait()
+	s.conf = conf
+	return s
 }
 
-type Server struct {
-	fmt     map[string]*template.Template
-	conn    net.Conn
-	conf    irc.ClientConfig
-	ctx	context.Context
-	addr    string
-	theme   string
-	buffers string
-	filter  string
-	log     string
+func (s *server) Open(c *fslib.Control, name string) error {
+	_, err := fmt.Fprintf(s.conn, "JOIN %s\n", name)
+	return err
 }
 
-func (s *Server) parseControl(r *Reader, c *irc.Client) {
-	scanner := bufio.NewScanner(r)
-	for scanner.Scan() {
-		line := scanner.Text()
-		if len(line) < 2 {
-			log.Printf("Command unsupported: %s\n", line)
-			return
-		}
-		nick := c.CurrentNick()
-		msg := parseControlLine(nick, line)
-		switch msg.Command {
-		case "QUIT":
-			s.conn.Close()
-			break
-		case "JOIN":
-			c.WriteMessage(msg)
-			srvdir := path.Join(*mtpt, s.addr)
-			logdir := path.Join(s.log, s.addr)
-			err := CreateChannel(msg.Params[0], srvdir, logdir)
-			if err != nil {
-				log.Print(err)
-			}
-			// Request data from the channel
-			// TODO: We may need other data to fill out our files
-			mode := newCTCP(nick, "MODE", msg.Params[0])
-			c.WriteMessage(mode)
-			list := newCTCP(nick, "LIST", msg.Params[0])
-			c.WriteMessage(list)
-		default:
-			c.WriteMessage(msg)
-		}
-	}
+func (s *server) Close(c *fslib.Control, name string) error {
+	_, err := fmt.Fprintf(s.conn, "PART %s\n", name)
+	return err
 }
 
-func (s *Server) parseInput(current string, r *Reader, c *irc.Client) {
-	scanner := bufio.NewScanner(r)
-	for scanner.Scan() {
-		line := scanner.Text()
-		// Create and send a message
-		nick := c.CurrentNick()
-		msg := &irc.Message{
-			Prefix:  &irc.Prefix{Name: nick},
-			Params:  []string{current, line},
-			Command: "PRIVMSG",
-		}
-		c.WriteMessage(msg)
-		WriteTo(path.Join(current, "feed"), nick, s, msg, SelfMsg)
-	}
-}
-
-func newCTCP(nick, command, target string) *irc.Message {
-	message := &irc.Message{
-		Prefix:  &irc.Prefix{Name: nick},
-		Params:  []string{target},
-		Command: command,
-	}
-	return message
-}
-
-// TODO: Handle a metric ton more interesting messages + ctcp
-func parseControlLine(nick, line string) *irc.Message {
-	token := strings.Fields(line)
-	message := &irc.Message{
-		Prefix: &irc.Prefix{Name: nick},
-		Params: token[1:],
-	}
+func (s *server) Default(c *fslib.Control, msg string) error {
+	token := strings.Fields(msg)
 	switch token[0] {
-	case "msg", "m":
-		message.Command = "PRIVMSG"
-	case "join", "j", "open", "o":
-		message.Command = "JOIN"
-	case "part", "p":
-		message.Command = "PART"
-	case "quit", "q":
-		message.Command = "QUIT"
-	default:
-		message.Command = "NONE"
+	case "join": 
+		return s.Open(c, strings.Join(token[1:], " "))
+	case "part":
+		return s.Close(c, strings.Join(token[1:], " "))
+	case "msg", "query":
+		return pm(s, strings.Join(token[1:], " "))		
 	}
-	return message
+	return fmt.Errorf("Unknown command %s", token[0])
+}
+
+// input is always sent down raw to the server
+func (s *server) Handle(bufname, msg string) error {
+	buffer := path.Base(bufname)
+	_, err := fmt.Fprintf(s.conn, ":%s PRIVMSG %s :%s\n", s.conf.Name, buffer, msg)
+	return err
+}
+
+
+func (s *server) run(conn net.Conn, ctx context.Context) error {
+	client := irc.NewClient(conn, s.conf)
+	return client.RunContext(ctx)
+}
+
+func (s *server) connect(ctx context.Context) error {
+	dialString := s.addr + ":" + s.port
+	dialer := &net.Dialer{}
+	conn, err := dialer.DialContext(ctx, "tcp", dialString)
+	if err != nil {
+		return err
+	}
+	switch s.ssl { // TODO: switch for simple|/path/to/cert
+	case "true":
+		tlsConfig := &tls.Config{
+			ServerName:         dialString,
+			InsecureSkipVerify: true,
+		}
+		tlsconn := tls.Client(conn, tlsConfig)
+		tlsconn.Handshake()
+		s.conn = tlsconn
+	default:
+		s.conn = conn
+	}
+	return nil
 }
