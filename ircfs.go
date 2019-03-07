@@ -9,20 +9,14 @@ import (
 	fs "github.com/ubqt-systems/fslib"
 )
 
+type messageType int
 const (
-	inputMsg messageType = iota
-	chanMsg
+	chanMsg messageType = iota
 	selfMsg
 	serverMsg
-	notifyMsg
-	titleMsg
-	statusMsg
-	highMsg
 	actionMsg
 	none
 )
-
-type messageType int
 
 // var match = regexp.MustCompile("([&#][^\\s\\x2C\\x07]{1,199})")
 
@@ -37,12 +31,13 @@ func main() {
 		flag.Usage()
 		os.Exit(1)
 	}
+
 	config, err := newConfig()
 	if err != nil {
 		log.Fatal(err)
 	}
-	srv := newServer(config)
-	ctrl, err := fs.CreateCtrlFile(srv, config.log, *mtpt, config.addr, "feed")
+	s := newServer(config)
+	ctrl, err := fs.CreateCtrlFile(s, config.log, *mtpt, config.addr, "feed")
 	defer ctrl.Cleanup()
 	if err != nil {
 		log.Fatal(err)
@@ -51,16 +46,11 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	err = srv.connect(ctx)
+	go s.fileListener(ctx, ctrl)
+	err = s.connect(ctx)
 	if err != nil {
 		log.Fatal(err)
 	}
-	// Ensure we close when the context from ctrl finishes
-	// DialContext only watches context until the connection is good
-	go func() {
-		<-ctx.Done()
-		srv.conn.Close()
-	}()
-	client := irc.NewClient(srv.conn, srv.conf)
+	client := irc.NewClient(s.conn, s.conf)
 	client.RunContext(ctx)
 }

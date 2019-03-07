@@ -16,6 +16,8 @@ type server struct {
 	conn   net.Conn
 	conf   irc.ClientConfig
 	cert   tls.Certificate
+	m      chan *msg
+	done   chan struct{}
 	addr   string
 	buffs  string
 	filter string
@@ -25,7 +27,9 @@ type server struct {
 }
 
 func newServer(c *config) *server {
+	m := make(chan *msg)
 	s := &server{
+		m:      m,
 		addr:   c.addr,
 		buffs:  c.chans,
 		cert:   c.cert,
@@ -62,8 +66,13 @@ func (s *server) Default(c *fslib.Control, msg string) error {
 		return s.Open(c, strings.Join(token[1:], " "))
 	case "part":
 		return s.Close(c, strings.Join(token[1:], " "))
-	case "msg", "query":
-		return pm(s, strings.Join(token[1:], " "))		
+	case "msg", "query": // util.go
+		return pm(s, strings.Join(token[1:], " "))
+	case "nick":
+		// Make sure we update s.conf.Name when we update username
+		s.conf.Name = token[1]
+		fmt.Fprintf(s.conn, "NICK %s\n", token[1])
+		return nil
 	}
 	return fmt.Errorf("Unknown command %s", token[0])
 }
@@ -75,6 +84,22 @@ func (s *server) Handle(bufname, msg string) error {
 	return err
 }
 
+// Tie the utility functions like title and feed to the fileWriter
+func (s *server) fileListener(ctx context.Context, c *fslib.Control) {
+	for {
+		select {
+		//case m := <- s.m:
+		//	fileWriter(c, m)
+		case <- ctx.Done():
+			// Sort of unrelated, sort of considered bad coding; but we throw this close here
+			// To clean up main() some. It needs to close after ctx.Done() no matter what
+			// And this serves as a convenient spot
+			s.conn.Close()
+			return
+		}
+	}
+
+}
 
 func (s *server) run(conn net.Conn, ctx context.Context) error {
 	client := irc.NewClient(conn, s.conf)
@@ -82,31 +107,33 @@ func (s *server) run(conn net.Conn, ctx context.Context) error {
 }
 
 func (s *server) connect(ctx context.Context) error {
+	var tlsConfig *tls.Config
 	dialString := s.addr + ":" + s.port
 	dialer := &net.Dialer{}
 	conn, err := dialer.DialContext(ctx, "tcp", dialString)
 	if err != nil {
 		return err
 	}
-	switch s.ssl { // TODO: switch for simple|/path/to/cert
+	switch s.ssl {
 	case "simple":
-		tlsConfig := &tls.Config{
+		tlsConfig = &tls.Config{
 			ServerName:         dialString,
 			InsecureSkipVerify: true,
 		}
-		tlsconn := tls.Client(conn, tlsConfig)
-		tlsconn.Handshake()
-		s.conn = tlsconn
 	case "certificate":
-		tlsConfig := &tls.Config{
-			Certificates: []tls.Certificate{s.cert},
-			ServerName: dialString,
+		tlsConfig = &tls.Config{
+			Certificates: []tls.Certificate{
+				s.cert,
+			},
+			ServerName:   dialString,
 		}
-		tlsconn := tls.Client(conn, tlsConfig)
-		tlsconn.Handshake()
-		s.conn = tlsconn
+
 	default:
 		s.conn = conn
+		return nil
 	}
+	tlsconn := tls.Client(conn, tlsConfig)
+	tlsconn.Handshake()
+	s.conn = tlsconn
 	return nil
 }
