@@ -15,6 +15,7 @@ import (
 type server struct {
 	conn   net.Conn
 	conf   irc.ClientConfig
+	cert   tls.Certificate
 	addr   string
 	buffs  string
 	filter string
@@ -27,6 +28,7 @@ func newServer(c *config) *server {
 	s := &server{
 		addr:   c.addr,
 		buffs:  c.chans,
+		cert:   c.cert,
 		filter: c.filter,
 		log:    c.log,
 		port:   c.port,
@@ -87,10 +89,18 @@ func (s *server) connect(ctx context.Context) error {
 		return err
 	}
 	switch s.ssl { // TODO: switch for simple|/path/to/cert
-	case "true":
+	case "simple":
 		tlsConfig := &tls.Config{
 			ServerName:         dialString,
 			InsecureSkipVerify: true,
+		}
+		tlsconn := tls.Client(conn, tlsConfig)
+		tlsconn.Handshake()
+		s.conn = tlsconn
+	case "certificate":
+		tlsConfig := &tls.Config{
+			Certificates: []tls.Certificate{s.cert},
+			ServerName: dialString,
 		}
 		tlsconn := tls.Client(conn, tlsConfig)
 		tlsconn.Handshake()
