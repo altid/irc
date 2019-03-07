@@ -9,17 +9,6 @@ import (
 	fs "github.com/ubqt-systems/fslib"
 )
 
-type messageType int
-const (
-	chanMsg messageType = iota
-	selfMsg
-	serverMsg
-	actionMsg
-	none
-)
-
-// var match = regexp.MustCompile("([&#][^\\s\\x2C\\x07]{1,199})")
-
 var (
 	mtpt = flag.String("p", "/tmp/ubqt", "Path for filesystem (Default /tmp/ubqt)")
 	srv  = flag.String("s", "irc.freenode.net", "Name of server to connect to (Default irc.freenode.net)")

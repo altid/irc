@@ -1,6 +1,8 @@
 package main
 
 import (
+	"log"
+	"path"
 	"strings"
 
 	"github.com/go-irc/irc"
@@ -13,7 +15,9 @@ const (
 	ftitle fname = iota
 	fstatus
 	fbuffer
+	faction
 	fsidebar
+	fserver
 )
 
 type msg struct {
@@ -43,30 +47,20 @@ func sendmsg(s *server, m *irc.Message) error {
 	return w.WriteMessage(m)
 }
 
-func title(fileName string, s *server, m *irc.Message) {
+func title(name string, s *server, m *irc.Message) {
 	s.m <- &msg{
-		buff: fileName,
+		buff: name,
 		data: m.Trailing(),
 		fn:   ftitle,
-		
 	}
 }
 
-func feed(mtype messageType, name string, s *server, m *irc.Message) {
-	var data string
-	switch mtype {
-	case chanMsg:
-		data = "foo"
-	case serverMsg:
-		data = "bar"
-	default:
-		return
-	}
+func feed(fn fname, name string, s *server, m *irc.Message) {
 	s.m <- &msg{
-		buff: name,
-		data: data,
+		buff: path.Join(name, "feed"),
+		data: m.Trailing(),
 		from: m.Prefix.Name,
-		fn:   fbuffer,
+		fn:   fn,
 	}
 }
 
@@ -78,18 +72,29 @@ func status(s *server, m *irc.Message) {
 func fileWriter(c *fslib.Control, m *msg) {
 	var w *fslib.WriteCloser
 	switch m.fn {
-	case fbuffer:
-		// Create and link buffer if it isn't present
+	case fbuffer, faction:
+		// Here we want to parse for uname(highlights)
+		//c.CreateBuffer(
 		w = c.MainWriter(m.buff, "feed")
+		// Color
+		// switch on faction/fbuffer to decide which token
+		// WritefEscaped
+		// return
+	case fserver:
+		// Create buffer if not exist
 	case fstatus:
 		w = c.StatusWriter(m.buff)
-	//case fsidebar:
+	case fsidebar:
+		w = c.SideWriter(m.buff)
 	case ftitle:
 		w = c.TitleWriter(m.buff)
-	default:
+	}
+	if w == nil {
 		return
 	}
 	cleaner := cleanmark.NewCleaner(w)
 	defer cleaner.Close()
+	// if m.from write it
+	// write trailing
 	cleaner.WriteStringEscaped(m.data + "\n")
 }

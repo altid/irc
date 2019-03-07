@@ -88,12 +88,9 @@ func (s *server) Handle(bufname, msg string) error {
 func (s *server) fileListener(ctx context.Context, c *fslib.Control) {
 	for {
 		select {
-		//case m := <- s.m:
-		//	fileWriter(c, m)
-		case <- ctx.Done():
-			// Sort of unrelated, sort of considered bad coding; but we throw this close here
-			// To clean up main() some. It needs to close after ctx.Done() no matter what
-			// And this serves as a convenient spot
+		case m := <- s.m:
+			fileWriter(c, m)
+		case <- ctx.Done():			
 			s.conn.Close()
 			return
 		}
