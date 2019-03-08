@@ -54,6 +54,8 @@ func handlerFunc(s *server) irc.HandlerFunc {
 			if m.Command == "332" {
 				title(m.Params[1], s, m)
 			}
+			// We have to manually send the input event
+			s.e <- path.Join(workdir, m.Params[1], "input")
 		default:			
 			feed(fserver, "server", s, m)
 		}

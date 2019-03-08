@@ -89,8 +89,9 @@ func readRecord(rec ndb.Record) (*config, error) {
 		}
 	}
 	if conf.log == "" {
-		conf.log = path.Join(datadir, "ircfs")
+		conf.log = datadir
 	}
+	conf.log = path.Join(conf.Log, conf.addr)
 	if len(conf.pass) > 5 && conf.pass[:5] == "pass=" {
 		conf.pass = conf.pass[5:]
 	}

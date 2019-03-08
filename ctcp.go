@@ -65,6 +65,14 @@ func parseForCTCP(c *irc.Client, m *irc.Message, s *server) {
 		})
 		feed(fserver, "server", s, m)
 	default:
-		feed(fbuffer, m.Params[0], s, m)
+		if strings.Contains(m.Params[1], c.CurrentNick()) {
+			feed(fhighlight, m.Params[0], s, m)
+			return
+		}
+		if c.FromChannel(m) {
+			feed(fbuffer, m.Params[0], s, m)
+			return
+		}
+		feed(fbuffer, m.Prefix.Name, s, m)
 	}
 }

@@ -1,8 +1,6 @@
 package main
 
 import (
-	"log"
-	"path"
 	"strings"
 
 	"github.com/go-irc/irc"
@@ -12,12 +10,14 @@ import (
 
 type fname int
 const (
-	ftitle fname = iota
-	fstatus
+	faction fname = iota
 	fbuffer
-	faction
-	fsidebar
+	fhighlight
+	fself
 	fserver
+	fsidebar
+	fstatus
+	ftitle
 )
 
 type msg struct {
@@ -57,7 +57,7 @@ func title(name string, s *server, m *irc.Message) {
 
 func feed(fn fname, name string, s *server, m *irc.Message) {
 	s.m <- &msg{
-		buff: path.Join(name, "feed"),
+		buff: name,
 		data: m.Trailing(),
 		from: m.Prefix.Name,
 		fn:   fn,
@@ -68,20 +68,29 @@ func status(s *server, m *irc.Message) {
 	// Just use m.Params[0] for the fname
 }
 
-// Probably switch this to an iota, since we have access to both ends of this intra file
 func fileWriter(c *fslib.Control, m *msg) {
+	c.CreateBuffer(m.buff, "feed")
 	var w *fslib.WriteCloser
 	switch m.fn {
-	case fbuffer, faction:
-		// Here we want to parse for uname(highlights)
-		//c.CreateBuffer(
+	case fbuffer, faction, fhighlight:
 		w = c.MainWriter(m.buff, "feed")
-		// Color
-		// switch on faction/fbuffer to decide which token
-		// WritefEscaped
-		// return
+		feed := cleanmark.NewCleaner(w)
+		defer feed.Close()
+		// Color - use m.from and friends
+		switch m.fn {
+		case fself:
+			feed.WritefEscaped("[%s](grey): ", m.from)
+		case fbuffer:
+			feed.WritefEscaped("[%s](blue): ", m.from)
+		case faction:
+			feed.WritefEscaped(" * [%s](blue) ", m.from)
+		case fhighlight:
+			feed.WritefEscaped("[%s](red): ", m.from)
+		}
+		feed.WriteStringEscaped(m.data + "\n")
+		return
 	case fserver:
-		// Create buffer if not exist
+		w = c.MainWriter("server", "feed")
 	case fstatus:
 		w = c.StatusWriter(m.buff)
 	case fsidebar:
@@ -95,6 +104,5 @@ func fileWriter(c *fslib.Control, m *msg) {
 	cleaner := cleanmark.NewCleaner(w)
 	defer cleaner.Close()
 	// if m.from write it
-	// write trailing
 	cleaner.WriteStringEscaped(m.data + "\n")
 }

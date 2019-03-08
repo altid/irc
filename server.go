@@ -16,6 +16,7 @@ type server struct {
 	conn   net.Conn
 	conf   irc.ClientConfig
 	cert   tls.Certificate
+	e      chan string
 	m      chan *msg
 	done   chan struct{}
 	addr   string
@@ -28,7 +29,9 @@ type server struct {
 
 func newServer(c *config) *server {
 	m := make(chan *msg)
+	e := make(chan string)
 	s := &server{
+		e:	e,
 		m:      m,
 		addr:   c.addr,
 		buffs:  c.chans,
@@ -78,9 +81,15 @@ func (s *server) Default(c *fslib.Control, msg string) error {
 }
 
 // input is always sent down raw to the server
-func (s *server) Handle(bufname, msg string) error {
+func (s *server) Handle(bufname, message string) error {
 	buffer := path.Base(bufname)
-	_, err := fmt.Fprintf(s.conn, ":%s PRIVMSG %s :%s\n", s.conf.Name, buffer, msg)
+	_, err := fmt.Fprintf(s.conn, ":%s PRIVMSG %s :%s\n", s.conf.Name, buffer, message)
+	s.m <- &msg{
+		buff: buffer,
+		from: s.conf.Name,
+		data: message,
+		fn:   fself,
+	}
 	return err
 }
 
@@ -88,6 +97,8 @@ func (s *server) Handle(bufname, msg string) error {
 func (s *server) fileListener(ctx context.Context, c *fslib.Control) {
 	for {
 		select {
+		case e := <- s.e:
+			c.Event(e)
 		case m := <- s.m:
 			fileWriter(c, m)
 		case <- ctx.Done():			
