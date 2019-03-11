@@ -11,7 +11,7 @@ import (
 
 var (
 	mtpt = flag.String("p", "/tmp/ubqt", "Path for filesystem (Default /tmp/ubqt)")
-	srv  = flag.String("s", "irc.freenode.net", "Name of server to connect to (Default irc.freenode.net)")
+	srv  = flag.String("s", "irc", "Name of service")
 )
 
 func main() {
@@ -26,7 +26,7 @@ func main() {
 		log.Fatal(err)
 	}
 	s := newServer(config)
-	ctrl, err := fs.CreateCtrlFile(s, config.log, *mtpt, config.addr, "feed")
+	ctrl, err := fs.CreateCtrlFile(s, config.log, *mtpt, *srv, "feed")
 	defer ctrl.Cleanup()
 	if err != nil {
 		log.Fatal(err)

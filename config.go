@@ -38,14 +38,14 @@ func newConfig() (*config, error) {
 	if err != nil {
 		return nil, err
 	}
-	for _, rec := range conf.Search("service", "irc") {
-		// Verify we're not on a different IRC server from the one requested
-		if conf.Search("service", "irc").Search("address") != *srv {
-			continue
-		}
-		return readRecord(rec)
+	recs := conf.Search("service", *srv)
+	switch len(recs) {
+	case 0:
+		return nil, fmt.Errorf("Unable to find entry for %s\n", *srv)
+	case 1:
+		return readRecord(recs[0])
 	}
-	return nil, fmt.Errorf("Unable to find record for %s\n", *srv)
+	return nil, fmt.Errorf("Found multiple entries for %s, unable to continue\n", *srv)
 }
 
 func readRecord(rec ndb.Record) (*config, error) {
@@ -91,7 +91,7 @@ func readRecord(rec ndb.Record) (*config, error) {
 	if conf.log == "" {
 		conf.log = datadir
 	}
-	conf.log = path.Join(conf.Log, conf.addr)
+	conf.log = path.Join(conf.log, conf.addr)
 	if len(conf.pass) > 5 && conf.pass[:5] == "pass=" {
 		conf.pass = conf.pass[5:]
 	}
