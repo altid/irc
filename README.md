@@ -1,44 +1,25 @@
-# ircfs
---------
+# Ircfs
 
-## Overview
+Ircfs is a file service used to connect to an IRC network
+
+`go install github.com/ubqt-systems/ircfs`
+
+## Usage
 
 `ircfs [-p <servicename>]`
 
-If servicename is not given, it wull use `irc`.
-This will set up a directory with `<servicename>` as the base
+ - if no service name is given, `irc` is used
 
-Upon connection, it will attempt to join any channels listed in your config
-It will result in a structure similar to this.
-
-```
-<servicename>/
-	ctrl
-	event
-	tabs
-	#ubqt/
-		status
-		title
-		feed
-		sidebar
-		input
-	#foo/
-		status
-		feed
-		[...]
-```
-
-We have more advanced topics in the Wiki!
+[Wiki!](wiki)
 
 ## Configuration
 
-ircfs will parse your ubqt.cfg file, looking for any entry which matches <servicename>, if given; or `irc`.
-
 ```
-# Example ubqt.cfg
+# ubqt.cfg - place this in your operating systems' default config directory
 
 service=irc address=irc.freenode.net port=6697 auth=pass=hunter2 ssl=none
 	nick=guest user=guest name=guest
+	channels=#ubqt,#hwwm
 	log=/home/guest/logs/irc/
 	filter=all
 	# listen_address=192.168.1.144:12345
@@ -67,7 +48,7 @@ service=irc2 address=supersecure.ircserver.net port=28888 auth=factotum
    - all filters all JOIN/PART/QUIT messages
    - smart filters JOIN/PART/QUIT messages for people who haven't written to the channel recently
    - none does not filter any messages
- - listen_address is a more advanced topic, explained here: [Using Listen Address](https://ubqt-systems.github.io/using-listen-address.html)
+ - listen_address is a more advanced topic, explained here: [Using listen_address](https://ubqt-systems.github.io/using-listen-address.html)
 
 ## Plan9 Caveat
 
