@@ -10,7 +10,7 @@ Ircfs is a file service used to connect to an IRC network
 
  - if no service name is given, `irc` is used
 
-[Wiki!](wiki)
+[Wiki!](https://github.com/ubqt-systems/ircfs/wiki)
 
 ## Configuration
 
