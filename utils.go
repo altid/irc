@@ -101,7 +101,8 @@ func fileWriter(c *fslib.Control, m *msg) {
 		return
 	// TODO halfwit: clean m.data and m.from
 	case fnotification:
-		c.Notification(m.buff, m.from, m.data)
+		ntfy := cleanmark.NewNotifier(m.buff, m.from, m.data)
+		c.Notification(ntfy.Parse())
 	case fserver:
 		w = c.MainWriter("server", "feed")
 	case fstatus:
