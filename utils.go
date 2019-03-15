@@ -13,7 +13,9 @@ const (
 	faction fname = iota
 	fbuffer
 	fhighlight
+	fnotification
 	fself
+	fselfaction
 	fserver
 	fsidebar
 	fstatus
@@ -76,19 +78,30 @@ func fileWriter(c *fslib.Control, m *msg) {
 		w = c.MainWriter(m.buff, "feed")
 		feed := cleanmark.NewCleaner(w)
 		defer feed.Close()
-		// Color - use m.from and friends
 		switch m.fn {
+		// TODO halfwit: Add fselfaction type
+		// https://github.com/ubqt-systems/ircfs/issues/3
+		case fselfaction:
+			color, _ := cleanmark.NewColor(cleanmark.Grey, []byte(m.from))
+			feed.WritefEscaped(" * %s: ", color)
 		case fself:
-			feed.WritefEscaped("[%s](grey): ", m.from)
+			color, _ := cleanmark.NewColor(cleanmark.Grey, []byte(m.from))
+			feed.WritefEscaped("%s: ", color)
 		case fbuffer:
-			feed.WritefEscaped("[%s](blue): ", m.from)
+			color, _ := cleanmark.NewColor(cleanmark.Blue, []byte(m.from))
+			feed.WritefEscaped("%s: ", color)
 		case faction:
-			feed.WritefEscaped(" * [%s](blue) ", m.from)
+			color, _ := cleanmark.NewColor(cleanmark.Blue, []byte(m.from))
+			feed.WritefEscaped(" * %s: ", color)
 		case fhighlight:
-			feed.WritefEscaped("[%s](red): ", m.from)
+			color, _ := cleanmark.NewColor(cleanmark.Red, []byte(m.from))
+			feed.WritefEscaped("%s: ", color)
 		}
-		feed.WriteStringEscaped(m.data + "\n")
+		feed.WritefEscaped("%s\n", m.data)
 		return
+	// TODO halfwit: clean m.data and m.from
+	case fnotification:
+		c.Notification(m.buff, m.from, m.data)
 	case fserver:
 		w = c.MainWriter("server", "feed")
 	case fstatus:

@@ -12,8 +12,8 @@ func handlerFunc(s *server) irc.HandlerFunc {
 	return irc.HandlerFunc(func(c *irc.Client, m *irc.Message) {
 		switch m.Command {
 		case "PRIVMSG":
-			//fn, buffname := parseForCTCP()
-			feed(fbuffer, m.Params[0], s, m)
+			parseForCTCP(c, m, s)
+			return
 		case "QUIT":
 			feed(fbuffer, m.Params[0], s, m)
 		case "PART", "KICK", "JOIN", "NICK":
@@ -44,7 +44,7 @@ func handlerFunc(s *server) irc.HandlerFunc {
 		// This is the title sent on channel connection
 		// We use this to start our input listeners
 		case "331", "332":
-			workdir := path.Join(*mtpt, s.addr)
+			workdir := path.Join(*mtpt, *srv)
 			input, err := fslib.NewInput(s, workdir, m.Params[1])
 			if err != nil {
 				log.Println(err)

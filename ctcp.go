@@ -15,7 +15,11 @@ func parseForCTCP(c *irc.Client, m *irc.Message, s *server) {
 	switch token[0] {
 	case "ACTION":
 		m.Params[1] = strings.Join(token[1:], " ")
-		feed(faction, m.Params[0], s, m)
+		fn := faction
+		if m.Params[0] == prefix.Name {
+			fn = fselfaction
+		}
+		feed(fn, m.Params[0], s, m)
 	case "CLIENTINFO":
 		c.WriteMessage(&irc.Message{
 			Prefix:  prefix,
@@ -67,6 +71,12 @@ func parseForCTCP(c *irc.Client, m *irc.Message, s *server) {
 	default:
 		if strings.Contains(m.Params[1], c.CurrentNick()) {
 			feed(fhighlight, m.Params[0], s, m)
+			s.m <- &msg{
+				fn:   fnotification,
+				buff: m.Params[0],
+				from: m.Prefix.Name,
+				data: m.Trailing(),
+			}
 			return
 		}
 		if c.FromChannel(m) {
