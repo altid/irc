@@ -17,13 +17,17 @@ func handlerFunc(s *server) irc.HandlerFunc {
 			parseForCTCP(c, m, s)
 			return
 		case "QUIT":
-			feed(fbuffer, m.Params[0], s, m)
+			//TODO(halfwit): When smart filtering is implemented
+			// we will check the map of names for the current channel
+			// log to that channel when we're connected to it, if logging enabled
+			// https://github.com/ubqt-systems/ircfs/issues/5
+			//feed(fbuffer, m.Prefix.Name, s, m)
 		case "PART", "KICK", "JOIN", "NICK":
-			name := "server"
-			if c.FromChannel(m) {
-				name = m.Params[0]
-			}
-			feed(fbuffer, name, s, m)
+			//name := "server"
+			//if c.FromChannel(m) {
+			//	name = m.Params[0]
+			//}
+			//feed(fbuffer, name, s, m)
 		case "PING", "PING ZNC":
 			c.Writef("PONG %s", m.Params[0])
 		case "001":
