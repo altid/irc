@@ -8,6 +8,8 @@ import (
 	"github.com/ubqt-systems/fslib"
 )
 
+// BUG(halfwit): Logs are being created for user events such as client quit
+// https://github.com/ubqt-systems/ircfs/issues/4
 func handlerFunc(s *server) irc.HandlerFunc {
 	return irc.HandlerFunc(func(c *irc.Client, m *irc.Message) {
 		switch m.Command {
