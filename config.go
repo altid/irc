@@ -91,7 +91,7 @@ func readRecord(rec ndb.Record) (*config, error) {
 	if conf.log == "" {
 		conf.log = datadir
 	}
-	conf.log = path.Join(conf.log, conf.addr)
+	conf.log = path.Join(conf.log, *srv)
 	if len(conf.pass) > 5 && conf.pass[:5] == "pass=" {
 		conf.pass = conf.pass[5:]
 	}

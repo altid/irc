@@ -1,7 +1,10 @@
 package main
 
 import (
+	"fmt"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/go-irc/irc"
 	"github.com/ubqt-systems/cleanmark"
@@ -19,6 +22,7 @@ const (
 	fserver
 	fsidebar
 	fstatus
+	ftime
 	ftitle
 )
 
@@ -49,6 +53,21 @@ func sendmsg(s *server, m *irc.Message) error {
 	return w.WriteMessage(m)
 }
 
+func timeSetAt(s *server, m *irc.Message) {
+	i, err := strconv.ParseInt(m.Params[3], 10, 64)
+	if err != nil {
+		return
+	}
+	t := time.Unix(i, 0).Format(time.RFC1123)
+	from := strings.Split(m.Params[2], "!")
+	s.m <- &msg{
+		buff: m.Params[1],
+		data: fmt.Sprintf("%s", t),
+		from: from[0],
+		fn: ftime,
+	}
+}
+
 func title(name string, s *server, m *irc.Message) {
 	s.m <- &msg{
 		buff: name,
@@ -74,13 +93,11 @@ func fileWriter(c *fslib.Control, m *msg) {
 	c.CreateBuffer(m.buff, "feed")
 	var w *fslib.WriteCloser
 	switch m.fn {
-	case fbuffer, faction, fhighlight:
+	case fbuffer, faction, fhighlight, fselfaction, fself, ftime:
 		w = c.MainWriter(m.buff, "feed")
 		feed := cleanmark.NewCleaner(w)
 		defer feed.Close()
 		switch m.fn {
-		// TODO halfwit: Add fselfaction type
-		// https://github.com/ubqt-systems/ircfs/issues/3
 		case fselfaction:
 			color, _ := cleanmark.NewColor(cleanmark.Grey, []byte(m.from))
 			feed.WritefEscaped(" * %s: ", color)
@@ -96,6 +113,9 @@ func fileWriter(c *fslib.Control, m *msg) {
 		case fhighlight:
 			color, _ := cleanmark.NewColor(cleanmark.Red, []byte(m.from))
 			feed.WritefEscaped("%s: ", color)
+		case ftime:
+			color, _ := cleanmark.NewColor(cleanmark.Orange, []byte(m.from))
+			feed.WritefEscaped("Topic was set by %s, on ", color)
 		}
 		feed.WritefEscaped("%s\n", m.data)
 		return

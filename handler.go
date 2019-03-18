@@ -18,8 +18,9 @@ func handlerFunc(s *server) irc.HandlerFunc {
 			return
 		case "QUIT":
 			//TODO(halfwit): When smart filtering is implemented
-			// we will check the map of names for the current channel
-			// log to that channel when we're connected to it, if logging enabled
+			// we will check the map of names for channels
+			// log to that channel when we're connected to it
+			// and logging is enabled/smart filter
 			// https://github.com/ubqt-systems/ircfs/issues/5
 			//feed(fbuffer, m.Prefix.Name, s, m)
 		case "PART", "KICK", "JOIN", "NICK":
@@ -32,8 +33,11 @@ func handlerFunc(s *server) irc.HandlerFunc {
 			c.Writef("PONG %s", m.Params[0])
 		case "001":
 			c.Writef("JOIN %s\n", s.buffs)
-		case "301", "333":
+		case "301":
 			feed(fbuffer, m.Params[0], s, m)
+		case "333": //topicwhotime <client> <channel> <nick> <setat> unix time
+			timeSetAt(s, m)
+			return
 		case "MODE", "324":
 			status(s, m)
 		//case "305": //BACK
