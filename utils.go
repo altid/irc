@@ -106,7 +106,7 @@ func status(s *server, m *irc.Message) {
 
 
 func fileWriter(c *fslib.Control, m *msg) {
-	if msg.from == "freenode-connect" {
+	if m.from == "freenode-connect" {
 		return
 	}
 	var w *fslib.WriteCloser
