@@ -16,8 +16,9 @@ type server struct {
 	conn   net.Conn
 	conf   irc.ClientConfig
 	cert   tls.Certificate
-	e      chan string
-	m      chan *msg
+	e      chan string // events
+        j      chan string // joins
+	m      chan *msg   // messages
 	done   chan struct{}
 	addr   string
 	buffs  string
@@ -30,9 +31,11 @@ type server struct {
 func newServer(c *config) *server {
 	m := make(chan *msg)
 	e := make(chan string)
+	j := make(chan string)
 	s := &server{
 		e:	e,
 		m:      m,
+		j:	j,
 		addr:   c.addr,
 		buffs:  c.chans,
 		cert:   c.cert,
@@ -53,12 +56,20 @@ func newServer(c *config) *server {
 }
 
 func (s *server) Open(c *fslib.Control, name string) error {
-	_, err := fmt.Fprintf(s.conn, "JOIN %s\n", name)
+	err := c.CreateBuffer(name, "feed")
+	if err != nil {
+		return err
+	}
+	_, err = fmt.Fprintf(s.conn, "JOIN %s\n", name)
 	return err
 }
 
 func (s *server) Close(c *fslib.Control, name string) error {
-	_, err := fmt.Fprintf(s.conn, "PART %s\n", name)
+	err := c.DeleteBuffer(name, "feed")
+	if err != nil {
+		return err
+	}
+	_, err = fmt.Fprintf(s.conn, "PART %s\n", name)
 	return err
 }
 
@@ -99,6 +110,13 @@ func (s *server) fileListener(ctx context.Context, c *fslib.Control) {
 		select {
 		case e := <- s.e:
 			c.Event(e)
+		case j := <- s.j:
+			buffs := getChans(j)
+			for _, buff := range buffs {
+				if ! c.HasBuffer(buff, "feed") {
+					s.Open(c, buff)
+				}
+			}
 		case m := <- s.m:
 			fileWriter(c, m)
 		case <- ctx.Done():			
@@ -107,11 +125,6 @@ func (s *server) fileListener(ctx context.Context, c *fslib.Control) {
 		}
 	}
 
-}
-
-func (s *server) run(conn net.Conn, ctx context.Context) error {
-	client := irc.NewClient(conn, s.conf)
-	return client.RunContext(ctx)
 }
 
 func (s *server) connect(ctx context.Context) error {

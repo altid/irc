@@ -1,7 +1,9 @@
 package main
 
 import (
+	"encoding/csv"
 	"fmt"
+	"io"
 	"strconv"
 	"strings"
 	"time"
@@ -31,6 +33,19 @@ type msg struct {
 	data string
 	from string
 	fn   fname
+}
+
+func getChans(buffs string) []string {
+	var items []string
+	r := csv.NewReader(strings.NewReader(buffs))
+	for {
+		buffers, err := r.Read()
+		if err == io.EOF {
+			break
+		}
+		items = append(items, buffers...)
+	}
+	return items
 }
 
 // Private message
@@ -89,12 +104,18 @@ func status(s *server, m *irc.Message) {
 	// Just use m.Params[0] for the fname
 }
 
+
 func fileWriter(c *fslib.Control, m *msg) {
-	c.CreateBuffer(m.buff, "feed")
+	if msg.from == "freenode-connect" {
+		return
+	}
 	var w *fslib.WriteCloser
 	switch m.fn {
 	case fbuffer, faction, fhighlight, fselfaction, fself, ftime:
 		w = c.MainWriter(m.buff, "feed")
+		if w == nil {
+			return
+		}
 		feed := cleanmark.NewCleaner(w)
 		defer feed.Close()
 		switch m.fn {

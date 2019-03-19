@@ -32,7 +32,7 @@ func handlerFunc(s *server) irc.HandlerFunc {
 		case "PING", "PING ZNC":
 			c.Writef("PONG %s", m.Params[0])
 		case "001":
-			c.Writef("JOIN %s\n", s.buffs)
+			s.j <- s.buffs
 		case "301":
 			feed(fbuffer, m.Params[0], s, m)
 		case "333": //topicwhotime <client> <channel> <nick> <setat> unix time
@@ -54,6 +54,7 @@ func handlerFunc(s *server) irc.HandlerFunc {
 		// This is the title sent on channel connection
 		// We use this to start our input listeners
 		case "331", "332":
+			s.j <- m.Params[1]
 			workdir := path.Join(*mtpt, *srv)
 			input, err := fslib.NewInput(s, workdir, m.Params[1])
 			if err != nil {

@@ -31,6 +31,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	ctrl.CreateBuffer("server", "feed")
 	ctx, err := ctrl.Start()
 	if err != nil {
 		log.Fatal(err)
