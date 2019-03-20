@@ -79,7 +79,9 @@ func parseForCTCP(c *irc.Client, m *irc.Message, s *server) {
 			}
 			return
 		}
+		// PM, make sure the file exists
 		if m.Params[0] == c.CurrentNick() {
+			s.j <- m.Prefix.Name
 			feed(fbuffer, m.Prefix.Name, s, m)
 			return
 		}

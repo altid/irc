@@ -31,6 +31,8 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	// Make a type which never will log
+	//ctrl.CreateTempBuffer("server", "feed")
 	ctrl.CreateBuffer("server", "feed")
 	ctx, err := ctrl.Start()
 	if err != nil {
