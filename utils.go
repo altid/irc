@@ -49,6 +49,9 @@ func getChans(buffs string) []string {
 }
 
 // Private message
+// TODO(halfwit): We need to create a buffer if we're initializing a PM
+// `open`ing a conversation with a user does as well
+// https://github.com/ubqt-systems/ircfs/issues/6
 func pm(s *server, msg string) error {
 	token := strings.Fields(msg)
 	m := &irc.Message{

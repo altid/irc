@@ -80,7 +80,7 @@ func (s *server) Default(c *fslib.Control, msg string) error {
 		return s.Open(c, strings.Join(token[1:], " "))
 	case "part":
 		return s.Close(c, strings.Join(token[1:], " "))
-	case "msg", "query": // util.go
+	case "msg", "query":
 		return pm(s, strings.Join(token[1:], " "))
 	case "nick":
 		// Make sure we update s.conf.Name when we update username
