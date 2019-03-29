@@ -69,6 +69,9 @@ func parseForCTCP(c *irc.Client, m *irc.Message, s *server) {
 		})
 		feed(fserver, "server", s, m)
 	default:
+		// BUG(halfwit): When we write to a channel from another connected client
+		// such as is possible over ZNC, channels aren't created properly
+		// We'll have to validate channels are created for any log requests.
 		if strings.Contains(m.Params[1], c.CurrentNick()) {
 			feed(fhighlight, m.Params[0], s, m)
 			s.m <- &msg{

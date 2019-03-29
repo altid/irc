@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net"
 	"path"
-	"strings"
 
 	"github.com/go-irc/irc"
 	"github.com/ubqt-systems/fslib"
@@ -73,22 +72,19 @@ func (s *server) Close(c *fslib.Control, name string) error {
 	return err
 }
 
-func (s *server) Default(c *fslib.Control, msg string) error {
-	token := strings.Fields(msg)
-	switch token[0] {
-	case "join": 
-		return s.Open(c, strings.Join(token[1:], " "))
-	case "part":
-		return s.Close(c, strings.Join(token[1:], " "))
+func (s *server) Default(c *fslib.Control, cmd, from, msg string) error {
+	switch cmd {
+	case "a", "act", "action", "me":
+		return action(s, from, msg)
 	case "msg", "query":
-		return pm(s, strings.Join(token[1:], " "))
+		return pm(s, msg)
 	case "nick":
 		// Make sure we update s.conf.Name when we update username
-		s.conf.Name = token[1]
-		fmt.Fprintf(s.conn, "NICK %s\n", token[1])
+		s.conf.Name = msg
+		fmt.Fprintf(s.conn, "NICK %s\n", msg)
 		return nil
 	}
-	return fmt.Errorf("Unknown command %s", token[0])
+	return fmt.Errorf("Unknown command %s", cmd)
 }
 
 // input is always sent down raw to the server
@@ -97,7 +93,7 @@ func (s *server) Handle(bufname, message string) error {
 	_, err := fmt.Fprintf(s.conn, ":%s PRIVMSG %s :%s\n", s.conf.Name, buffer, message)
 	s.m <- &msg{
 		buff: buffer,
-		from: s.conf.Name,
+		from: s.conf.Nick,
 		data: message,
 		fn:   fself,
 	}

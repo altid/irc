@@ -66,6 +66,20 @@ func pm(s *server, msg string) error {
 	return sendmsg(s, m)
 }
 
+func action(s *server, from, msg string) error {
+	m := &irc.Message{
+		Command: "PRIVMSG",
+		Prefix: &irc.Prefix{
+			Name: s.conf.Name,
+		},
+		Params: []string{
+			from,
+			fmt.Sprintf("ACTION %s", msg),
+		},
+	}
+	return sendmsg(s, m)
+}
+
 func sendmsg(s *server, m *irc.Message) error {
 	w := irc.NewWriter(s.conn)
 	return w.WriteMessage(m)
