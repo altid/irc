@@ -8,7 +8,7 @@ import (
 	"path"
 
 	"github.com/go-irc/irc"
-	"github.com/ubqt-systems/fslib"
+	"github.com/altid/fslib"
 )
 
 type server struct {
@@ -70,6 +70,10 @@ func (s *server) Close(c *fslib.Control, name string) error {
 	}
 	_, err = fmt.Fprintf(s.conn, "PART %s\n", name)
 	return err
+}
+
+func (s *server) Link(c *fslib.Control, from, name string) error {
+	return fmt.Errorf("link command not supported, please use open/close\n")
 }
 
 func (s *server) Default(c *fslib.Control, cmd, from, msg string) error {

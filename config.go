@@ -8,7 +8,7 @@ import (
 
 	"bitbucket.org/mischief/libauth"
 	"github.com/mischief/ndb"
-	"github.com/ubqt-systems/fslib"
+	"github.com/altid/fslib"
 )
 
 type config struct {
@@ -30,7 +30,7 @@ func newConfig() (*config, error) {
 	if err != nil {
 		return nil, err
 	}
-	filePath := path.Join(confdir, "ubqt.cfg")
+	filePath := path.Join(confdir, "altid", "config")
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
 		return nil, err
 	}
@@ -52,7 +52,7 @@ func readRecord(rec ndb.Record) (*config, error) {
 	var cert, key string
 	datadir, err := fslib.UserShareDir()
 	if err != nil {
-		datadir = "/tmp/ubqt"
+		datadir = "/tmp/altid"
 	}
 	conf := &config{
 		port:   "6667",

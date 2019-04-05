@@ -37,11 +37,11 @@ A server cannot modify the underlying servers' structured directly, outside of d
 
 ## New Services
 
-Testfs can be considered as a simplest-case, complete service for ubqt. A few notable caveats exist for services, and are as follows:
+Testfs can be considered as a simplest-case, complete service for Altid. A few notable caveats exist for services, and are as follows:
  - Events must be a normal file
-   - FIFO are tempting to use, but suffer only allowing one listener at a time. This limits a ubqt network to a single server type, therefor is undesirable.
+   - FIFO are tempting to use, but suffer only allowing one listener at a time. This limits an Altid network to a single server type, therefor is undesirable.
  - Tabs must list all buffers still open since startup. A client close must remove a tab from the file.
 
 ## New Clients
 
-Arguably the most simple thing to implement in ubqt is a client. They simply have to attach to a server, and issue ctrl/(input when applicable) messages. Optionally, they can handle and delete notifications for the buffer they are viewing.
+Arguably the most simple thing to implement in Altid is a client. They simply have to attach to a server, and issue ctrl/(input when applicable) messages. Optionally, they can handle and delete notifications for the buffer they are viewing.

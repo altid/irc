@@ -6,11 +6,11 @@ import (
 	"os"
 
 	"github.com/go-irc/irc"
-	fs "github.com/ubqt-systems/fslib"
+	fs "github.com/altid/fslib"
 )
 
 var (
-	mtpt = flag.String("p", "/tmp/ubqt", "Path for filesystem (Default /tmp/ubqt)")
+	mtpt = flag.String("p", "/tmp/altid", "Path for filesystem")
 	srv  = flag.String("s", "irc", "Name of service")
 )
 

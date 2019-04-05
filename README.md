@@ -2,7 +2,7 @@
 
 Ircfs is a file service used to connect to an IRC network
 
-`go install github.com/ubqt-systems/ircfs`
+`go install github.com/altid/ircfs`
 
 ## Usage
 
@@ -10,16 +10,16 @@ Ircfs is a file service used to connect to an IRC network
 
  - if no service name is given, `irc` is used
 
-[Wiki!](https://github.com/ubqt-systems/ircfs/wiki)
+[Wiki!](https://github.com/altid/ircfs/wiki)
 
 ## Configuration
 
 ```
-# ubqt.cfg - place this in your operating systems' default config directory
+# altid/config - place this in your operating systems' default config directory
 
 service=irc address=irc.freenode.net port=6697 auth=pass=hunter2 ssl=none
 	nick=guest user=guest name=guest
-	channels=#ubqt,#hwwm
+	channels=#altid,#hwwm
 	log=/home/guest/logs/irc/
 	filter=all
 	# listen_address=192.168.1.144:12345
@@ -48,7 +48,7 @@ service=irc2 address=supersecure.ircserver.net port=28888 auth=factotum
    - all filters all JOIN/PART/QUIT messages
    - smart filters JOIN/PART/QUIT messages for people who haven't written to the channel recently
    - none does not filter any messages
- - listen_address is a more advanced topic, explained here: [Using listen_address](https://ubqt-systems.github.io/using-listen-address.html)
+ - listen_address is a more advanced topic, explained here: [Using listen_address](https://altid.github.io/using-listen-address.html)
 
 ## Plan9 Caveat
 

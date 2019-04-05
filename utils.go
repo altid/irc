@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/go-irc/irc"
-	"github.com/ubqt-systems/cleanmark"
-	"github.com/ubqt-systems/fslib"
+	"github.com/altid/cleanmark"
+	"github.com/altid/fslib"
 )
 
 type fname int
@@ -51,7 +51,7 @@ func getChans(buffs string) []string {
 // Private message
 // TODO(halfwit): We need to create a buffer if we're initializing a PM
 // `open`ing a conversation with a user does as well
-// https://github.com/ubqt-systems/ircfs/issues/6
+// https://github.com/altid/ircfs/issues/6
 func pm(s *server, msg string) error {
 	token := strings.Fields(msg)
 	m := &irc.Message{

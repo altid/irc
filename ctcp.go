@@ -44,7 +44,7 @@ func parseForCTCP(c *irc.Client, m *irc.Message, s *server) {
 		c.WriteMessage(&irc.Message{
 			Prefix:  prefix,
 			Command: "SOURCE",
-			Params:  []string{m.Prefix.Name, "https://github.com/ubqt-systems/ircfs"},
+			Params:  []string{m.Prefix.Name, "https://github.com/altid/ircfs"},
 		})
 		feed(fserver, "server", s, m)
 	case "TIME":
@@ -89,6 +89,7 @@ func parseForCTCP(c *irc.Client, m *irc.Message, s *server) {
 			return
 		}
 		if c.FromChannel(m) {
+			s.j <- m.Params[0]
 			feed(fbuffer, m.Params[0], s, m)
 			return
 		}
