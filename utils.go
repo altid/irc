@@ -8,12 +8,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-irc/irc"
 	"github.com/altid/cleanmark"
 	"github.com/altid/fslib"
+	"github.com/go-irc/irc"
 )
 
 type fname int
+
 const (
 	faction fname = iota
 	fbuffer
@@ -96,7 +97,7 @@ func timeSetAt(s *server, m *irc.Message) {
 		buff: m.Params[1],
 		data: fmt.Sprintf("%s", t),
 		from: from[0],
-		fn: ftime,
+		fn:   ftime,
 	}
 }
 
@@ -120,7 +121,6 @@ func feed(fn fname, name string, s *server, m *irc.Message) {
 func status(s *server, m *irc.Message) {
 	// Just use m.Params[0] for the fname
 }
-
 
 func fileWriter(c *fslib.Control, m *msg) {
 	if m.from == "freenode-connect" {

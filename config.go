@@ -7,8 +7,8 @@ import (
 	"path"
 
 	"bitbucket.org/mischief/libauth"
-	"github.com/mischief/ndb"
 	"github.com/altid/fslib"
+	"github.com/mischief/ndb"
 )
 
 type config struct {

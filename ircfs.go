@@ -5,8 +5,8 @@ import (
 	"log"
 	"os"
 
-	"github.com/go-irc/irc"
 	fs "github.com/altid/fslib"
+	"github.com/go-irc/irc"
 )
 
 var (

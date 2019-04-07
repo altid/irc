@@ -4,8 +4,8 @@ import (
 	"log"
 	"path"
 
-	"github.com/go-irc/irc"
 	"github.com/altid/fslib"
+	"github.com/go-irc/irc"
 )
 
 // BUG(halfwit): Logs are being created for user events such as client quit
@@ -44,9 +44,9 @@ func handlerFunc(s *server) irc.HandlerFunc {
 		//case "306": //AWAY
 		// Sidebar
 		//case "353": list of names
-			//<client> <symbol> <channel> :[prefix]<nick>{ [prefix]<nick>}
+		//<client> <symbol> <channel> :[prefix]<nick>{ [prefix]<nick>}
 		//case "366": // End of names
-			//<client> <channel>
+		//<client> <channel>
 		// Title
 		case "TOPIC":
 			title(m.Params[1], s, m)
@@ -67,7 +67,7 @@ func handlerFunc(s *server) irc.HandlerFunc {
 			}
 			// We have to manually send the input event
 			s.e <- path.Join(workdir, m.Params[1], "input")
-		default:			
+		default:
 			feed(fserver, "server", s, m)
 		}
 	})

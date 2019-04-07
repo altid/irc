@@ -8,9 +8,9 @@ import (
 	"path"
 	"strings"
 
-	"github.com/go-irc/irc"
+	cm "github.com/altid/cleanmark"
 	"github.com/altid/fslib"
-	"github.com/altid/cleanmark"
+	"github.com/go-irc/irc"
 )
 
 type server struct {
@@ -18,7 +18,7 @@ type server struct {
 	conf   irc.ClientConfig
 	cert   tls.Certificate
 	e      chan string // events
-        j      chan string // joins
+	j      chan string // joins
 	m      chan *msg   // messages
 	done   chan struct{}
 	addr   string
@@ -34,9 +34,9 @@ func newServer(c *config) *server {
 	e := make(chan string)
 	j := make(chan string)
 	s := &server{
-		e:	e,
+		e:      e,
 		m:      m,
-		j:	j,
+		j:      j,
 		addr:   c.addr,
 		buffs:  c.chans,
 		cert:   c.cert,
@@ -94,76 +94,34 @@ func (s *server) Default(c *fslib.Control, cmd, from, msg string) error {
 }
 
 // input is always sent down raw to the server
-func (s *server) Handle(bufname string, l *cleanmark.Lexer) error {
+func (s *server) Handle(bufname string, l *cm.Lexer) error {
 	var m strings.Builder
-	buffer := path.Base(bufname)
+	buff := path.Base(bufname)
 	for {
 		i := l.Next()
 		switch i.ItemType {
-		case cleanmark.EOF:
-			_, err := fmt.Fprintf(s.conn, ":%s PRIVMSG %s :%s\n", s.conf.Name, buffer, m.String())
+		case cm.EOF:
+			_, err := fmt.Fprintf(s.conn, ":%s PRIVMSG %s :%s\n", s.conf.Name, buff, m.String())
 			s.m <- &msg{
-				buff: buffer,
+				buff: buff,
 				from: s.conf.Nick,
 				data: m.String(),
 				fn:   fself,
 			}
 			return err
-		case cleanmark.UrlLink, cleanmark.UrlText, cleanmark.ImagePath, cleanmark.ImageLink, cleanmark.ImageText:
+		case cm.UrlLink, cm.UrlText, cm.ImagePath, cm.ImageLink, cm.ImageText:
 			continue
-		case cleanmark.ColorText:
-			fmt.Println("We made it into color")
-			text := i.Data
-			i := l.Next()
-			if i.ItemType == cleanmark.EOF || i.ItemType != cleanmark.ColorCode {
-				return fmt.Errorf("Improperly formatted color code")
-			}
-			m.WriteString("")
-			switch string(i.Data) {
-			case cleanmark.White:
-				m.WriteString("0")
-			case cleanmark.Black:
-				m.WriteString("1")
-			case cleanmark.Blue:
-				m.WriteString("2")
-			case cleanmark.Green:
-				m.WriteString("3")
-			case cleanmark.Red:
-				m.WriteString("4")
-			case cleanmark.Brown:
-				m.WriteString("5")
-			case cleanmark.Purple:
-				m.WriteString("6")
-			case cleanmark.Orange:
-				m.WriteString("7")
-			case cleanmark.Yellow:
-				m.WriteString("8")
-			case cleanmark.LightGreen:
-				m.WriteString("9")
-			case cleanmark.Cyan:
-				m.WriteString("10")
-			case cleanmark.LightCyan:
-				m.WriteString("11")
-			case cleanmark.LightBlue:
-				m.WriteString("12")
-			case cleanmark.Pink:
-				m.WriteString("13")
-			case cleanmark.Grey:
-				m.WriteString("14")
-			case cleanmark.LightGrey:
-				m.WriteString("15")
-			}
-			m.Write(text)
-			m.WriteString("")
-		case cleanmark.BoldText:
+		case cm.ColorText, cm.ColorTextBold:
+			m.WriteString(getColors(i.Data, l))
+		case cm.BoldText:
 			m.WriteString("")
 			m.Write(i.Data)
 			m.WriteString("")
-		case cleanmark.EmphasisText:
+		case cm.EmphasisText:
 			m.WriteString("")
 			m.Write(i.Data)
 			m.WriteString("")
-		case cleanmark.UnderlineText:
+		case cm.UnderlineText:
 			m.WriteString("")
 			m.Write(i.Data)
 			m.WriteString("")
@@ -174,22 +132,86 @@ func (s *server) Handle(bufname string, l *cleanmark.Lexer) error {
 	return fmt.Errorf("Unknown error parsing input encountered")
 }
 
+func getColors(current []byte, l *cm.Lexer) string {
+	var text strings.Builder
+	var color strings.Builder
+	text.Write(current)
+	for {
+		i := l.Next()
+		switch i.ItemType {
+		case cm.EOF:
+			return color.String()
+		case cm.ColorCode:
+			code := getColorCode(i.Data)
+			color.WriteString("")
+			color.WriteString(code)
+			color.WriteString(text.String())
+			color.WriteString("")
+			return color.String()
+		case cm.ColorTextBold:
+			text.WriteString("")
+			text.Write(i.Data)
+			text.WriteString("")
+		case cm.ColorText:
+			text.Write(i.Data)
+		}
+	}
+}
+
+func getColorCode(d []byte) string {
+	switch string(d) {
+	case cm.White:
+		return "0"
+	case cm.Black:
+		return "1"
+	case cm.Blue:
+		return "2"
+	case cm.Green:
+		return "3"
+	case cm.Red:
+		return "4"
+	case cm.Brown:
+		return "5"
+	case cm.Purple:
+		return "6"
+	case cm.Orange:
+		return "7"
+	case cm.Yellow:
+		return "8"
+	case cm.LightGreen:
+		return "9"
+	case cm.Cyan:
+		return "10"
+	case cm.LightCyan:
+		return "11"
+	case cm.LightBlue:
+		return "12"
+	case cm.Pink:
+		return "13"
+	case cm.Grey:
+		return "14"
+	case cm.LightGrey:
+		return "15"
+	}
+	return ""
+}
+
 // Tie the utility functions like title and feed to the fileWriter
 func (s *server) fileListener(ctx context.Context, c *fslib.Control) {
 	for {
 		select {
-		case e := <- s.e:
+		case e := <-s.e:
 			c.Event(e)
-		case j := <- s.j:
+		case j := <-s.j:
 			buffs := getChans(j)
 			for _, buff := range buffs {
-				if ! c.HasBuffer(buff, "feed") {
+				if !c.HasBuffer(buff, "feed") {
 					s.Open(c, buff)
 				}
 			}
-		case m := <- s.m:
+		case m := <-s.m:
 			fileWriter(c, m)
-		case <- ctx.Done():			
+		case <-ctx.Done():
 			s.conn.Close()
 			return
 		}
@@ -216,7 +238,7 @@ func (s *server) connect(ctx context.Context) error {
 			Certificates: []tls.Certificate{
 				s.cert,
 			},
-			ServerName:   dialString,
+			ServerName: dialString,
 		}
 
 	default:
@@ -228,4 +250,3 @@ func (s *server) connect(ctx context.Context) error {
 	s.conn = tlsconn
 	return nil
 }
-
