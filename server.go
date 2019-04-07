@@ -6,9 +6,11 @@ import (
 	"fmt"
 	"net"
 	"path"
+	"strings"
 
 	"github.com/go-irc/irc"
 	"github.com/altid/fslib"
+	"github.com/altid/cleanmark"
 )
 
 type server struct {
@@ -92,16 +94,84 @@ func (s *server) Default(c *fslib.Control, cmd, from, msg string) error {
 }
 
 // input is always sent down raw to the server
-func (s *server) Handle(bufname, message string) error {
+func (s *server) Handle(bufname string, l *cleanmark.Lexer) error {
+	var m strings.Builder
 	buffer := path.Base(bufname)
-	_, err := fmt.Fprintf(s.conn, ":%s PRIVMSG %s :%s\n", s.conf.Name, buffer, message)
-	s.m <- &msg{
-		buff: buffer,
-		from: s.conf.Nick,
-		data: message,
-		fn:   fself,
+	for {
+		i := l.Next()
+		switch i.ItemType {
+		case cleanmark.EOF:
+			_, err := fmt.Fprintf(s.conn, ":%s PRIVMSG %s :%s\n", s.conf.Name, buffer, m.String())
+			s.m <- &msg{
+				buff: buffer,
+				from: s.conf.Nick,
+				data: m.String(),
+				fn:   fself,
+			}
+			return err
+		case cleanmark.UrlLink, cleanmark.UrlText, cleanmark.ImagePath, cleanmark.ImageLink, cleanmark.ImageText:
+			continue
+		case cleanmark.ColorText:
+			fmt.Println("We made it into color")
+			text := i.Data
+			i := l.Next()
+			if i.ItemType == cleanmark.EOF || i.ItemType != cleanmark.ColorCode {
+				return fmt.Errorf("Improperly formatted color code")
+			}
+			m.WriteString("")
+			switch string(i.Data) {
+			case cleanmark.White:
+				m.WriteString("0")
+			case cleanmark.Black:
+				m.WriteString("1")
+			case cleanmark.Blue:
+				m.WriteString("2")
+			case cleanmark.Green:
+				m.WriteString("3")
+			case cleanmark.Red:
+				m.WriteString("4")
+			case cleanmark.Brown:
+				m.WriteString("5")
+			case cleanmark.Purple:
+				m.WriteString("6")
+			case cleanmark.Orange:
+				m.WriteString("7")
+			case cleanmark.Yellow:
+				m.WriteString("8")
+			case cleanmark.LightGreen:
+				m.WriteString("9")
+			case cleanmark.Cyan:
+				m.WriteString("10")
+			case cleanmark.LightCyan:
+				m.WriteString("11")
+			case cleanmark.LightBlue:
+				m.WriteString("12")
+			case cleanmark.Pink:
+				m.WriteString("13")
+			case cleanmark.Grey:
+				m.WriteString("14")
+			case cleanmark.LightGrey:
+				m.WriteString("15")
+			}
+			m.Write(text)
+			m.WriteString("")
+		case cleanmark.BoldText:
+			m.WriteString("")
+			m.Write(i.Data)
+			m.WriteString("")
+		case cleanmark.EmphasisText:
+			m.WriteString("")
+			m.Write(i.Data)
+			m.WriteString("")
+		case cleanmark.UnderlineText:
+			m.WriteString("")
+			m.Write(i.Data)
+			m.WriteString("")
+		default:
+			m.Write(i.Data)
+		}
 	}
-	return err
+	return fmt.Errorf("Unknown error parsing input encountered")
 }
 
 // Tie the utility functions like title and feed to the fileWriter
@@ -158,3 +228,4 @@ func (s *server) connect(ctx context.Context) error {
 	s.conn = tlsconn
 	return nil
 }
+
