@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"fmt"
@@ -96,16 +97,17 @@ func (s *server) Default(c *fslib.Control, cmd, from, msg string) error {
 // input is always sent down raw to the server
 func (s *server) Handle(bufname string, l *cm.Lexer) error {
 	var m strings.Builder
-	buff := path.Base(bufname)
 	for {
 		i := l.Next()
 		switch i.ItemType {
 		case cm.EOF:
-			_, err := fmt.Fprintf(s.conn, ":%s PRIVMSG %s :%s\n", s.conf.Name, buff, m.String())
+			b := path.Base(bufname)
+			d := m.String()
+			_, err := fmt.Fprintf(s.conn, ":%s PRIVMSG %s :%s\n", s.conf.Name, b, d)
 			s.m <- &msg{
-				buff: buff,
+				buff: b,
 				from: s.conf.Nick,
-				data: m.String(),
+				data: d,
 				fn:   fself,
 			}
 			return err
@@ -143,6 +145,11 @@ func getColors(current []byte, l *cm.Lexer) string {
 			return color.String()
 		case cm.ColorCode:
 			code := getColorCode(i.Data)
+			if n := bytes.IndexByte(i.Data, ','); n >= 0 {
+				code = getColorCode(i.Data[:n])
+				code += ","
+				code += getColorCode(i.Data[n+1:])	
+			}
 			color.WriteString("")
 			color.WriteString(code)
 			color.WriteString(text.String())
@@ -152,6 +159,14 @@ func getColors(current []byte, l *cm.Lexer) string {
 			text.WriteString("")
 			text.Write(i.Data)
 			text.WriteString("")
+		case cm.ColorTextEmphasis:
+			text.WriteString("")
+			text.Write(i.Data)
+			text.WriteString("")
+		case cm.ColorTextUnderline:
+			text.WriteString("")
+			text.Write(i.Data)
+			text.WriteString("")
 		case cm.ColorText:
 			text.Write(i.Data)
 		}

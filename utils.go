@@ -157,7 +157,6 @@ func fileWriter(c *fslib.Control, m *msg) {
 		}
 		feed.WritefEscaped("%s\n", m.data)
 		return
-	// TODO halfwit: clean m.data and m.from
 	case fnotification:
 		ntfy := cleanmark.NewNotifier(m.buff, m.from, m.data)
 		c.Notification(ntfy.Parse())
