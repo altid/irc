@@ -79,16 +79,18 @@ func (s *server) Link(c *fslib.Control, from, name string) error {
 	return fmt.Errorf("link command not supported, please use open/close\n")
 }
 
-func (s *server) Default(c *fslib.Control, cmd, from, msg string) error {
+func (s *server) Default(c *fslib.Control, cmd, from, m string) error {
 	switch cmd {
 	case "a", "act", "action", "me":
-		return action(s, from, msg)
+		return action(s, from, m)
 	case "msg", "query":
-		return pm(s, msg)
+		t := strings.Fields(m)
+		s.j <- t[0]
+		return pm(s, m)
 	case "nick":
 		// Make sure we update s.conf.Name when we update username
-		s.conf.Name = msg
-		fmt.Fprintf(s.conn, "NICK %s\n", msg)
+		s.conf.Name = m
+		fmt.Fprintf(s.conn, "NICK %s\n", m)
 		return nil
 	}
 	return fmt.Errorf("Unknown command %s", cmd)
