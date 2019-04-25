@@ -14,6 +14,8 @@ import (
 	"github.com/go-irc/irc"
 )
 
+var workdir = path.Join(*mtpt, *srv)
+
 type server struct {
 	conn   net.Conn
 	conf   irc.ClientConfig
@@ -63,7 +65,16 @@ func (s *server) Open(c *fslib.Control, name string) error {
 		return err
 	}
 	_, err = fmt.Fprintf(s.conn, "JOIN %s\n", name)
-	return err
+	if err != nil {
+		return nil
+	}
+	input, err := fslib.NewInput(s, workdir, name)
+	if err != nil {
+		return err
+	}
+	defer c.Event(path.Join(workdir, name, "input"))
+	go input.Start()
+	return nil
 }
 
 func (s *server) Close(c *fslib.Control, name string) error {
@@ -83,9 +94,17 @@ func (s *server) Default(c *fslib.Control, cmd, from, m string) error {
 	switch cmd {
 	case "a", "act", "action", "me":
 		return action(s, from, m)
-	case "msg", "query":
+	case "msg", "query": 
+		// we don't want to send a JOIN message, so we don't simply s.j <- t[0]
 		t := strings.Fields(m)
-		s.j <- t[0]
+		err := c.CreateBuffer(t[0], "feed")
+		if err != nil {
+			return err
+		}
+		go func() {
+			input, _ := fslib.NewInput(s, workdir, t[0])
+			input.Start()
+		}()
 		return pm(s, m)
 	case "nick":
 		// Make sure we update s.conf.Name when we update username
@@ -113,6 +132,8 @@ func (s *server) Handle(bufname string, l *cm.Lexer) error {
 				fn:   fself,
 			}
 			return err
+		case cm.ErrorText:
+			return fmt.Errorf("Error parsing input: %v", i.Data)
 		case cm.UrlLink, cm.UrlText, cm.ImagePath, cm.ImageLink, cm.ImageText:
 			continue
 		case cm.ColorText, cm.ColorTextBold:

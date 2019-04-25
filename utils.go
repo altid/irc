@@ -23,7 +23,7 @@ const (
 	fself
 	fselfaction
 	fserver
-	fsidebar
+	faside
 	fstatus
 	ftime
 	ftitle
@@ -164,7 +164,7 @@ func fileWriter(c *fslib.Control, m *msg) {
 		w = c.MainWriter("server", "feed")
 	case fstatus:
 		w = c.StatusWriter(m.buff)
-	case fsidebar:
+	case faside:
 		w = c.SideWriter(m.buff)
 	case ftitle:
 		w = c.TitleWriter(m.buff)

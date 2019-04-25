@@ -1,10 +1,6 @@
 package main
 
 import (
-	"log"
-	"path"
-
-	"github.com/altid/fslib"
 	"github.com/go-irc/irc"
 )
 
@@ -51,22 +47,11 @@ func handlerFunc(s *server) irc.HandlerFunc {
 		case "TOPIC":
 			title(m.Params[1], s, m)
 			feed(fbuffer, m.Params[0], s, m)
-		// This is the title sent on channel connection
-		// We use this to start our input listeners
 		case "331", "332":
 			s.j <- m.Params[1]
-			workdir := path.Join(*mtpt, *srv)
-			input, err := fslib.NewInput(s, workdir, m.Params[1])
-			if err != nil {
-				log.Println(err)
-				return
-			}
-			go input.Start()
 			if m.Command == "332" {
 				title(m.Params[1], s, m)
 			}
-			// We have to manually send the input event
-			s.e <- path.Join(workdir, m.Params[1], "input")
 		default:
 			feed(fserver, "server", s, m)
 		}
