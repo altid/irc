@@ -5,7 +5,7 @@ import (
 	"log"
 	"os"
 
-	fs "github.com/altid/fslib"
+	"github.com/altid/libs/fs"
 	"github.com/go-irc/irc"
 )
 

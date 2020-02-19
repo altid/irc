@@ -9,8 +9,8 @@ import (
 	"path"
 	"strings"
 
-	cm "github.com/altid/cleanmark"
-	"github.com/altid/fslib"
+	"github.com/altid/libs/fs"
+	"github.com/altid/libs/markup"
 	"github.com/go-irc/irc"
 )
 
@@ -59,7 +59,7 @@ func newServer(c *config) *server {
 	return s
 }
 
-func (s *server) Open(c *fslib.Control, name string) error {
+func (s *server) Open(c *fs.Control, name string) error {
 	err := c.CreateBuffer(name, "feed")
 	if err != nil {
 		return err
@@ -70,7 +70,7 @@ func (s *server) Open(c *fslib.Control, name string) error {
 			return err
 		}
 	}
-	input, err := fslib.NewInput(s, workdir, name)
+	input, err := fs.NewInput(s, workdir, name)
 	if err != nil {
 		return err
 	}
@@ -79,7 +79,7 @@ func (s *server) Open(c *fslib.Control, name string) error {
 	return nil
 }
 
-func (s *server) Close(c *fslib.Control, name string) error {
+func (s *server) Close(c *fs.Control, name string) error {
 	err := c.DeleteBuffer(name, "feed")
 	if err != nil {
 		return err
@@ -88,15 +88,15 @@ func (s *server) Close(c *fslib.Control, name string) error {
 	return err
 }
 
-func (s *server) Link(c *fslib.Control, from, name string) error {
+func (s *server) Link(c *fs.Control, from, name string) error {
 	return fmt.Errorf("link command not supported, please use open/close\n")
 }
 
-func (s *server) Default(c *fslib.Control, cmd, from, m string) error {
+func (s *server) Default(c *fs.Control, cmd, from, m string) error {
 	switch cmd {
 	case "a", "act", "action", "me":
 		return action(s, from, m)
-	case "msg", "query": 
+	case "msg", "query":
 		// we don't want to send a JOIN message, so we don't simply s.j <- t[0]
 		t := strings.Fields(m)
 		err := c.CreateBuffer(t[0], "feed")
@@ -104,7 +104,7 @@ func (s *server) Default(c *fslib.Control, cmd, from, m string) error {
 			return err
 		}
 		go func() {
-			input, _ := fslib.NewInput(s, workdir, t[0])
+			input, _ := fs.NewInput(s, workdir, t[0])
 			input.Start()
 		}()
 		return pm(s, m)
@@ -118,12 +118,12 @@ func (s *server) Default(c *fslib.Control, cmd, from, m string) error {
 }
 
 // input is always sent down raw to the server
-func (s *server) Handle(bufname string, l *cm.Lexer) error {
+func (s *server) Handle(bufname string, l *markup.Lexer) error {
 	var m bytes.Buffer
 	for {
 		i := l.Next()
 		switch i.ItemType {
-		case cm.EOF:
+		case markup.EOF:
 			b := path.Base(bufname)
 			d := m.String()
 			_, err := fmt.Fprintf(s.conn, ":%s PRIVMSG %s :%s\n", s.conf.Name, b, d)
@@ -134,21 +134,21 @@ func (s *server) Handle(bufname string, l *cm.Lexer) error {
 				fn:   fself,
 			}
 			return err
-		case cm.ErrorText:
+		case markup.ErrorText:
 			return fmt.Errorf("Error parsing input: %v", i.Data)
-		case cm.UrlLink, cm.UrlText, cm.ImagePath, cm.ImageLink, cm.ImageText:
+		case markup.UrlLink, markup.UrlText, markup.ImagePath, markup.ImageLink, markup.ImageText:
 			continue
-		case cm.ColorText, cm.ColorTextBold:
+		case markup.ColorText, markup.ColorTextBold:
 			m.WriteString(getColors(i.Data, l))
-		case cm.BoldText:
+		case markup.BoldText:
 			m.WriteString("")
 			m.Write(i.Data)
 			m.WriteString("")
-		case cm.EmphasisText:
+		case markup.EmphasisText:
 			m.WriteString("")
 			m.Write(i.Data)
 			m.WriteString("")
-		case cm.UnderlineText:
+		case markup.UnderlineText:
 			m.WriteString("")
 			m.Write(i.Data)
 			m.WriteString("")
@@ -159,40 +159,40 @@ func (s *server) Handle(bufname string, l *cm.Lexer) error {
 	return fmt.Errorf("Unknown error parsing input encountered")
 }
 
-func getColors(current []byte, l *cm.Lexer) string {
+func getColors(current []byte, l *markup.Lexer) string {
 	var text bytes.Buffer
 	var color bytes.Buffer
 	text.Write(current)
 	for {
 		i := l.Next()
 		switch i.ItemType {
-		case cm.EOF:
+		case markup.EOF:
 			return color.String()
-		case cm.ColorCode:
+		case markup.ColorCode:
 			code := getColorCode(i.Data)
 			if n := bytes.IndexByte(i.Data, ','); n >= 0 {
 				code = getColorCode(i.Data[:n])
 				code += ","
-				code += getColorCode(i.Data[n+1:])	
+				code += getColorCode(i.Data[n+1:])
 			}
 			color.WriteString("")
 			color.WriteString(code)
 			color.WriteString(text.String())
 			color.WriteString("")
 			return color.String()
-		case cm.ColorTextBold:
+		case markup.ColorTextBold:
 			text.WriteString("")
 			text.Write(i.Data)
 			text.WriteString("")
-		case cm.ColorTextEmphasis:
+		case markup.ColorTextEmphasis:
 			text.WriteString("")
 			text.Write(i.Data)
 			text.WriteString("")
-		case cm.ColorTextUnderline:
+		case markup.ColorTextUnderline:
 			text.WriteString("")
 			text.Write(i.Data)
 			text.WriteString("")
-		case cm.ColorText:
+		case markup.ColorText:
 			text.Write(i.Data)
 		}
 	}
@@ -200,44 +200,44 @@ func getColors(current []byte, l *cm.Lexer) string {
 
 func getColorCode(d []byte) string {
 	switch string(d) {
-	case cm.White:
+	case markup.White:
 		return "0"
-	case cm.Black:
+	case markup.Black:
 		return "1"
-	case cm.Blue:
+	case markup.Blue:
 		return "2"
-	case cm.Green:
+	case markup.Green:
 		return "3"
-	case cm.Red:
+	case markup.Red:
 		return "4"
-	case cm.Brown:
+	case markup.Brown:
 		return "5"
-	case cm.Purple:
+	case markup.Purple:
 		return "6"
-	case cm.Orange:
+	case markup.Orange:
 		return "7"
-	case cm.Yellow:
+	case markup.Yellow:
 		return "8"
-	case cm.LightGreen:
+	case markup.LightGreen:
 		return "9"
-	case cm.Cyan:
+	case markup.Cyan:
 		return "10"
-	case cm.LightCyan:
+	case markup.LightCyan:
 		return "11"
-	case cm.LightBlue:
+	case markup.LightBlue:
 		return "12"
-	case cm.Pink:
+	case markup.Pink:
 		return "13"
-	case cm.Grey:
+	case markup.Grey:
 		return "14"
-	case cm.LightGrey:
+	case markup.LightGrey:
 		return "15"
 	}
 	return ""
 }
 
 // Tie the utility functions like title and feed to the fileWriter
-func (s *server) fileListener(ctx context.Context, c *fslib.Control) {
+func (s *server) fileListener(ctx context.Context, c *fs.Control) {
 	for {
 		select {
 		case e := <-s.e:

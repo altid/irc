@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/altid/cleanmark"
-	"github.com/altid/fslib"
+	"github.com/altid/libs/fs"
+	"github.com/altid/libs/markup"
 	"github.com/go-irc/irc"
 )
 
@@ -122,43 +122,43 @@ func status(s *server, m *irc.Message) {
 	// Just use m.Params[0] for the fname
 }
 
-func fileWriter(c *fslib.Control, m *msg) {
+func fileWriter(c *fs.Control, m *msg) {
 	if m.from == "freenode-connect" {
 		return
 	}
-	var w *fslib.WriteCloser
+	var w *fs.WriteCloser
 	switch m.fn {
 	case fbuffer, faction, fhighlight, fselfaction, fself, ftime:
 		w = c.MainWriter(m.buff, "feed")
 		if w == nil {
 			return
 		}
-		feed := cleanmark.NewCleaner(w)
+		feed := markup.NewCleaner(w)
 		defer feed.Close()
 		switch m.fn {
 		case fselfaction:
-			color, _ := cleanmark.NewColor(cleanmark.Grey, []byte(m.from))
+			color, _ := markup.NewColor(markup.Grey, []byte(m.from))
 			feed.WritefEscaped(" * %s: ", color)
 		case fself:
-			color, _ := cleanmark.NewColor(cleanmark.Grey, []byte(m.from))
+			color, _ := markup.NewColor(markup.Grey, []byte(m.from))
 			feed.WritefEscaped("%s: ", color)
 		case fbuffer:
-			color, _ := cleanmark.NewColor(cleanmark.Blue, []byte(m.from))
+			color, _ := markup.NewColor(markup.Blue, []byte(m.from))
 			feed.WritefEscaped("%s: ", color)
 		case faction:
-			color, _ := cleanmark.NewColor(cleanmark.Blue, []byte(m.from))
+			color, _ := markup.NewColor(markup.Blue, []byte(m.from))
 			feed.WritefEscaped(" * %s: ", color)
 		case fhighlight:
-			color, _ := cleanmark.NewColor(cleanmark.Red, []byte(m.from))
+			color, _ := markup.NewColor(markup.Red, []byte(m.from))
 			feed.WritefEscaped("%s: ", color)
 		case ftime:
-			color, _ := cleanmark.NewColor(cleanmark.Orange, []byte(m.from))
+			color, _ := markup.NewColor(markup.Orange, []byte(m.from))
 			feed.WritefEscaped("Topic was set by %s, on ", color)
 		}
 		feed.WritefEscaped("%s\n", m.data)
 		return
 	case fnotification:
-		ntfy := cleanmark.NewNotifier(m.buff, m.from, m.data)
+		ntfy := markup.NewNotifier(m.buff, m.from, m.data)
 		c.Notification(ntfy.Parse())
 	case fserver:
 		w = c.MainWriter("server", "feed")
@@ -172,7 +172,7 @@ func fileWriter(c *fslib.Control, m *msg) {
 	if w == nil {
 		return
 	}
-	cleaner := cleanmark.NewCleaner(w)
+	cleaner := markup.NewCleaner(w)
 	defer cleaner.Close()
 	// if m.from write it
 	cleaner.WriteStringEscaped(m.data + "\n")
