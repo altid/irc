@@ -26,7 +26,7 @@ func main() {
 		log.Fatal(err)
 	}
 	s := newServer(config)
-	ctrl, err := fs.CreateCtrlFile(s, config.log, *mtpt, *srv, "feed")
+	ctrl, err := fs.CreateCtlFile(s, config.log, *mtpt, *srv, "feed")
 	defer ctrl.Cleanup()
 	if err != nil {
 		log.Fatal(err)
