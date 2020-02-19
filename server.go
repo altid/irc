@@ -64,9 +64,11 @@ func (s *server) Open(c *fslib.Control, name string) error {
 	if err != nil {
 		return err
 	}
-	_, err = fmt.Fprintf(s.conn, "JOIN %s\n", name)
-	if err != nil {
-		return nil
+	if name[0] == '#' {
+		_, err = fmt.Fprintf(s.conn, "JOIN %s\n", name)
+		if err != nil {
+			return err
+		}
 	}
 	input, err := fslib.NewInput(s, workdir, name)
 	if err != nil {
@@ -117,7 +119,7 @@ func (s *server) Default(c *fslib.Control, cmd, from, m string) error {
 
 // input is always sent down raw to the server
 func (s *server) Handle(bufname string, l *cm.Lexer) error {
-	var m strings.Builder
+	var m bytes.Buffer
 	for {
 		i := l.Next()
 		switch i.ItemType {
@@ -158,8 +160,8 @@ func (s *server) Handle(bufname string, l *cm.Lexer) error {
 }
 
 func getColors(current []byte, l *cm.Lexer) string {
-	var text strings.Builder
-	var color strings.Builder
+	var text bytes.Buffer
+	var color bytes.Buffer
 	text.Write(current)
 	for {
 		i := l.Next()
