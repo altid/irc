@@ -25,24 +25,28 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	s := newServer(config)
 	ctrl, err := fs.CreateCtlFile(s, config.log, *mtpt, *srv, "feed")
-	defer ctrl.Cleanup()
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	defer ctrl.Cleanup()
+
 	// Make a type which never will log
-	//ctrl.CreateTempBuffer("server", "feed")
 	ctrl.CreateBuffer("server", "feed")
 	ctx, err := ctrl.Start()
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	go s.fileListener(ctx, ctrl)
 	err = s.connect(ctx)
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	client := irc.NewClient(s.conn, s.conf)
 	client.RunContext(ctx)
 }
