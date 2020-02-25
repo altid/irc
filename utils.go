@@ -129,6 +129,7 @@ func errorWriter(c *fs.Control, err error) {
 		// I mean, at this point...
 		log.Fatal(err)
 	}
+	defer ew.Close()
 
 	fmt.Fprintf(ew, "ircfs: %s\n", err)
 }
