@@ -250,7 +250,10 @@ func (s *server) fileListener(ctx context.Context, c *fs.Control) {
 				}
 			}
 		case m := <-s.m:
-			fileWriter(c, m)
+			err := fileWriter(c, m)
+			if err != nil {
+				errorWriter(c, err)
+			}
 		case <-ctx.Done():
 			s.conn.Close()
 			return

@@ -4,6 +4,7 @@ import (
 	"encoding/csv"
 	"fmt"
 	"io"
+	"log"
 	"strconv"
 	"strings"
 	"time"
@@ -122,16 +123,27 @@ func status(s *server, m *irc.Message) {
 	// Just use m.Params[0] for the fname
 }
 
-func fileWriter(c *fs.Control, m *msg) {
+func errorWriter(c *fs.Control, err error) {
+	ew, err := c.ErrorWriter()
+	if err != nil {
+		// I mean, at this point...
+		log.Fatal(err)
+	}
+
+	fmt.Fprintf(ew, "ircfs: %s\n", err)
+}
+
+func fileWriter(c *fs.Control, m *msg) error {
 	if m.from == "freenode-connect" {
-		return
+		return nil
 	}
 	var w *fs.WriteCloser
+	var err error
 	switch m.fn {
 	case fbuffer, faction, fhighlight, fselfaction, fself, ftime:
-		w = c.MainWriter(m.buff, "feed")
-		if w == nil {
-			return
+		w, err = c.MainWriter(m.buff, "feed")
+		if err != nil {
+			return err
 		}
 		feed := markup.NewCleaner(w)
 		defer feed.Close()
@@ -156,24 +168,32 @@ func fileWriter(c *fs.Control, m *msg) {
 			feed.WritefEscaped("Topic was set by %s, on ", color)
 		}
 		feed.WritefEscaped("%s\n", m.data)
-		return
+		return nil
 	case fnotification:
 		ntfy := markup.NewNotifier(m.buff, m.from, m.data)
 		c.Notification(ntfy.Parse())
+
+		return nil
 	case fserver:
-		w = c.MainWriter("server", "feed")
+		w, err = c.MainWriter("server", "feed")
 	case fstatus:
-		w = c.StatusWriter(m.buff)
+		w, err = c.StatusWriter(m.buff)
 	case faside:
-		w = c.SideWriter(m.buff)
+		w, err = c.SideWriter(m.buff)
 	case ftitle:
-		w = c.TitleWriter(m.buff)
+		w, err = c.TitleWriter(m.buff)
+	default:
+		return nil
 	}
-	if w == nil {
-		return
+
+	if err != nil {
+		return err
 	}
+
 	cleaner := markup.NewCleaner(w)
 	defer cleaner.Close()
 	// if m.from write it
 	cleaner.WriteStringEscaped(m.data + "\n")
+
+	return nil
 }
