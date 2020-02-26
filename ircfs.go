@@ -24,7 +24,7 @@ func main() {
 
 	s := &server{}
 
-	conf, err := config.New(s, *srv)
+	conf, err := config.New(buildConfig, *srv)
 	if err != nil {
 		log.Fatal(err)
 	}

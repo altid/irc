@@ -56,10 +56,6 @@ func (s *server) parse(c *config.Config) {
 	}
 }
 
-func (s *server) Configure() (*config.Config, error) {
-	return nil, nil
-}
-
 func (s *server) Open(c *fs.Control, name string) error {
 	err := c.CreateBuffer(name, "feed")
 	if err != nil {

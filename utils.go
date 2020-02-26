@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/altid/libs/config"
 	"github.com/altid/libs/fs"
 	"github.com/altid/libs/markup"
 	"github.com/go-irc/irc"
@@ -117,6 +118,10 @@ func feed(fn fname, name string, s *server, m *irc.Message) {
 		from: m.Prefix.Name,
 		fn:   fn,
 	}
+}
+
+func buildConfig() (*config.Config, error) {
+	return nil, nil
 }
 
 func status(s *server, m *irc.Message) {
