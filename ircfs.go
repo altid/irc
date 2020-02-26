@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/altid/libs/config"
 	"github.com/altid/libs/fs"
 	"github.com/go-irc/irc"
 )
@@ -21,13 +22,16 @@ func main() {
 		os.Exit(1)
 	}
 
-	config, err := newConfig()
+	s := &server{}
+
+	conf, err := config.New(s, *srv)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	s := newServer(config)
-	ctrl, err := fs.CreateCtlFile(s, config.log, *mtpt, *srv, "feed")
+	s.parse(conf)
+
+	ctrl, err := fs.CreateCtlFile(s, conf.Log(), *mtpt, *srv, "feed")
 	if err != nil {
 		log.Fatal(err)
 	}

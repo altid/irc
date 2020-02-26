@@ -4,11 +4,13 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"net"
 	"path"
 	"strings"
 
+	"github.com/altid/libs/config"
 	"github.com/altid/libs/fs"
 	"github.com/altid/libs/markup"
 	"github.com/go-irc/irc"
@@ -32,31 +34,30 @@ type server struct {
 	ssl    string
 }
 
-func newServer(c *config) *server {
-	m := make(chan *msg)
-	e := make(chan string)
-	j := make(chan string)
-	s := &server{
-		e:      e,
-		m:      m,
-		j:      j,
-		addr:   c.addr,
-		buffs:  c.chans,
-		cert:   c.cert,
-		filter: c.filter,
-		log:    c.log,
-		port:   c.port,
-		ssl:    c.ssl,
-	}
-	conf := irc.ClientConfig{
-		User:    c.user,
-		Nick:    c.nick,
-		Name:    c.name,
-		Pass:    c.pass,
+func (s *server) parse(c *config.Config) {
+	s.m = make(chan *msg)
+	s.e = make(chan string)
+	s.j = make(chan string)
+	s.cert, _ = c.SSLCert()
+	s.addr, _ = c.Search("address")
+	s.buffs, _ = c.Search("buffers")
+	s.filter, _ = c.Search("filter")
+	s.log = c.Log()
+	s.port, _ = c.Search("port")
+	s.ssl, _ = c.Search("ssl")
+	pass, _ := c.Password()
+
+	s.conf = irc.ClientConfig{
+		User:    c.MustSearch("user"),
+		Nick:    c.MustSearch("nick"),
+		Name:    c.MustSearch("name"),
+		Pass:    pass,
 		Handler: handlerFunc(s),
 	}
-	s.conf = conf
-	return s
+}
+
+func (s *server) Configure() (*config.Config, error) {
+	return nil, nil
 }
 
 func (s *server) Open(c *fs.Control, name string) error {
@@ -89,7 +90,7 @@ func (s *server) Close(c *fs.Control, name string) error {
 }
 
 func (s *server) Link(c *fs.Control, from, name string) error {
-	return fmt.Errorf("link command not supported, please use open/close\n")
+	return errors.New("link command not supported, please use open/close")
 }
 
 func (s *server) Default(c *fs.Control, cmd, from, m string) error {
@@ -135,7 +136,7 @@ func (s *server) Handle(bufname string, l *markup.Lexer) error {
 			}
 			return err
 		case markup.ErrorText:
-			return fmt.Errorf("Error parsing input: %v", i.Data)
+			return fmt.Errorf("error parsing input: %v", i.Data)
 		case markup.UrlLink, markup.UrlText, markup.ImagePath, markup.ImageLink, markup.ImageText:
 			continue
 		case markup.ColorText, markup.ColorTextBold:
@@ -156,7 +157,6 @@ func (s *server) Handle(bufname string, l *markup.Lexer) error {
 			m.Write(i.Data)
 		}
 	}
-	return fmt.Errorf("Unknown error parsing input encountered")
 }
 
 func getColors(current []byte, l *markup.Lexer) string {
