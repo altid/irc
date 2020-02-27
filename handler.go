@@ -28,6 +28,9 @@ func handlerFunc(s *server) irc.HandlerFunc {
 		case "PING", "PING ZNC":
 			c.Writef("PONG %s", m.Params[0])
 		case "001":
+			if s.conf.Nick != "" {
+				c.Writef("NICK %s", s.conf.Nick)
+			}
 			s.j <- s.buffs
 		case "301":
 			feed(fbuffer, m.Params[0], s, m)
