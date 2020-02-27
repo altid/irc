@@ -7,7 +7,6 @@ import (
 	"github.com/go-irc/irc"
 )
 
-// BUG(halfwit) client-to-client messages are being handled incorrectly
 func parseForCTCP(c *irc.Client, m *irc.Message, s *server) {
 	prefix := &irc.Prefix{
 		Name: c.CurrentNick(),
@@ -32,7 +31,7 @@ func parseForCTCP(c *irc.Client, m *irc.Message, s *server) {
 		c.WriteMessage(&irc.Message{
 			Prefix:  prefix,
 			Command: "FINGER",
-			Params:  []string{m.Prefix.Name, "ircfs 0.0.0"},
+			Params:  []string{m.Prefix.Name, "ircfs 0.0.1"},
 		})
 		feed(fserver, "server", s, m)
 	case "PING", "PING":
@@ -70,9 +69,6 @@ func parseForCTCP(c *irc.Client, m *irc.Message, s *server) {
 		})
 		feed(fserver, "server", s, m)
 	default:
-		// BUG(halfwit): When we write to a channel from another connected client
-		// such as is possible over ZNC, channels aren't created properly
-		// We'll have to validate channels are created for any log requests.
 		if strings.Contains(m.Params[1], prefix.Name) {
 			feed(fhighlight, m.Params[0], s, m)
 			s.m <- &msg{
@@ -90,7 +86,7 @@ func parseForCTCP(c *irc.Client, m *irc.Message, s *server) {
 			return
 		}
 
-		// Would prefer to use hostmask matches here
+		// TODO(halfwit) Would prefer to use hostmask matches here
 		if m.Name == prefix.Name {
 			s.j <- m.Params[0]
 			feed(fself, m.Params[0], s, m)

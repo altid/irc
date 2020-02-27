@@ -198,8 +198,7 @@ func fileWriter(c *fs.Control, m *msg) error {
 
 	cleaner := markup.NewCleaner(w)
 	defer cleaner.Close()
-	// if m.from write it
-	cleaner.WriteStringEscaped(m.data + "\n")
 
+	cleaner.WriteStringEscaped(m.data + "\n")
 	return nil
 }
