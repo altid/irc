@@ -105,11 +105,11 @@ func (s *server) Default(c *fs.Control, cmd, from, m string) error {
 		}()
 		return pm(s, m)
 	case "nick":
-		// Make sure we update s.conf.Name when we update username
 		s.conf.Name = m
 		fmt.Fprintf(s.conn, "NICK %s\n", m)
 		return nil
 	}
+
 	return fmt.Errorf("Unknown command %s", cmd)
 }
 
@@ -120,12 +120,12 @@ func (s *server) Handle(bufname string, l *markup.Lexer) error {
 		return err
 	}
 
-	_, err = fmt.Fprintf(s.conn, ":%s PRIVMSG %s :%s\n", s.conf.Name, m.buff, m.data)
+	_, err = fmt.Fprintf(s.conn, ":%s PRIVMSG %s :%s\n", s.conf.Name, bufname, m.data)
 	if err != nil {
 		return err
 	}
 
-	m.from = s.conf.Name
+	m.from = s.conf.Nick
 	m.buff = bufname
 	s.m <- m
 
