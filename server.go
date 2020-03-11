@@ -69,7 +69,8 @@ func (s *server) Open(c *fs.Control, name string) error {
 	}
 
 	s.i <- name
-	c.Event(path.Join(workdir, name, "input"))
+	defer c.Event(path.Join(workdir, name, "input"))
+
 	return nil
 }
 
@@ -114,6 +115,7 @@ func (s *server) Default(c *fs.Control, cmd, from, m string) error {
 func (s *server) Handle(bufname string, l *markup.Lexer) error {
 	m, err := input(l)
 	if err != nil {
+
 		return err
 	}
 
@@ -124,7 +126,6 @@ func (s *server) Handle(bufname string, l *markup.Lexer) error {
 	m.from = s.conf.Nick
 	m.buff = bufname
 	s.m <- m
-	s.e <- path.Join(workdir, bufname, "feed")
 
 	return nil
 }
@@ -147,7 +148,10 @@ func (s *server) fileListener(ctx context.Context, c *fs.Control) {
 				errorWriter(c, e)
 			}
 		case b := <-s.i:
-			if in, e := fs.NewInput(s, workdir, b); e == nil {
+			in, e := fs.NewInput(s, workdir, b)
+			if e != nil {
+				errorWriter(c, e)
+			} else {
 				go in.Start()
 			}
 		case <-ctx.Done():

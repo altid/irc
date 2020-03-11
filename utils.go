@@ -4,7 +4,6 @@ import (
 	"encoding/csv"
 	"fmt"
 	"io"
-	"log"
 	"strconv"
 	"strings"
 	"time"
@@ -52,9 +51,6 @@ func getChans(buffs string) []string {
 }
 
 // Private message
-// TODO(halfwit): We need to create a buffer if we're initializing a PM
-// `open`ing a conversation with a user does as well
-// https://github.com/altid/ircfs/issues/6
 func pm(s *server, msg string) error {
 	token := strings.Fields(msg)
 	m := &irc.Message{
@@ -64,7 +60,6 @@ func pm(s *server, msg string) error {
 		},
 		Params: token[:1],
 	}
-	// Param[1] is the body of the msg
 	m.Params = append(m.Params, strings.Join(token[1:], " "))
 	return sendmsg(s, m)
 }
@@ -129,11 +124,7 @@ func status(s *server, m *irc.Message) {
 }
 
 func errorWriter(c *fs.Control, err error) {
-	ew, err := c.ErrorWriter()
-	if err != nil {
-		// I mean, at this point...
-		log.Fatal(err)
-	}
+	ew, _ := c.ErrorWriter()
 	defer ew.Close()
 
 	fmt.Fprintf(ew, "ircfs: %s\n", err)
@@ -151,30 +142,34 @@ func fileWriter(c *fs.Control, m *msg) error {
 		if err != nil {
 			return err
 		}
+
 		feed := markup.NewCleaner(w)
 		defer feed.Close()
+
+		var color *markup.Color
 		switch m.fn {
 		case fselfaction:
-			color, _ := markup.NewColor(markup.Grey, []byte(m.from))
+			color, err = markup.NewColor(markup.Grey, []byte(m.from))
 			feed.WritefEscaped(" * %s: ", color)
 		case fself:
-			color, _ := markup.NewColor(markup.Grey, []byte(m.from))
+			color, err = markup.NewColor(markup.Grey, []byte(m.from))
 			feed.WritefEscaped("%s: ", color)
 		case fbuffer:
-			color, _ := markup.NewColor(markup.Blue, []byte(m.from))
+			color, err = markup.NewColor(markup.Blue, []byte(m.from))
 			feed.WritefEscaped("%s: ", color)
 		case faction:
-			color, _ := markup.NewColor(markup.Blue, []byte(m.from))
+			color, err = markup.NewColor(markup.Blue, []byte(m.from))
 			feed.WritefEscaped(" * %s: ", color)
 		case fhighlight:
-			color, _ := markup.NewColor(markup.Red, []byte(m.from))
+			color, err = markup.NewColor(markup.Red, []byte(m.from))
 			feed.WritefEscaped("%s: ", color)
 		case ftime:
-			color, _ := markup.NewColor(markup.Orange, []byte(m.from))
+			color, err = markup.NewColor(markup.Orange, []byte(m.from))
 			feed.WritefEscaped("Topic was set by %s, on ", color)
 		}
+
 		feed.WritefEscaped("%s\n", m.data)
-		return nil
+		return err
 	case fnotification:
 		ntfy := markup.NewNotifier(m.buff, m.from, m.data)
 		c.Notification(ntfy.Parse())
