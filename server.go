@@ -24,6 +24,7 @@ type server struct {
 	e      chan string // events
 	j      chan string // joins
 	m      chan *msg   // messages
+	i      chan string // start inputs
 	done   chan struct{}
 	addr   string
 	buffs  string
@@ -37,6 +38,7 @@ func (s *server) parse(c *config.Config) {
 	s.m = make(chan *msg)
 	s.e = make(chan string)
 	s.j = make(chan string)
+	s.i = make(chan string)
 	s.cert, _ = c.SSLCert()
 	s.addr, _ = c.Search("address")
 	s.buffs, _ = c.Search("buffers")
@@ -56,31 +58,27 @@ func (s *server) parse(c *config.Config) {
 }
 
 func (s *server) Open(c *fs.Control, name string) error {
-	err := c.CreateBuffer(name, "feed")
-	if err != nil {
-		return err
+	if e := c.CreateBuffer(name, "feed"); e != nil {
+		return e
 	}
+
 	if name[0] == '#' {
-		_, err = fmt.Fprintf(s.conn, "JOIN %s\n", name)
-		if err != nil {
-			return err
+		if _, e := fmt.Fprintf(s.conn, "JOIN %s\n", name); e != nil {
+			return e
 		}
 	}
-	input, err := fs.NewInput(s, workdir, name)
-	if err != nil {
-		return err
-	}
-	defer c.Event(path.Join(workdir, name, "input"))
-	go input.Start()
+
+	s.i <- name
+	c.Event(path.Join(workdir, name, "input"))
 	return nil
 }
 
 func (s *server) Close(c *fs.Control, name string) error {
-	err := c.DeleteBuffer(name, "feed")
-	if err != nil {
-		return err
+	if e := c.DeleteBuffer(name, "feed"); e != nil {
+		return e
 	}
-	_, err = fmt.Fprintf(s.conn, "PART %s\n", name)
+
+	_, err := fmt.Fprintf(s.conn, "PART %s\n", name)
 	return err
 }
 
@@ -95,18 +93,17 @@ func (s *server) Default(c *fs.Control, cmd, from, m string) error {
 	case "msg", "query":
 		// we don't want to send a JOIN message, so we don't simply s.j <- t[0]
 		t := strings.Fields(m)
-		err := c.CreateBuffer(t[0], "feed")
-		if err != nil {
-			return err
+
+		if e := c.CreateBuffer(t[0], "feed"); e != nil {
+			return e
 		}
-		go func() {
-			input, _ := fs.NewInput(s, workdir, t[0])
-			input.Start()
-		}()
+
+		s.i <- t[0]
 		return pm(s, m)
 	case "nick":
 		s.conf.Name = m
 		fmt.Fprintf(s.conn, "NICK %s\n", m)
+
 		return nil
 	}
 
@@ -120,14 +117,14 @@ func (s *server) Handle(bufname string, l *markup.Lexer) error {
 		return err
 	}
 
-	_, err = fmt.Fprintf(s.conn, ":%s PRIVMSG %s :%s\n", s.conf.Name, bufname, m.data)
-	if err != nil {
-		return err
+	if _, e := fmt.Fprintf(s.conn, ":%s PRIVMSG %s :%s\n", s.conf.Name, bufname, m.data); e != nil {
+		return e
 	}
 
 	m.from = s.conf.Nick
 	m.buff = bufname
 	s.m <- m
+	s.e <- path.Join(workdir, bufname, "feed")
 
 	return nil
 }
@@ -146,9 +143,12 @@ func (s *server) fileListener(ctx context.Context, c *fs.Control) {
 				}
 			}
 		case m := <-s.m:
-			err := fileWriter(c, m)
-			if err != nil {
-				errorWriter(c, err)
+			if e := fileWriter(c, m); e != nil {
+				errorWriter(c, e)
+			}
+		case b := <-s.i:
+			if in, e := fs.NewInput(s, workdir, b); e == nil {
+				go in.Start()
 			}
 		case <-ctx.Done():
 			s.conn.Close()
