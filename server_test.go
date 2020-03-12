@@ -40,10 +40,13 @@ func TestCmds(t *testing.T) {
 func runCommands(reqs chan string) {
 	reqs <- "open foo"
 	reqs <- "open bar"
-	reqs <- "join foo"
-	reqs <- "join bar"
-	reqs <- "part foo"
-	reqs <- "me bar eats chili"
+	// Stuff like me will have to have major parts abstracted out
+	// Since it calls a conn, we'll have to swap it for
+	// a readwriter, etc
+	//reqs <- "join baz"
+	//reqs <- "join qoz"
+	//reqs <- "part baz"
+	//reqs <- "me foo smiles"
 	reqs <- "quit"
 }
 
