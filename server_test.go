@@ -2,9 +2,11 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/altid/libs/fs"
+	"github.com/altid/libs/markup"
 )
 
 func TestCmds(t *testing.T) {
@@ -46,6 +48,18 @@ func runCommands(reqs chan string) {
 	reqs <- "quit"
 }
 
+type mockhandler struct{}
+
+func (f *mockhandler) Handle(bufname string, l *markup.Lexer) error {
+	m, err := input(l)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println(m.data)
+	return nil
+}
+
 func TestServerInput(t *testing.T) {
 	s := &server{
 		i:     make(chan string),
@@ -73,7 +87,7 @@ func TestServerInput(t *testing.T) {
 		mcf.CreateBuffer("foo", "feed")
 		in := make(chan string)
 
-		input, err := fs.NewMockInput(s, "foo", false, in)
+		input, err := fs.NewMockInput(&mockhandler{}, "foo", false, in)
 		if err != nil {
 			t.Error(err)
 		}
@@ -83,7 +97,8 @@ func TestServerInput(t *testing.T) {
 		in <- "input"
 		in <- "make some"
 		in <- "things break"
-		in <- "invalid-tokens"
+		//https://github.com/altid/libs/issues/13
+		//in <- "invalid-tokens"
 
 		if e := input.Errs(); len(e) > 0 {
 			for _, err := range e {
