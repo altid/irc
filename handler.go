@@ -51,7 +51,9 @@ func handlerFunc(s *server) irc.HandlerFunc {
 			title(m.Params[1], s, m)
 			feed(fbuffer, m.Params[0], s, m)
 		case "331", "332":
+			// Make sure we start listener and add tab
 			s.i <- m.Params[1]
+			s.j <- m.Params[1]
 			if m.Command == "332" {
 				title(m.Params[1], s, m)
 			}
