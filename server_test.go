@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
 	"github.com/altid/libs/fs"
@@ -20,7 +19,7 @@ func TestCmds(t *testing.T) {
 
 	reqs := make(chan string)
 
-	mcf, err := fs.MockCtlFile(s, reqs, false)
+	mcf, err := fs.MockCtlFile(s, reqs, true)
 	if err != nil {
 		t.Error(err)
 		return
@@ -51,12 +50,11 @@ func runCommands(reqs chan string) {
 type mockhandler struct{}
 
 func (f *mockhandler) Handle(bufname string, l *markup.Lexer) error {
-	m, err := input(l)
+	_, err := input(l)
 	if err != nil {
 		return err
 	}
 
-	fmt.Println(m.data)
 	return nil
 }
 
@@ -71,7 +69,7 @@ func TestServerInput(t *testing.T) {
 
 	reqs := make(chan string)
 
-	mcf, err := fs.MockCtlFile(s, reqs, false)
+	mcf, err := fs.MockCtlFile(s, reqs, true)
 	if err != nil {
 		t.Error(err)
 		return
@@ -80,7 +78,6 @@ func TestServerInput(t *testing.T) {
 	ctx := context.Background()
 	defer ctx.Done()
 	defer mcf.Cleanup()
-
 	go s.fileListener(ctx, mcf)
 
 	go func() {
@@ -93,6 +90,7 @@ func TestServerInput(t *testing.T) {
 		}
 
 		input.Start()
+		defer input.Stop()
 		in <- "test some"
 		in <- "input"
 		in <- "make some"
@@ -105,6 +103,7 @@ func TestServerInput(t *testing.T) {
 				t.Error(err)
 			}
 		}
+		reqs <- "quit"
 	}()
 
 	if e := mcf.Listen(); e != nil {
