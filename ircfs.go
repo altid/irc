@@ -11,8 +11,9 @@ import (
 )
 
 var (
-	mtpt = flag.String("p", "/tmp/altid", "Path for filesystem")
-	srv  = flag.String("s", "irc", "Name of service")
+	mtpt  = flag.String("p", "/tmp/altid", "Path for filesystem")
+	srv   = flag.String("s", "irc", "Name of service")
+	debug = flag.Bool("d", false, "enable debug printing")
 )
 
 func main() {
@@ -31,7 +32,7 @@ func main() {
 
 	s.parse(conf)
 
-	ctrl, err := fs.CreateCtlFile(s, conf.Log(), *mtpt, *srv, "feed")
+	ctrl, err := fs.CreateCtlFile(s, conf.Log(), *mtpt, *srv, "feed", *debug)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -40,6 +41,7 @@ func main() {
 
 	// Make a type which never will log
 	ctrl.CreateBuffer("server", "feed")
+
 	ctx, err := ctrl.Start()
 	if err != nil {
 		log.Fatal(err)
@@ -51,6 +53,7 @@ func main() {
 		log.Fatal(err)
 	}
 
+	// Is this even working?
 	client := irc.NewClient(s.conn, s.conf)
 	client.RunContext(ctx)
 }
