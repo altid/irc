@@ -26,6 +26,7 @@ func handlerFunc(s *server) irc.HandlerFunc {
 			//}
 			//feed(fbuffer, name, s, m)
 		case "PING", "PING ZNC":
+			s.debug(ctlMsg, m.Command, "server", "nil")
 			c.Writef("PONG %s", m.Params[0])
 		case "001":
 			if s.conf.Nick != "" {
@@ -33,11 +34,13 @@ func handlerFunc(s *server) irc.HandlerFunc {
 			}
 			s.j <- s.buffs
 		case "301":
+			s.debug(ctlMsg, m.Command, m.Params[0], "nil")
 			feed(fbuffer, m.Params[0], s, m)
 		case "333": //topicwhotime <client> <channel> <nick> <setat> unix time
 			timeSetAt(s, m)
 			return
 		case "MODE", "324":
+			s.debug(ctlMsg, m.Command, m.Params[0], "nil")
 			status(s, m)
 		//case "305": //BACK
 		//case "306": //AWAY
@@ -48,11 +51,11 @@ func handlerFunc(s *server) irc.HandlerFunc {
 		//<client> <channel>
 		// Title
 		case "TOPIC":
+			s.debug(ctlMsg, m.Command, m.Params[0], m.Params[1])
 			title(m.Params[1], s, m)
 			feed(fbuffer, m.Params[0], s, m)
 		case "331", "332":
 			// Make sure we start listener and add tab
-			s.i <- m.Params[1]
 			s.j <- m.Params[1]
 			if m.Command == "332" {
 				title(m.Params[1], s, m)

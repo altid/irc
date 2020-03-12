@@ -23,13 +23,12 @@ func main() {
 		os.Exit(1)
 	}
 
-	s := &server{}
-
 	conf, err := config.New(buildConfig, *srv)
 	if err != nil {
 		log.Fatal(err)
 	}
 
+	s := &server{}
 	s.parse(conf)
 
 	ctrl, err := fs.CreateCtlFile(s, conf.Log(), *mtpt, *srv, "feed", *debug)
@@ -39,7 +38,6 @@ func main() {
 
 	defer ctrl.Cleanup()
 
-	// Make a type which never will log
 	ctrl.CreateBuffer("server", "feed")
 
 	ctx, err := ctrl.Start()
@@ -48,12 +46,11 @@ func main() {
 	}
 
 	go s.fileListener(ctx, ctrl)
-	err = s.connect(ctx)
-	if err != nil {
-		log.Fatal(err)
+	if e := s.connect(ctx); e != nil {
+		log.Fatal(e)
 	}
+	defer s.conn.Close()
 
-	// Is this even working?
 	client := irc.NewClient(s.conn, s.conf)
 	client.RunContext(ctx)
 }

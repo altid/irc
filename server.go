@@ -5,7 +5,9 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
+	"log"
 	"net"
+	"os"
 	"path"
 	"strings"
 
@@ -17,21 +19,35 @@ import (
 
 var workdir = path.Join(*mtpt, *srv)
 
+type ctlItem int
+
+const (
+	ctlJoin ctlItem = iota
+	ctlPart
+	ctlStart
+	ctlEvent
+	ctlMsg
+	ctlInput
+	ctlRun
+	ctlSucceed
+	ctlErr
+)
+
 type server struct {
 	conn   net.Conn
 	conf   irc.ClientConfig
 	cert   tls.Certificate
 	e      chan string // events
+	i      chan string // inputs
 	j      chan string // joins
 	m      chan *msg   // messages
-	i      chan string // inputs
 	done   chan struct{}
 	addr   string
 	buffs  string
 	filter string
-	log    string
 	port   string
 	ssl    string
+	debug  func(ctlItem, ...interface{})
 }
 
 func (s *server) parse(c *config.Config) {
@@ -43,9 +59,9 @@ func (s *server) parse(c *config.Config) {
 	s.addr, _ = c.Search("address")
 	s.buffs, _ = c.Search("buffers")
 	s.filter, _ = c.Search("filter")
-	s.log = c.Log()
 	s.port, _ = c.Search("port")
 	s.ssl, _ = c.Search("ssl")
+	s.debug = func(ctlItem, ...interface{}) {}
 	pass, _ := c.Password()
 
 	s.conf = irc.ClientConfig{
@@ -55,14 +71,18 @@ func (s *server) parse(c *config.Config) {
 		Pass:    pass,
 		Handler: handlerFunc(s),
 	}
+
+	if *debug {
+		s.debug = ctlLogging
+	}
 }
 
 func (s *server) Open(c *fs.Control, name string) error {
 	if e := c.CreateBuffer(name, "feed"); e != nil {
-		fmt.Println(e)
 		return e
 	}
 
+	s.debug(ctlJoin, name)
 	if name[0] == '#' {
 		if _, e := fmt.Fprintf(s.conn, "JOIN %s\n", name); e != nil {
 			return e
@@ -72,26 +92,35 @@ func (s *server) Open(c *fs.Control, name string) error {
 	s.i <- name
 	defer c.Event(path.Join(workdir, name, "input"))
 
+	s.debug(ctlSucceed, "join")
 	return nil
 }
 
 func (s *server) Close(c *fs.Control, name string) error {
+	s.debug(ctlPart, name)
 	if e := c.DeleteBuffer(name, "feed"); e != nil {
 		return e
 	}
 
 	_, err := fmt.Fprintf(s.conn, "PART %s\n", name)
+	s.debug(ctlSucceed, "part")
 	return err
 }
 
 func (s *server) Link(c *fs.Control, from, name string) error {
-	return errors.New("link command not supported, please use open/close")
+	err := errors.New("link command not supported, please use open/close")
+	s.debug(ctlErr, name, err)
+
+	return err
 }
 
 func (s *server) Default(c *fs.Control, cmd, from, m string) error {
+	s.debug(ctlMsg, cmd, from, m)
 	switch cmd {
 	case "a", "act", "action", "me":
-		return action(s, from, m)
+		if e := action(s, from, m); e != nil {
+			return e
+		}
 	case "msg", "query":
 		// we don't want to send a JOIN message, so we don't simply s.j <- t[0]
 		t := strings.Fields(m)
@@ -101,25 +130,28 @@ func (s *server) Default(c *fs.Control, cmd, from, m string) error {
 		}
 
 		s.i <- t[0]
-		return pm(s, m)
+		if e := pm(s, m); e != nil {
+			return e
+		}
 	case "nick":
 		s.conf.Name = m
 		fmt.Fprintf(s.conn, "NICK %s\n", m)
-
-		return nil
+	default:
+		return fmt.Errorf("Unknown command %s", cmd)
 	}
 
-	return fmt.Errorf("Unknown command %s", cmd)
+	s.debug(ctlSucceed, cmd)
+	return nil
 }
 
 // input is always sent down raw to the server
 func (s *server) Handle(bufname string, l *markup.Lexer) error {
 	m, err := input(l)
 	if err != nil {
-
 		return err
 	}
 
+	s.debug(ctlInput, bufname, m.data)
 	if _, e := fmt.Fprintf(s.conn, ":%s PRIVMSG %s :%s\n", s.conf.Name, bufname, m.data); e != nil {
 		return e
 	}
@@ -128,6 +160,7 @@ func (s *server) Handle(bufname string, l *markup.Lexer) error {
 	m.buff = bufname
 	s.m <- m
 
+	s.debug(ctlSucceed, "input")
 	return nil
 }
 
@@ -136,12 +169,14 @@ func (s *server) fileListener(ctx context.Context, c *fs.Control) {
 	for {
 		select {
 		case e := <-s.e:
-			c.Event(e)
+			s.debug(ctlEvent, e)
+			go c.Event(e)
+			s.debug(ctlSucceed, "event")
 		case j := <-s.j:
 			buffs := getChans(j)
 			for _, buff := range buffs {
 				if !c.HasBuffer(buff, "feed") {
-					s.Open(c, buff)
+					go s.Open(c, buff)
 				}
 			}
 		case m := <-s.m:
@@ -152,11 +187,10 @@ func (s *server) fileListener(ctx context.Context, c *fs.Control) {
 			in, e := fs.NewInput(s, workdir, b, *debug)
 			if e != nil {
 				errorWriter(c, e)
-			} else {
-				in.Start()
+				continue
 			}
+			in.Start()
 		case <-ctx.Done():
-			s.conn.Close()
 			return
 		}
 	}
@@ -165,7 +199,7 @@ func (s *server) fileListener(ctx context.Context, c *fs.Control) {
 
 func (s *server) connect(ctx context.Context) error {
 	var tlsConfig *tls.Config
-
+	s.debug(ctlStart, s.addr, s.port)
 	dialString := s.addr + ":" + s.port
 	dialer := &net.Dialer{}
 
@@ -199,5 +233,36 @@ func (s *server) connect(ctx context.Context) error {
 	}
 
 	s.conn = tlsconn
+	s.debug(ctlRun)
+
 	return nil
+}
+
+func ctlLogging(ctl ctlItem, args ...interface{}) {
+	l := log.New(os.Stdout, "ircfs ", 0)
+
+	switch ctl {
+	case ctlSucceed:
+		l.Printf("%s succeeded\n", args[0])
+	case ctlJoin:
+		l.Printf("join target=\"%s\"\n", args[0])
+	case ctlStart:
+		l.Printf("start addr=\"%s\", port=%s\n", args[0], args[1])
+	case ctlRun:
+		l.Println("connected")
+	case ctlPart:
+		l.Printf("part target=\"%s\"\n", args[0])
+	case ctlEvent:
+		l.Printf("event data=\"%s\"\n", args[0])
+	case ctlInput:
+		l.Printf("input target=\"%s\" data=\"%s\"\n", args[0], args[1])
+	case ctlMsg:
+		l.Printf("%s target=\"%s\" action=\"%s\"\n", args[0], args[1], args[2])
+	case ctlErr:
+		l.Printf("error buffer=\"%s\" err=\"%v\"\n", args[0], args[1])
+	// This will be a lot of line noise
+	case ctcpMsg:
+		m := args[0].(*irc.Message)
+		l.Printf("ctcp: name=\"%s\" prefix=\"%s\" params=\"%v\"\n", m.Name, m.Prefix, m.Params)
+	}
 }

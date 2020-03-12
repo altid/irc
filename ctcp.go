@@ -7,10 +7,14 @@ import (
 	"github.com/go-irc/irc"
 )
 
+var ctcpMsg ctlItem
+
 func parseForCTCP(c *irc.Client, m *irc.Message, s *server) {
 	prefix := &irc.Prefix{
 		Name: c.CurrentNick(),
 	}
+
+	s.debug(ctcpMsg, m)
 	token := strings.Split(m.Params[1], " ")
 	switch token[0] {
 	case "ACTION":
@@ -69,14 +73,21 @@ func parseForCTCP(c *irc.Client, m *irc.Message, s *server) {
 		})
 		feed(fserver, "server", s, m)
 	default:
+		// User mentions, don't send highlights; just notifications
 		if strings.Contains(m.Params[1], prefix.Name) {
-			feed(fhighlight, m.Params[0], s, m)
+			if m.Params[0] == "chanserv" || m.Params[0] == "chanserve" {
+				m.Params[0] = "server"
+			} else {
+				feed(fhighlight, m.Params[0], s, m)
+			}
+
 			s.m <- &msg{
 				fn:   fnotification,
 				buff: m.Params[0],
 				from: m.Name,
 				data: m.Trailing(),
 			}
+
 			return
 		}
 		// PM received, make sure the file exists
