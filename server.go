@@ -24,7 +24,7 @@ type server struct {
 	e      chan string // events
 	j      chan string // joins
 	m      chan *msg   // messages
-	i      chan string // start inputs
+	i      chan string // inputs
 	done   chan struct{}
 	addr   string
 	buffs  string
@@ -59,6 +59,7 @@ func (s *server) parse(c *config.Config) {
 
 func (s *server) Open(c *fs.Control, name string) error {
 	if e := c.CreateBuffer(name, "feed"); e != nil {
+		fmt.Println(e)
 		return e
 	}
 
@@ -148,11 +149,11 @@ func (s *server) fileListener(ctx context.Context, c *fs.Control) {
 				errorWriter(c, e)
 			}
 		case b := <-s.i:
-			in, e := fs.NewInput(s, workdir, b)
+			in, e := fs.NewInput(s, workdir, b, *debug)
 			if e != nil {
 				errorWriter(c, e)
 			} else {
-				go in.Start()
+				in.Start()
 			}
 		case <-ctx.Done():
 			s.conn.Close()
