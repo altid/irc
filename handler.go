@@ -1,6 +1,8 @@
 package main
 
 import (
+	"time"
+
 	"github.com/go-irc/irc"
 )
 
@@ -52,13 +54,15 @@ func handlerFunc(s *server) irc.HandlerFunc {
 		// Title
 		case "TOPIC":
 			s.debug(ctlMsg, m.Command, m.Params[0], m.Params[1])
-			title(m.Params[1], s, m)
 			feed(fbuffer, m.Params[0], s, m)
+			title(m.Params[1], s, m)
 		case "331", "332":
 			// Make sure we start listener and add tab
 			s.j <- m.Params[1]
 			if m.Command == "332" {
-				title(m.Params[1], s, m)
+				// Give the join time to propogate
+				// TODO(halfwit) Create the directory for title if none exists
+				time.AfterFunc(time.Second*2, func() { title(m.Params[1], s, m) })
 			}
 		default:
 			feed(fserver, "server", s, m)
