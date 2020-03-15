@@ -114,30 +114,37 @@ func (s *server) Link(c *fs.Control, from, name string) error {
 	return err
 }
 
-func (s *server) Default(c *fs.Control, cmd, from, m string) error {
-	s.debug(ctlMsg, cmd, from, m)
-	switch cmd {
+func (s *server) Default(c *fs.Control, cmd *fs.Command) error {
+	s.debug(ctlMsg, cmd)
+	switch cmd.Name {
 	case "a", "act", "action", "me":
-		if e := action(s, from, m); e != nil {
+		if len(cmd.Args) < 1 {
+			return errors.New("no action entered")
+		}
+		line := strings.Join(cmd.Args[1:], " ")
+		if e := action(s, cmd.Args[0], line); e != nil {
 			return e
 		}
 	case "msg", "query":
-		// we don't want to send a JOIN message, so we don't simply s.j <- t[0]
-		t := strings.Fields(m)
-
-		if e := c.CreateBuffer(t[0], "feed"); e != nil {
+		if len(cmd.Args) < 1 {
+			return errors.New("no user specified")
+		}
+		if e := c.CreateBuffer(cmd.Args[0], "feed"); e != nil {
 			return e
 		}
 
-		s.i <- t[0]
-		if e := pm(s, m); e != nil {
-			return e
+		s.i <- cmd.Args[0]
+		if len(cmd.Args) > 1 {
+			line := strings.Join(cmd.Args[1:], " ")
+			if e := pm(s, line); e != nil {
+				return e
+			}
 		}
 	case "nick":
-		s.conf.Name = m
-		fmt.Fprintf(s.conn, "NICK %s\n", m)
+		s.conf.Name = cmd.Args[0]
+		fmt.Fprintf(s.conn, "NICK %s\n", cmd.Args[0])
 	default:
-		return fmt.Errorf("Unknown command %s", cmd)
+		return fmt.Errorf("Unknown command %s", cmd.Name)
 	}
 
 	s.debug(ctlSucceed, cmd)
@@ -257,7 +264,9 @@ func ctlLogging(ctl ctlItem, args ...interface{}) {
 	case ctlInput:
 		l.Printf("input target=\"%s\" data=\"%s\"\n", args[0], args[1])
 	case ctlMsg:
-		l.Printf("%s target=\"%s\" action=\"%s\"\n", args[0], args[1], args[2])
+		m := args[0].(*fs.Command)
+		line := strings.Join(m.Args, " ")
+		l.Printf("%s data=\"%s\"\n", m.Name, line)
 	case ctlErr:
 		l.Printf("error buffer=\"%s\" err=\"%v\"\n", args[0], args[1])
 	// This will be a lot of line noise

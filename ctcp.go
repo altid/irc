@@ -73,43 +73,41 @@ func parseForCTCP(c *irc.Client, m *irc.Message, s *server) {
 		})
 		feed(fserver, "server", s, m)
 	default:
-		// User mentions, don't send highlights; just notifications
-		if strings.Contains(m.Params[1], prefix.Name) {
-			if m.Params[0] == "chanserv" || m.Params[0] == "chanserve" {
-				m.Params[0] = "server"
-			} else {
-				feed(fhighlight, m.Params[0], s, m)
-			}
+		defaultCTCP(c, m, s)
+	}
+}
 
-			s.m <- &msg{
-				fn:   fnotification,
-				buff: m.Params[0],
-				from: m.Name,
-				data: m.Trailing(),
-			}
-
-			return
-		}
-		// PM received, make sure the file exists
-		if m.Params[0] == prefix.Name {
-			s.j <- m.Prefix.Name
-			feed(fbuffer, m.Prefix.Name, s, m)
-			return
+func defaultCTCP(c *irc.Client, m *irc.Message, s *server) {
+	// User mentions, don't send highlights; just notifications
+	switch {
+	// TODO(halfwit) Would prefer to use hostmask matches here
+	// Messages the user writes
+	case m.Name == c.CurrentNick():
+		s.j <- m.Params[0]
+		feed(fself, m.Params[0], s, m)
+	// User is highlighted
+	case strings.Contains(m.Params[1], c.CurrentNick()):
+		if m.Params[0] == "chanserv" || m.Params[0] == "chanserve" {
+			m.Params[0] = "server"
+		} else {
+			feed(fhighlight, m.Params[0], s, m)
 		}
 
-		// TODO(halfwit) Would prefer to use hostmask matches here
-		if m.Name == prefix.Name {
-			s.j <- m.Params[0]
-			feed(fself, m.Params[0], s, m)
-			return
+		s.m <- &msg{
+			fn:   fnotification,
+			buff: m.Params[0],
+			from: m.Name,
+			data: m.Trailing(),
 		}
-
-		if c.FromChannel(m) {
-			s.j <- m.Params[0]
-			feed(fbuffer, m.Params[0], s, m)
-			return
-		}
-
+	// PM received, make sure the file exists
+	case m.Params[0] == c.CurrentNick():
+		s.j <- m.Prefix.Name
+		feed(fbuffer, m.Prefix.Name, s, m)
+	// Normal message from a buffer
+	case c.FromChannel(m):
+		s.j <- m.Params[0]
+		feed(fbuffer, m.Params[0], s, m)
+	default:
 		feed(fserver, "server", s, m)
 	}
 }

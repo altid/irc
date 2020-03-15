@@ -60,7 +60,7 @@ func handlerFunc(s *server) irc.HandlerFunc {
 			// Make sure we start listener and add tab
 			s.j <- m.Params[1]
 			if m.Command == "332" {
-				// Give the join time to propogate
+				// Give the join time to propagate
 				// TODO(halfwit) Create the directory for title if none exists
 				time.AfterFunc(time.Second*2, func() { title(m.Params[1], s, m) })
 			}

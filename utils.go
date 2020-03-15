@@ -134,59 +134,27 @@ func fileWriter(c *fs.Control, m *msg) error {
 	if m.from == "freenode-connect" {
 		return nil
 	}
-	var w *fs.WriteCloser
-	var err error
+
 	switch m.fn {
 	case fbuffer, faction, fhighlight, fselfaction, fself, ftime:
-		w, err = c.MainWriter(m.buff, "feed")
-		if err != nil {
-			return err
-		}
-
-		feed := markup.NewCleaner(w)
-		defer feed.Close()
-
-		var color *markup.Color
-		switch m.fn {
-		case fselfaction:
-			color, err = markup.NewColor(markup.Grey, []byte(m.from))
-			feed.WritefEscaped(" * %s: ", color)
-		case fself:
-			color, err = markup.NewColor(markup.Grey, []byte(m.from))
-			feed.WritefEscaped("%s: ", color)
-		case fbuffer:
-			color, err = markup.NewColor(markup.Blue, []byte(m.from))
-			feed.WritefEscaped("%s: ", color)
-		case faction:
-			color, err = markup.NewColor(markup.Blue, []byte(m.from))
-			feed.WritefEscaped(" * %s: ", color)
-		case fhighlight:
-			color, err = markup.NewColor(markup.Red, []byte(m.from))
-			feed.WritefEscaped("%s: ", color)
-		case ftime:
-			color, err = markup.NewColor(markup.Orange, []byte(m.from))
-			feed.WritefEscaped("Topic was set by %s, on ", color)
-		}
-
-		feed.WritefEscaped("%s\n", m.data)
-		return err
+		return m.fnormalWrite(c)
 	case fnotification:
-		ntfy := markup.NewNotifier(m.buff, m.from, m.data)
-		c.Notification(ntfy.Parse())
-
-		return nil
+		return c.Notification(markup.NewNotifier(m.buff, m.from, m.data).Parse())
 	case fserver:
-		w, err = c.MainWriter("server", "feed")
+		return m.fspecialWrite(c.MainWriter("server", "feed"))
 	case fstatus:
-		w, err = c.StatusWriter(m.buff)
+		return m.fspecialWrite(c.StatusWriter(m.buff))
 	case faside:
-		w, err = c.SideWriter(m.buff)
+		return m.fspecialWrite(c.SideWriter(m.buff))
 	case ftitle:
-		w, err = c.TitleWriter(m.buff)
+		return m.fspecialWrite(c.TitleWriter(m.buff))
 	default:
 		return nil
 	}
+}
 
+// We take the error in here for a cleaner switch
+func (m *msg) fspecialWrite(w *fs.WriteCloser, err error) error {
 	if err != nil {
 		return err
 	}
@@ -194,6 +162,47 @@ func fileWriter(c *fs.Control, m *msg) error {
 	cleaner := markup.NewCleaner(w)
 	defer cleaner.Close()
 
-	cleaner.WriteStringEscaped(m.data + "\n")
+	if _, e := cleaner.WriteStringEscaped(m.data + "\n"); e != nil {
+		return e
+	}
+
+	return nil
+}
+
+func (m *msg) fnormalWrite(c *fs.Control) error {
+	var color *markup.Color
+
+	w, err := c.MainWriter(m.buff, "feed")
+	if err != nil {
+		return err
+	}
+
+	feed := markup.NewCleaner(w)
+	defer feed.Close()
+
+	switch m.fn {
+	case fselfaction:
+		color, _ = markup.NewColor(markup.Grey, []byte(m.from))
+		feed.WritefEscaped(" * %s: ", color)
+	case fself:
+		color, _ = markup.NewColor(markup.Grey, []byte(m.from))
+		feed.WritefEscaped("%s: ", color)
+	case fbuffer:
+		color, _ = markup.NewColor(markup.Blue, []byte(m.from))
+		feed.WritefEscaped("%s: ", color)
+	case faction:
+		color, _ = markup.NewColor(markup.Blue, []byte(m.from))
+		feed.WritefEscaped(" * %s: ", color)
+	case fhighlight:
+		color, _ = markup.NewColor(markup.Red, []byte(m.from))
+		feed.WritefEscaped("%s: ", color)
+	case ftime:
+		color, _ = markup.NewColor(markup.Orange, []byte(m.from))
+		feed.WritefEscaped("Topic was set by %s, on ", color)
+	}
+
+	feed.WritefEscaped("%s\n", m.data)
+
+	//return feed.Err()
 	return nil
 }

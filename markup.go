@@ -7,6 +7,25 @@ import (
 	"github.com/altid/libs/markup"
 )
 
+var colorCode = map[string]string{
+	markup.White:      "0",
+	markup.Black:      "1",
+	markup.Blue:       "2",
+	markup.Green:      "3",
+	markup.Red:        "4",
+	markup.Brown:      "5",
+	markup.Purple:     "6",
+	markup.Orange:     "7",
+	markup.Yellow:     "8",
+	markup.LightGreen: "9",
+	markup.Cyan:       "10",
+	markup.LightCyan:  "11",
+	markup.LightBlue:  "12",
+	markup.Pink:       "13",
+	markup.Grey:       "14",
+	markup.LightGrey:  "15",
+}
+
 func input(l *markup.Lexer) (*msg, error) {
 	var m bytes.Buffer
 	for {
@@ -53,11 +72,11 @@ func getColors(current []byte, l *markup.Lexer) string {
 		case markup.EOF:
 			return color.String()
 		case markup.ColorCode:
-			code := getColorCode(i.Data)
+			code := colorCode[string(i.Data)]
 			if n := bytes.IndexByte(i.Data, ','); n >= 0 {
-				code = getColorCode(i.Data[:n])
+				code = colorCode[string(i.Data[:n])]
 				code += ","
-				code += getColorCode(i.Data[n+1:])
+				code += colorCode[string(i.Data[n+1:])]
 			}
 			color.WriteString("")
 			color.WriteString(code)
@@ -80,42 +99,4 @@ func getColors(current []byte, l *markup.Lexer) string {
 			text.Write(i.Data)
 		}
 	}
-}
-
-func getColorCode(d []byte) string {
-	switch string(d) {
-	case markup.White:
-		return "0"
-	case markup.Black:
-		return "1"
-	case markup.Blue:
-		return "2"
-	case markup.Green:
-		return "3"
-	case markup.Red:
-		return "4"
-	case markup.Brown:
-		return "5"
-	case markup.Purple:
-		return "6"
-	case markup.Orange:
-		return "7"
-	case markup.Yellow:
-		return "8"
-	case markup.LightGreen:
-		return "9"
-	case markup.Cyan:
-		return "10"
-	case markup.LightCyan:
-		return "11"
-	case markup.LightBlue:
-		return "12"
-	case markup.Pink:
-		return "13"
-	case markup.Grey:
-		return "14"
-	case markup.LightGrey:
-		return "15"
-	}
-	return ""
 }

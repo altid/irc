@@ -2,6 +2,8 @@
 9fans.net/go v0.0.2/go.mod h1:lfPdxjq9v8pVQXUMBCx5EO5oLXWQFlKRQgs1kEkjoIM=
 github.com/altid/libs v0.0.0-20200314043833-77431354dd9c h1:sHscjbH+s6LtadPbZn3k2zDwXSI11o4iJwIkNW86a7E=
 github.com/altid/libs v0.0.0-20200314043833-77431354dd9c/go.mod h1:U8m8LG+xPdt5M3MXW+opofIYFS3iA6RrP/fQhBaH9N8=
+github.com/altid/libs v0.1.0 h1:1JanshaQTpN/HGi6xX/8Yg25rlHZ2bArkd7ArPnX+wQ=
+github.com/altid/libs v0.1.0/go.mod h1:U8m8LG+xPdt5M3MXW+opofIYFS3iA6RrP/fQhBaH9N8=
 github.com/go-irc/irc v1.3.0 h1:IMD+d/+EzY51ecMLOz73r/NXTZrEp8khrePxRCvX71M=
 github.com/go-irc/irc v2.1.0+incompatible h1:pg7pMVq5OYQbqTxceByD/EN8VIsba7DtKn49rsCnG8Y=
 github.com/go-irc/irc v2.1.0+incompatible/go.mod h1:jJILTRy8s/qOvusiKifAEfhQMVwft1ZwQaVJnnzmyX4=
