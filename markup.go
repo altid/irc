@@ -40,7 +40,7 @@ func input(l *markup.Lexer) (*msg, error) {
 			return m, nil
 		case markup.ErrorText:
 			return nil, fmt.Errorf("error parsing input: %v", i.Data)
-		case markup.UrlLink, markup.UrlText, markup.ImagePath, markup.ImageLink, markup.ImageText:
+		case markup.URLLink, markup.URLText, markup.ImagePath, markup.ImageLink, markup.ImageText:
 			continue
 		case markup.ColorText, markup.ColorTextBold:
 			m.WriteString(getColors(i.Data, l))
