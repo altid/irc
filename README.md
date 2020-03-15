@@ -2,7 +2,7 @@
 
 Ircfs is a file service used to connect to an IRC network
 
-[![Go Report Card](https://goreportcard.com/badge/github.com/altid/ircfs)](https://goreportcard.com/report/github.com/altid/ircfs)
+![Go](https://github.com/altid/ircfs/workflows/Go/badge.svg) [![Go Report Card](https://goreportcard.com/badge/github.com/altid/ircfs)](https://goreportcard.com/report/github.com/altid/ircfs)
 
 `go install github.com/altid/ircfs`
 
