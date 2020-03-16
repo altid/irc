@@ -90,7 +90,7 @@ func (s *server) Open(c *fs.Control, name string) error {
 	}
 
 	s.i <- name
-	defer c.Event(path.Join(workdir, name, "input"))
+	s.e <- path.Join(workdir, name, "input")
 
 	s.debug(ctlSucceed, "join")
 	return nil
@@ -177,8 +177,7 @@ func (s *server) fileListener(ctx context.Context, c *fs.Control) {
 		select {
 		case e := <-s.e:
 			s.debug(ctlEvent, e)
-			go c.Event(e)
-			s.debug(ctlSucceed, "event")
+			c.Event(e)
 		case j := <-s.j:
 			buffs := getChans(j)
 			for _, buff := range buffs {

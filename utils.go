@@ -116,6 +116,9 @@ func feed(fn fname, name string, s *server, m *irc.Message) {
 }
 
 func buildConfig() (*config.Config, error) {
+	// TODO(halfwit) Show off an example config interaction
+	// we may want to check if we were ran with `&` and give directions
+	// on how to run in foreground, exiting after a successful config build
 	return nil, nil
 }
 
