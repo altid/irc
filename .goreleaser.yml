@@ -3,7 +3,7 @@ before:
   hooks:
     - go mod download
 builds:
-  goos:
+- goos:
   - linux
   - windows
   - darwin
