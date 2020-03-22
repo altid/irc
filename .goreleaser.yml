@@ -1,0 +1,32 @@
+project_name: ircfs
+before:
+  hooks:
+    - go mod download
+builds:
+  goos:
+  - linux
+  - windows
+  - darwin
+  - freebsd
+  goarch: 
+  - amd64
+signs:
+  - artifacts: all
+archives:
+- replacements:
+    darwin: Darwin
+    linux: Linux
+    windows: Windows
+    freebsd: FreeBSD
+    amd64: x86_64
+  format_overrides:
+    - goos: windows
+      format: zip
+checksum:
+  name_template: 'checksums'
+changelog:
+  sort: asc
+  filters:
+    exclude:
+    - '^docs:'
+    - '^test:'
