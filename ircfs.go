@@ -23,7 +23,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	conf, err := config.New(buildConfig, *srv)
+	conf, err := config.New(buildConfig, *srv, false)
 	if err != nil {
 		log.Fatal(err)
 	}

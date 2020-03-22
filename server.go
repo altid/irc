@@ -151,6 +151,18 @@ func (s *server) Default(c *fs.Control, cmd *fs.Command) error {
 	return nil
 }
 
+func (s *server) Quit() {
+
+}
+
+func (s *server) Restart(c *fs.Control) error {
+	return nil
+}
+  
+func (s *server) Refresh(c *fs.Control) error {
+	return nil
+}
+
 // input is always sent down raw to the server
 func (s *server) Handle(bufname string, l *markup.Lexer) error {
 	m, err := input(l)

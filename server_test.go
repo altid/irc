@@ -19,7 +19,7 @@ func TestCmds(t *testing.T) {
 
 	reqs := make(chan string)
 
-	mcf, err := fs.MockCtlFile(s, reqs, true)
+	mcf, err := fs.MockCtlFile(s, reqs, "test", true)
 	if err != nil {
 		t.Error(err)
 		return
@@ -72,7 +72,7 @@ func TestServerInput(t *testing.T) {
 
 	reqs := make(chan string)
 
-	mcf, err := fs.MockCtlFile(s, reqs, true)
+	mcf, err := fs.MockCtlFile(s, reqs, "test", true)
 	if err != nil {
 		t.Error(err)
 		return
