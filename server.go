@@ -14,7 +14,7 @@ import (
 	"github.com/altid/libs/config"
 	"github.com/altid/libs/fs"
 	"github.com/altid/libs/markup"
-	"github.com/go-irc/irc"
+	"gopkg.in/irc.v3"
 )
 
 var workdir = path.Join(*mtpt, *srv)
@@ -34,6 +34,7 @@ const (
 )
 
 type server struct {
+	cancel context.CancelFunc
 	conn   net.Conn
 	conf   irc.ClientConfig
 	cert   tls.Certificate
@@ -90,7 +91,7 @@ func (s *server) Open(c *fs.Control, name string) error {
 	}
 
 	s.i <- name
-	defer c.Event(path.Join(workdir, name, "input"))
+	s.e <- path.Join(workdir, name, "input")
 
 	s.debug(ctlSucceed, "join")
 	return nil
@@ -151,6 +152,18 @@ func (s *server) Default(c *fs.Control, cmd *fs.Command) error {
 	return nil
 }
 
+func (s *server) Quit() {
+	s.cancel()
+}
+
+func (s *server) Restart(c *fs.Control) error {
+	return nil
+}
+
+func (s *server) Refresh(c *fs.Control) error {
+	return nil
+}
+
 // input is always sent down raw to the server
 func (s *server) Handle(bufname string, l *markup.Lexer) error {
 	m, err := input(l)
@@ -177,8 +190,7 @@ func (s *server) fileListener(ctx context.Context, c *fs.Control) {
 		select {
 		case e := <-s.e:
 			s.debug(ctlEvent, e)
-			go c.Event(e)
-			s.debug(ctlSucceed, "event")
+			c.Event(e)
 		case j := <-s.j:
 			buffs := getChans(j)
 			for _, buff := range buffs {

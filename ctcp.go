@@ -4,7 +4,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-irc/irc"
+	"gopkg.in/irc.v3"
 )
 
 var ctcpMsg ctlItem

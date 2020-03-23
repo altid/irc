@@ -8,10 +8,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/altid/libs/config"
 	"github.com/altid/libs/fs"
 	"github.com/altid/libs/markup"
-	"github.com/go-irc/irc"
+	"gopkg.in/irc.v3"
 )
 
 type fname int
@@ -115,10 +114,6 @@ func feed(fn fname, name string, s *server, m *irc.Message) {
 	}
 }
 
-func buildConfig() (*config.Config, error) {
-	return nil, nil
-}
-
 func status(s *server, m *irc.Message) {
 	// Just use m.Params[0] for the fname
 }
@@ -154,7 +149,7 @@ func fileWriter(c *fs.Control, m *msg) error {
 }
 
 // We take the error in here for a cleaner switch
-func (m *msg) fspecialWrite(w *fs.WriteCloser, err error) error {
+func (m *msg) fspecialWrite(w io.WriteCloser, err error) error {
 	if err != nil {
 		return err
 	}
