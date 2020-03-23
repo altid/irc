@@ -3,7 +3,7 @@ package main
 import (
 	"time"
 
-	"github.com/go-irc/irc"
+	"gopkg.in/irc.v3"
 )
 
 // BUG(halfwit): Logs are being created for user events such as client quit

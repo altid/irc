@@ -1,13 +1,14 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"log"
 	"os"
 
 	"github.com/altid/libs/config"
 	"github.com/altid/libs/fs"
-	"github.com/go-irc/irc"
+	"gopkg.in/irc.v3"
 )
 
 var (
@@ -28,27 +29,29 @@ func main() {
 		log.Fatal(err)
 	}
 
-	s := &server{}
+	ctx, cancel := context.WithCancel(context.Background())
+
+	s := &server{
+		cancel: cancel,
+	}
+
 	s.parse(conf)
 
-	ctrl, err := fs.CreateCtlFile(s, conf.Log(), *mtpt, *srv, "feed", *debug)
+	ctrl, err := fs.CreateCtlFile(ctx, s, conf.Log(), *mtpt, *srv, "feed", *debug)
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	defer ctrl.Cleanup()
 
 	ctrl.CreateBuffer("server", "feed")
 
-	ctx, err := ctrl.Start()
-	if err != nil {
-		log.Fatal(err)
-	}
-
+	defer ctrl.Cleanup()
+	go ctrl.Listen()
 	go s.fileListener(ctx, ctrl)
+
 	if e := s.connect(ctx); e != nil {
 		log.Fatal(e)
 	}
+
 	defer s.conn.Close()
 
 	client := irc.NewClient(s.conn, s.conf)

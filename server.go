@@ -14,7 +14,7 @@ import (
 	"github.com/altid/libs/config"
 	"github.com/altid/libs/fs"
 	"github.com/altid/libs/markup"
-	"github.com/go-irc/irc"
+	"gopkg.in/irc.v3"
 )
 
 var workdir = path.Join(*mtpt, *srv)
@@ -34,6 +34,7 @@ const (
 )
 
 type server struct {
+	cancel context.CancelFunc
 	conn   net.Conn
 	conf   irc.ClientConfig
 	cert   tls.Certificate
@@ -152,13 +153,13 @@ func (s *server) Default(c *fs.Control, cmd *fs.Command) error {
 }
 
 func (s *server) Quit() {
-
+	s.cancel()
 }
 
 func (s *server) Restart(c *fs.Control) error {
 	return nil
 }
-  
+
 func (s *server) Refresh(c *fs.Control) error {
 	return nil
 }

@@ -10,7 +10,7 @@ import (
 
 	"github.com/altid/libs/fs"
 	"github.com/altid/libs/markup"
-	"github.com/go-irc/irc"
+	"gopkg.in/irc.v3"
 )
 
 type fname int

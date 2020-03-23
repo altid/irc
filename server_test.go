@@ -9,32 +9,32 @@ import (
 )
 
 func TestCmds(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+
 	s := &server{
-		i:     make(chan string),
-		e:     make(chan string),
-		j:     make(chan string),
-		m:     make(chan *msg),
-		debug: func(ctlItem, ...interface{}) {},
+		cancel: cancel,
+		i:      make(chan string),
+		e:      make(chan string),
+		j:      make(chan string),
+		m:      make(chan *msg),
+		debug:  func(ctlItem, ...interface{}) {},
 	}
 
 	reqs := make(chan string)
 
-	mcf, err := fs.MockCtlFile(s, reqs, "test", true)
+	mcf, err := fs.MockCtlFile(ctx, s, reqs, "test", true)
 	if err != nil {
 		t.Error(err)
 		return
 	}
 
-	ctx := context.Background()
-	defer ctx.Done()
 	defer mcf.Cleanup()
 
 	go s.fileListener(ctx, mcf)
 	go runCommands(reqs)
+	go mcf.Listen()
 
-	if e := mcf.Listen(); e != nil {
-		t.Error(err)
-	}
+	<-ctx.Done()
 }
 
 func runCommands(reqs chan string) {
@@ -47,7 +47,7 @@ func runCommands(reqs chan string) {
 	//reqs <- "join qoz"
 	//reqs <- "part baz"
 	//reqs <- "me foo smiles"
-	reqs <- "quit"
+	reqs <- "test quit"
 }
 
 type mockhandler struct{}
@@ -62,24 +62,24 @@ func (f *mockhandler) Handle(bufname string, l *markup.Lexer) error {
 }
 
 func TestServerInput(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
 	s := &server{
-		i:     make(chan string),
-		e:     make(chan string),
-		j:     make(chan string),
-		m:     make(chan *msg),
-		debug: func(ctlItem, ...interface{}) {},
+		cancel: cancel,
+		i:      make(chan string),
+		e:      make(chan string),
+		j:      make(chan string),
+		m:      make(chan *msg),
+		debug:  func(ctlItem, ...interface{}) {},
 	}
 
 	reqs := make(chan string)
 
-	mcf, err := fs.MockCtlFile(s, reqs, "test", true)
+	mcf, err := fs.MockCtlFile(ctx, s, reqs, "test", true)
 	if err != nil {
 		t.Error(err)
 		return
 	}
 
-	ctx := context.Background()
-	defer ctx.Done()
 	defer mcf.Cleanup()
 	go s.fileListener(ctx, mcf)
 
@@ -106,10 +106,10 @@ func TestServerInput(t *testing.T) {
 				t.Error(err)
 			}
 		}
-		reqs <- "quit"
+		reqs <- "test quit"
 	}()
 
-	if e := mcf.Listen(); e != nil {
-		t.Error(err)
-	}
+	go mcf.Listen()
+
+	<-ctx.Done()
 }
