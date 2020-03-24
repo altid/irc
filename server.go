@@ -37,39 +37,41 @@ type server struct {
 	cancel context.CancelFunc
 	conn   net.Conn
 	conf   irc.ClientConfig
-	cert   tls.Certificate
 	e      chan string // events
 	i      chan string // inputs
 	j      chan string // joins
 	m      chan *msg   // messages
-	done   chan struct{}
-	addr   string
-	buffs  string
-	filter string
-	port   string
-	ssl    string
+	d      *defaults
 	debug  func(ctlItem, ...interface{})
 }
 
-func (s *server) parse(c *config.Config) {
+type defaults struct {
+	Address string `IP Address of IRC server you wish to connect to:`
+	SSL     string `SSL mode: none|simple|certificate`
+	Port    int
+	Auth    config.Auth `Select authentication type password|factotum|none`
+	Filter  string
+	Nick    string `Enter your IRC nickname (this is what will be shown on messages you send):`
+	User    string
+	Name    string
+	Buffs   string
+	Logdir  config.Logdir
+	TLSCert string
+	TLSKey  string
+}
+
+func (s *server) parse() {
 	s.m = make(chan *msg)
 	s.e = make(chan string)
 	s.j = make(chan string)
 	s.i = make(chan string)
-	s.cert, _ = c.SSLCert()
-	s.addr, _ = c.Search("address")
-	s.buffs, _ = c.Search("buffers")
-	s.filter, _ = c.Search("filter")
-	s.port, _ = c.Search("port")
-	s.ssl, _ = c.Search("ssl")
 	s.debug = func(ctlItem, ...interface{}) {}
-	pass, _ := c.Password()
 
 	s.conf = irc.ClientConfig{
-		User:    c.MustSearch("user"),
-		Nick:    c.MustSearch("nick"),
-		Name:    c.MustSearch("name"),
-		Pass:    pass,
+		User:    s.d.User,
+		Nick:    s.d.Nick,
+		Name:    s.d.Name,
+		Pass:    string(s.d.Auth),
 		Handler: handlerFunc(s),
 	}
 
@@ -218,8 +220,9 @@ func (s *server) fileListener(ctx context.Context, c *fs.Control) {
 
 func (s *server) connect(ctx context.Context) error {
 	var tlsConfig *tls.Config
-	s.debug(ctlStart, s.addr, s.port)
-	dialString := s.addr + ":" + s.port
+
+	s.debug(ctlStart, s.d.Address, s.d.Port)
+	dialString := fmt.Sprintf("%s:%d", s.d.Address, s.d.Port)
 	dialer := &net.Dialer{}
 
 	conn, err := dialer.DialContext(ctx, "tcp", dialString)
@@ -227,23 +230,27 @@ func (s *server) connect(ctx context.Context) error {
 		return err
 	}
 
-	switch s.ssl {
+	switch s.d.SSL {
+	case "none":
+		s.conn = conn
+		return nil
 	case "simple":
 		tlsConfig = &tls.Config{
 			ServerName:         dialString,
 			InsecureSkipVerify: true,
 		}
 	case "certificate":
+		cert, err := tls.LoadX509KeyPair(s.d.TLSCert, s.d.TLSKey)
+		if err != nil {
+			return err
+		}
+
 		tlsConfig = &tls.Config{
 			Certificates: []tls.Certificate{
-				s.cert,
+				cert,
 			},
 			ServerName: dialString,
 		}
-
-	default:
-		s.conn = conn
-		return nil
 	}
 
 	tlsconn := tls.Client(conn, tlsConfig)
@@ -266,7 +273,7 @@ func ctlLogging(ctl ctlItem, args ...interface{}) {
 	case ctlJoin:
 		l.Printf("join target=\"%s\"\n", args[0])
 	case ctlStart:
-		l.Printf("start addr=\"%s\", port=%s\n", args[0], args[1])
+		l.Printf("start addr=\"%s\", port=%d\n", args[0], args[1])
 	case ctlRun:
 		l.Println("connected")
 	case ctlPart:
