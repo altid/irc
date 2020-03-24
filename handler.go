@@ -33,7 +33,7 @@ func handlerFunc(s *server) irc.HandlerFunc {
 			if s.conf.Nick != "" {
 				c.Writef("NICK %s", s.conf.Nick)
 			}
-			s.j <- s.buffs
+			s.j <- s.d.Buffs
 		case "301":
 			feed(fbuffer, m.Params[0], s, m)
 		case "333": //topicwhotime <client> <channel> <nick> <setat> unix time

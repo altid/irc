@@ -196,8 +196,6 @@ func (m *msg) fnormalWrite(c *fs.Control) error {
 		feed.WritefEscaped("Topic was set by %s, on ", color)
 	}
 
-	feed.WritefEscaped("%s\n", m.data)
-
-	//return feed.Err()
-	return nil
+	_, err = feed.WritefEscaped("%s\n", m.data)
+	return err
 }
