@@ -11,7 +11,7 @@ import (
 	"path"
 	"strings"
 
-	"github.com/altid/libs/config"
+	"github.com/altid/libs/config/types"
 	"github.com/altid/libs/fs"
 	"github.com/altid/libs/markup"
 	"gopkg.in/irc.v3"
@@ -49,13 +49,13 @@ type defaults struct {
 	Address string `IP Address of IRC server you wish to connect to:`
 	SSL     string `SSL mode: none|simple|certificate`
 	Port    int
-	Auth    config.Auth `Select authentication type password|factotum|none`
+	Auth    types.Auth `Select authentication type password|factotum|none`
 	Filter  string
 	Nick    string `Enter your IRC nickname (this is what will be shown on messages you send):`
 	User    string
 	Name    string
 	Buffs   string
-	Logdir  config.Logdir
+	Logdir  types.Logdir
 	TLSCert string
 	TLSKey  string
 }
