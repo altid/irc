@@ -80,44 +80,7 @@ func (s *server) parse() {
 	}
 }
 
-func (s *server) Open(c *fs.Control, name string) error {
-	if e := c.CreateBuffer(name, "feed"); e != nil {
-		return e
-	}
-
-	s.debug(ctlJoin, name)
-	if name[0] == '#' {
-		if _, e := fmt.Fprintf(s.conn, "JOIN %s\n", name); e != nil {
-			return e
-		}
-	}
-
-	s.i <- name
-	s.e <- path.Join(workdir, name, "input")
-
-	s.debug(ctlSucceed, "join")
-	return nil
-}
-
-func (s *server) Close(c *fs.Control, name string) error {
-	s.debug(ctlPart, name)
-	if e := c.DeleteBuffer(name, "feed"); e != nil {
-		return e
-	}
-
-	_, err := fmt.Fprintf(s.conn, "PART %s\n", name)
-	s.debug(ctlSucceed, "part")
-	return err
-}
-
-func (s *server) Link(c *fs.Control, from, name string) error {
-	err := errors.New("link command not supported, please use open/close")
-	s.debug(ctlErr, name, err)
-
-	return err
-}
-
-func (s *server) Default(c *fs.Control, cmd *fs.Command) error {
+func (s *server) Run(c *fs.Control, cmd *fs.Command) error {
 	s.debug(ctlMsg, cmd)
 	switch cmd.Name {
 	case "a", "act", "action", "me":
@@ -146,8 +109,35 @@ func (s *server) Default(c *fs.Control, cmd *fs.Command) error {
 	case "nick":
 		s.conf.Name = cmd.Args[0]
 		fmt.Fprintf(s.conn, "NICK %s\n", cmd.Args[0])
+	case "close":
+		// IRC buffers do not allow spaces
+		s.debug(ctlPart, cmd.Args[0])
+		if e := c.DeleteBuffer(cmd.Args[0], "feed"); e != nil {
+			return e
+		}
+
+		_, err := fmt.Fprintf(s.conn, "PART %s\n", cmd.Args[0])
+		s.debug(ctlSucceed, "part")
+		return err
+	case "open":
+		if e := c.CreateBuffer(cmd.Args[0], "feed"); e != nil {
+			return e
+		}
+
+		s.debug(ctlJoin, cmd.Args[0])
+		if cmd.Args[0][0] == '#' {
+			if _, e := fmt.Fprintf(s.conn, "JOIN %s\n", cmd.Args[0]); e != nil {
+				return e
+			}
+		}
+
+		s.i <- cmd.Args[0]
+		s.e <- path.Join(workdir, cmd.Args[0], "input")
+
+		s.debug(ctlSucceed, "join")
+		return nil
 	default:
-		return fmt.Errorf("Unknown command %s", cmd.Name)
+		return fmt.Errorf("Unsupported command %s", cmd.Name)
 	}
 
 	s.debug(ctlSucceed, cmd)
@@ -156,14 +146,6 @@ func (s *server) Default(c *fs.Control, cmd *fs.Command) error {
 
 func (s *server) Quit() {
 	s.cancel()
-}
-
-func (s *server) Restart(c *fs.Control) error {
-	return nil
-}
-
-func (s *server) Refresh(c *fs.Control) error {
-	return nil
 }
 
 // input is always sent down raw to the server
@@ -197,7 +179,11 @@ func (s *server) fileListener(ctx context.Context, c *fs.Control) {
 			buffs := getChans(j)
 			for _, buff := range buffs {
 				if !c.HasBuffer(buff, "feed") {
-					go s.Open(c, buff)
+					cmd := &fs.Command{
+						Name: "open",
+						Args: []string{buff},
+					}
+					go s.Run(c, cmd)
 				}
 			}
 		case m := <-s.m:
