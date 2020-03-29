@@ -64,7 +64,7 @@ func main() {
 
 	s.parse()
 
-	ctrl, err := fs.CreateCtlFile(ctx, s, string(conf.Logdir), *mtpt, *srv, "feed", *debug)
+	ctrl, err := fs.New(s, string(conf.Logdir), *mtpt, *srv, "feed", *debug)
 	if err != nil {
 		log.Fatal(err)
 	}

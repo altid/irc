@@ -183,7 +183,11 @@ func (s *server) fileListener(ctx context.Context, c *fs.Control) {
 						Name: "open",
 						Args: []string{buff},
 					}
-					go s.Run(c, cmd)
+
+					go func() {
+						s.Run(c, cmd)
+						c.Input(buff)
+					}()
 				}
 			}
 		case m := <-s.m:
@@ -191,12 +195,9 @@ func (s *server) fileListener(ctx context.Context, c *fs.Control) {
 				errorWriter(c, e)
 			}
 		case b := <-s.i:
-			in, e := fs.NewInput(s, workdir, b, *debug)
-			if e != nil {
+			if e := c.Input(b); e != nil {
 				errorWriter(c, e)
-				continue
 			}
-			in.Start()
 		case <-ctx.Done():
 			return
 		}
