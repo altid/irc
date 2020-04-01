@@ -43,7 +43,12 @@ func input(l *markup.Lexer) (*msg, error) {
 		case markup.URLLink, markup.URLText, markup.ImagePath, markup.ImageLink, markup.ImageText:
 			continue
 		case markup.ColorText, markup.ColorTextBold:
-			m.WriteString(getColors(i.Data, l))
+			data, err := getColors(i.Data, l)
+			if err != nil {
+				return nil, err
+			}
+
+			m.WriteString(data)
 		case markup.BoldText:
 			m.WriteString("")
 			m.Write(i.Data)
@@ -52,25 +57,31 @@ func input(l *markup.Lexer) (*msg, error) {
 			m.WriteString("")
 			m.Write(i.Data)
 			m.WriteString("")
-		case markup.UnderlineText:
-			m.WriteString("")
+		case markup.StrongText:
+			m.WriteString("")
+			m.WriteString("")
 			m.Write(i.Data)
-			m.WriteString("")
+			m.WriteString("")
+			m.WriteString("")
 		default:
 			m.Write(i.Data)
 		}
 	}
 }
 
-func getColors(current []byte, l *markup.Lexer) string {
+func getColors(current []byte, l *markup.Lexer) (string, error) {
 	var text bytes.Buffer
 	var color bytes.Buffer
+
 	text.Write(current)
+
 	for {
 		i := l.Next()
 		switch i.ItemType {
+		case markup.ErrorText:
+			return "", fmt.Errorf("%s", i.Data)
 		case markup.EOF:
-			return color.String()
+			return color.String(), nil
 		case markup.ColorCode:
 			code := colorCode[string(i.Data)]
 			if n := bytes.IndexByte(i.Data, ','); n >= 0 {
@@ -82,7 +93,7 @@ func getColors(current []byte, l *markup.Lexer) string {
 			color.WriteString(code)
 			color.WriteString(text.String())
 			color.WriteString("")
-			return color.String()
+			return color.String(), nil
 		case markup.ColorTextBold:
 			text.WriteString("")
 			text.Write(i.Data)
@@ -91,10 +102,12 @@ func getColors(current []byte, l *markup.Lexer) string {
 			text.WriteString("")
 			text.Write(i.Data)
 			text.WriteString("")
-		case markup.ColorTextUnderline:
-			text.WriteString("")
+		case markup.ColorTextStrong:
+			text.WriteString("")
+			text.WriteString("")
 			text.Write(i.Data)
-			text.WriteString("")
+			text.WriteString("")
+			text.WriteString("")
 		case markup.ColorText:
 			text.Write(i.Data)
 		}

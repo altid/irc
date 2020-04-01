@@ -46,18 +46,18 @@ type server struct {
 }
 
 type defaults struct {
-	Address string `IP Address of IRC server you wish to connect to:`
-	SSL     string `SSL mode: none|simple|certificate`
-	Port    int
-	Auth    types.Auth `Select authentication type password|factotum|none`
-	Filter  string
-	Nick    string `Enter your IRC nickname (this is what will be shown on messages you send):`
-	User    string
-	Name    string
-	Buffs   string
-	Logdir  types.Logdir
-	TLSCert string
-	TLSKey  string
+	Address string       `altid:"address,prompt:IP Address of IRC server you wish to connect to"`
+	SSL     string       `altid:"ssl,prompt:SSL mode,pick:none|simple|certificate"`
+	Port    int          `altid:"port,no_prompt"`
+	Auth    types.Auth   `altid:"auth,Authentication method to use:"`
+	Filter  string       `altid:"filter,no_prompt"`
+	Nick    string       `altid:"nick,prompt:Enter your IRC nickname (this is what will be shown on messages you send)"`
+	User    string       `altid:"user,no_prompt"`
+	Name    string       `altid:"name,no_prompt"`
+	Buffs   string       `altid:"buffs,no_prompt"`
+	Logdir  types.Logdir `altid:"logdir,no_prompt"`
+	TLSCert string       `altid:"tlscert,no_prompt"`
+	TLSKey  string       `altid:"tlskey,no_prompt"`
 }
 
 func (s *server) parse() {
