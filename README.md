@@ -19,9 +19,9 @@ Ircfs is a file service used to connect to an IRC network
 ```
 # altid/config - place this in your operating systems' default config directory
 
-service=irc address=irc.freenode.net port=6697 auth=pass=hunter2 ssl=none
+service=irc address=libera.chat port=6697 auth=pass=hunter2 ssl=none
 	nick=guest user=guest name=guest
-	channels=#altid,#hwwm
+	channels=#altid
 	log=/home/guest/logs/irc/
 	filter=all
 	# listen_address=192.168.1.144:12345
