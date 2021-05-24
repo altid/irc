@@ -29,7 +29,7 @@ func main() {
 	u, _ := user.Current()
 
 	conf := &defaults{
-		Address: "irc.freenode.net",
+		Address: "libera.chat",
 		Auth:    "password",
 		SSL:     "none",
 		Port:    6697,
