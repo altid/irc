@@ -1,4 +1,4 @@
-package main
+package server 
 
 import (
 	"time"
@@ -8,7 +8,7 @@ import (
 
 // BUG(halfwit): Logs are being created for user events such as client quit
 // https://github.com/altid/ircfs/issues/4
-func handlerFunc(s *server) irc.HandlerFunc {
+func handlerFunc(s *Server) irc.HandlerFunc {
 	return irc.HandlerFunc(func(c *irc.Client, m *irc.Message) {
 		switch m.Command {
 		case "PRIVMSG":
@@ -33,7 +33,7 @@ func handlerFunc(s *server) irc.HandlerFunc {
 			if s.conf.Nick != "" {
 				c.Writef("NICK %s", s.conf.Nick)
 			}
-			s.j <- s.d.Buffs
+			s.j <- s.Defaults.Buffs
 		case "301":
 			feed(fbuffer, m.Params[0], s, m)
 		case "333": //topicwhotime <client> <channel> <nick> <setat> unix time

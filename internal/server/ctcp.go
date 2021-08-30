@@ -1,4 +1,4 @@
-package main
+package server 
 
 import (
 	"strings"
@@ -9,7 +9,7 @@ import (
 
 var ctcpMsg ctlItem
 
-func parseForCTCP(c *irc.Client, m *irc.Message, s *server) {
+func parseForCTCP(c *irc.Client, m *irc.Message, s *Server) {
 	prefix := &irc.Prefix{
 		Name: c.CurrentNick(),
 	}
@@ -77,7 +77,7 @@ func parseForCTCP(c *irc.Client, m *irc.Message, s *server) {
 	}
 }
 
-func defaultCTCP(c *irc.Client, m *irc.Message, s *server) {
+func defaultCTCP(c *irc.Client, m *irc.Message, s *Server) {
 	// User mentions, don't send highlights; just notifications
 	switch {
 	// TODO(halfwit) Would prefer to use hostmask matches here

@@ -1,4 +1,4 @@
-package main
+package ircfs 
 
 import (
 	"context"
@@ -9,6 +9,7 @@ import (
 
 	"github.com/altid/libs/config"
 	"github.com/altid/libs/fs"
+	"github.com/altid/ircfs/internal/server"
 	"gopkg.in/irc.v3"
 )
 
@@ -28,7 +29,7 @@ func main() {
 
 	u, _ := user.Current()
 
-	conf := &defaults{
+	conf := &server.Defaults{
 		Address: "irc.freenode.net",
 		Auth:    "password",
 		SSL:     "none",
@@ -57,12 +58,12 @@ func main() {
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	s := &server{
-		cancel: cancel,
-		d:      conf,
+	s := &server.Server{
+		Cancel:   cancel,
+		Defaults: conf,
 	}
 
-	s.parse()
+	s.Parse()
 
 	ctrl, err := fs.New(s, string(conf.Logdir), *mtpt, *srv, "feed", *debug)
 	if err != nil {

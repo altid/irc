@@ -1,4 +1,4 @@
-package main
+package server 
 
 import (
 	"context"
@@ -33,19 +33,20 @@ const (
 	ctlErr
 )
 
-type server struct {
-	cancel context.CancelFunc
-	conn   net.Conn
-	conf   irc.ClientConfig
-	e      chan string // events
-	i      chan string // inputs
-	j      chan string // joins
-	m      chan *msg   // messages
-	d      *defaults
-	debug  func(ctlItem, ...interface{})
+type Server struct {
+	cancel   context.CancelFunc
+	conn     net.Conn
+	conf     irc.ClientConfig
+	e        chan string // events
+	i        chan string // inputs
+	j        chan string // joins
+	m        chan *msg   // messages
+	Defaults *Defaults
+        Verbose  bool
+	debug    func(ctlItem, ...interface{})
 }
 
-type defaults struct {
+type Defaults struct { 
 	Address string       `altid:"address,prompt:IP Address of IRC server you wish to connect to"`
 	SSL     string       `altid:"ssl,prompt:SSL mode,pick:none|simple|certificate"`
 	Port    int          `altid:"port,no_prompt"`
@@ -60,7 +61,7 @@ type defaults struct {
 	TLSKey  string       `altid:"tlskey,no_prompt"`
 }
 
-func (s *server) parse() {
+func (s *Server) Parse() {
 	s.m = make(chan *msg)
 	s.e = make(chan string)
 	s.j = make(chan string)
@@ -68,19 +69,19 @@ func (s *server) parse() {
 	s.debug = func(ctlItem, ...interface{}) {}
 
 	s.conf = irc.ClientConfig{
-		User:    s.d.User,
-		Nick:    s.d.Nick,
-		Name:    s.d.Name,
-		Pass:    string(s.d.Auth),
+		User:    s.Defaults.User,
+		Nick:    s.Defaults.Nick,
+		Name:    s.Defaults.Name,
+		Pass:    string(s.Defaults.Auth),
 		Handler: handlerFunc(s),
 	}
 
-	if *debug {
+	if s.Verbose {
 		s.debug = ctlLogging
 	}
 }
 
-func (s *server) Run(c *fs.Control, cmd *fs.Command) error {
+func (s *Server) Run(c *fs.Control, cmd *fs.Command) error {
 	s.debug(ctlMsg, cmd)
 	switch cmd.Name {
 	case "a", "act", "action", "me":
@@ -144,12 +145,12 @@ func (s *server) Run(c *fs.Control, cmd *fs.Command) error {
 	return nil
 }
 
-func (s *server) Quit() {
+func (s *Server) Quit() {
 	s.cancel()
 }
 
 // input is always sent down raw to the server
-func (s *server) Handle(bufname string, l *markup.Lexer) error {
+func (s *Server) Handle(bufname string, l *markup.Lexer) error {
 	m, err := input(l)
 	if err != nil {
 		return err
@@ -169,7 +170,7 @@ func (s *server) Handle(bufname string, l *markup.Lexer) error {
 }
 
 // Tie the utility functions like title and feed to the fileWriter
-func (s *server) fileListener(ctx context.Context, c *fs.Control) {
+func (s *Server) fileListener(ctx context.Context, c *fs.Control) {
 	for {
 		select {
 		case e := <-s.e:
@@ -205,11 +206,11 @@ func (s *server) fileListener(ctx context.Context, c *fs.Control) {
 
 }
 
-func (s *server) connect(ctx context.Context) error {
+func (s *Server) connect(ctx context.Context) error {
 	var tlsConfig *tls.Config
 
-	s.debug(ctlStart, s.d.Address, s.d.Port)
-	dialString := fmt.Sprintf("%s:%d", s.d.Address, s.d.Port)
+	s.debug(ctlStart, s.Defaults.Address, s.Defaults.Port)
+	dialString := fmt.Sprintf("%s:%d", s.Defaults.Address, s.Defaults.Port)
 	dialer := &net.Dialer{}
 
 	conn, err := dialer.DialContext(ctx, "tcp", dialString)
@@ -217,7 +218,7 @@ func (s *server) connect(ctx context.Context) error {
 		return err
 	}
 
-	switch s.d.SSL {
+	switch s.Defaults.SSL {
 	case "none":
 		s.conn = conn
 		return nil
@@ -227,7 +228,7 @@ func (s *server) connect(ctx context.Context) error {
 			InsecureSkipVerify: true,
 		}
 	case "certificate":
-		cert, err := tls.LoadX509KeyPair(s.d.TLSCert, s.d.TLSKey)
+		cert, err := tls.LoadX509KeyPair(s.Defaults.TLSCert, s.Defaults.TLSKey)
 		if err != nil {
 			return err
 		}

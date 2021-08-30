@@ -1,4 +1,4 @@
-package main
+package server 
 
 import (
 	"encoding/csv"
@@ -50,7 +50,7 @@ func getChans(buffs string) []string {
 }
 
 // Private message
-func pm(s *server, msg string) error {
+func pm(s *Server, msg string) error {
 	token := strings.Fields(msg)
 	m := &irc.Message{
 		Command: "PRIVMSG",
@@ -63,7 +63,7 @@ func pm(s *server, msg string) error {
 	return sendmsg(s, m)
 }
 
-func action(s *server, from, msg string) error {
+func action(s *Server, from, msg string) error {
 	m := &irc.Message{
 		Command: "PRIVMSG",
 		Prefix: &irc.Prefix{
@@ -77,12 +77,12 @@ func action(s *server, from, msg string) error {
 	return sendmsg(s, m)
 }
 
-func sendmsg(s *server, m *irc.Message) error {
+func sendmsg(s *Server, m *irc.Message) error {
 	w := irc.NewWriter(s.conn)
 	return w.WriteMessage(m)
 }
 
-func timeSetAt(s *server, m *irc.Message) {
+func timeSetAt(s *Server, m *irc.Message) {
 	i, err := strconv.ParseInt(m.Params[3], 10, 64)
 	if err != nil {
 		return
@@ -97,7 +97,7 @@ func timeSetAt(s *server, m *irc.Message) {
 	}
 }
 
-func title(name string, s *server, m *irc.Message) {
+func title(name string, s *Server, m *irc.Message) {
 	s.m <- &msg{
 		buff: name,
 		data: m.Trailing(),
@@ -105,7 +105,7 @@ func title(name string, s *server, m *irc.Message) {
 	}
 }
 
-func feed(fn fname, name string, s *server, m *irc.Message) {
+func feed(fn fname, name string, s *Server, m *irc.Message) {
 	s.m <- &msg{
 		buff: name,
 		data: m.Trailing(),
@@ -114,7 +114,7 @@ func feed(fn fname, name string, s *server, m *irc.Message) {
 	}
 }
 
-func status(s *server, m *irc.Message) {
+func status(s *Server, m *irc.Message) {
 	// Just use m.Params[0] for the fname
 }
 
