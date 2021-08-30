@@ -1,4 +1,4 @@
-package server 
+package session 
 
 import (
 	"context"
@@ -33,7 +33,7 @@ const (
 	ctlErr
 )
 
-type Server struct {
+type Session struct {
 	cancel   context.CancelFunc
 	conn     net.Conn
 	conf     irc.ClientConfig
@@ -61,7 +61,7 @@ type Defaults struct {
 	TLSKey  string       `altid:"tlskey,no_prompt"`
 }
 
-func (s *Server) Parse() {
+func (s *Session) Parse() {
 	s.m = make(chan *msg)
 	s.e = make(chan string)
 	s.j = make(chan string)
@@ -81,7 +81,7 @@ func (s *Server) Parse() {
 	}
 }
 
-func (s *Server) Run(c *fs.Control, cmd *fs.Command) error {
+func (s *Session) Run(c *fs.Control, cmd *fs.Command) error {
 	s.debug(ctlMsg, cmd)
 	switch cmd.Name {
 	case "a", "act", "action", "me":
@@ -145,32 +145,34 @@ func (s *Server) Run(c *fs.Control, cmd *fs.Command) error {
 	return nil
 }
 
-func (s *Server) Quit() {
+func (s *Session) Quit() {
 	s.cancel()
 }
 
 // input is always sent down raw to the server
-func (s *Server) Handle(bufname string, l *markup.Lexer) error {
-	m, err := input(l)
+func (s *Session) Handle(bufname string, l *markup.Lexer) error {
+	data, err := format.Input(l)
 	if err != nil {
 		return err
 	}
 
-	s.debug(ctlInput, bufname, m.data)
-	if _, e := fmt.Fprintf(s.conn, ":%s PRIVMSG %s :%s\n", s.conf.Name, bufname, m.data); e != nil {
+	s.debug(ctlInput, bufname, data)
+	if _, e := fmt.Fprintf(s.conn, ":%s PRIVMSG %s :%s\n", s.conf.Name, bufname, data); e != nil {
 		return e
 	}
 
-	m.from = s.conf.Nick
-	m.buff = bufname
-	s.m <- m
+        s.m <- &msg{
+		data: data,
+		from: s.conf.Nick,
+		buff: bufname,
+	}
 
 	s.debug(ctlSucceed, "input")
 	return nil
 }
 
 // Tie the utility functions like title and feed to the fileWriter
-func (s *Server) fileListener(ctx context.Context, c *fs.Control) {
+func (s *Session) fileListener(ctx context.Context, c *fs.Control) {
 	for {
 		select {
 		case e := <-s.e:
@@ -206,7 +208,7 @@ func (s *Server) fileListener(ctx context.Context, c *fs.Control) {
 
 }
 
-func (s *Server) connect(ctx context.Context) error {
+func (s *Session) connect(ctx context.Context) error {
 	var tlsConfig *tls.Config
 
 	s.debug(ctlStart, s.Defaults.Address, s.Defaults.Port)

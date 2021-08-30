@@ -1,4 +1,4 @@
-package server 
+package session 
 
 import (
 	"encoding/csv"
@@ -10,6 +10,7 @@ import (
 
 	"github.com/altid/libs/fs"
 	"github.com/altid/libs/markup"
+	"github.com/altid/ircfs/internal/format"
 	"gopkg.in/irc.v3"
 )
 

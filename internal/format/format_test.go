@@ -1,4 +1,4 @@
-package server 
+package format
 
 import (
 	"testing"
@@ -18,9 +18,9 @@ func TestInput(t *testing.T) {
 
 	for key, value := range tests {
 		l := markup.NewStringLexer(key)
-		out, _ := input(l)
+		out, _ := Input(l)
 
-		if string(out.data) != value {
+		if out != value {
 			t.Error("mismatched values")
 		}
 	}
