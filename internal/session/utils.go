@@ -1,4 +1,4 @@
-package session 
+package session
 
 import (
 	"encoding/csv"
@@ -8,9 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/altid/libs/fs"
 	"github.com/altid/libs/markup"
-	"github.com/altid/ircfs/internal/format"
+	"github.com/altid/libs/service"
 	"gopkg.in/irc.v3"
 )
 
@@ -51,7 +50,7 @@ func getChans(buffs string) []string {
 }
 
 // Private message
-func pm(s *Server, msg string) error {
+func pm(s *Session, msg string) error {
 	token := strings.Fields(msg)
 	m := &irc.Message{
 		Command: "PRIVMSG",
@@ -64,7 +63,7 @@ func pm(s *Server, msg string) error {
 	return sendmsg(s, m)
 }
 
-func action(s *Server, from, msg string) error {
+func action(s *Session, from, msg string) error {
 	m := &irc.Message{
 		Command: "PRIVMSG",
 		Prefix: &irc.Prefix{
@@ -78,12 +77,12 @@ func action(s *Server, from, msg string) error {
 	return sendmsg(s, m)
 }
 
-func sendmsg(s *Server, m *irc.Message) error {
+func sendmsg(s *Session, m *irc.Message) error {
 	w := irc.NewWriter(s.conn)
 	return w.WriteMessage(m)
 }
 
-func timeSetAt(s *Server, m *irc.Message) {
+func timeSetAt(s *Session, m *irc.Message) {
 	i, err := strconv.ParseInt(m.Params[3], 10, 64)
 	if err != nil {
 		return
@@ -92,13 +91,13 @@ func timeSetAt(s *Server, m *irc.Message) {
 	from := strings.Split(m.Params[2], "!")
 	s.m <- &msg{
 		buff: m.Params[1],
-		data: fmt.Sprintf("%s", t),
+		data: t,
 		from: from[0],
 		fn:   ftime,
 	}
 }
 
-func title(name string, s *Server, m *irc.Message) {
+func title(name string, s *Session, m *irc.Message) {
 	s.m <- &msg{
 		buff: name,
 		data: m.Trailing(),
@@ -106,7 +105,7 @@ func title(name string, s *Server, m *irc.Message) {
 	}
 }
 
-func feed(fn fname, name string, s *Server, m *irc.Message) {
+func feed(fn fname, name string, s *Session, m *irc.Message) {
 	s.m <- &msg{
 		buff: name,
 		data: m.Trailing(),
@@ -115,18 +114,18 @@ func feed(fn fname, name string, s *Server, m *irc.Message) {
 	}
 }
 
-func status(s *Server, m *irc.Message) {
+func status(s *Session, m *irc.Message) {
 	// Just use m.Params[0] for the fname
 }
 
-func errorWriter(c *fs.Control, err error) {
+func errorWriter(c *service.Control, err error) {
 	ew, _ := c.ErrorWriter()
 	defer ew.Close()
 
 	fmt.Fprintf(ew, "ircfs: %s\n", err)
 }
 
-func fileWriter(c *fs.Control, m *msg) error {
+func fileWriter(c *service.Control, m *msg) error {
 	if m.from == "freenode-connect" {
 		return nil
 	}
@@ -137,7 +136,7 @@ func fileWriter(c *fs.Control, m *msg) error {
 	case fnotification:
 		return c.Notification(markup.NewNotifier(m.buff, m.from, m.data).Parse())
 	case fserver:
-		return m.fspecialWrite(c.MainWriter("server", "feed"))
+		return m.fspecialWrite(c.MainWriter("server"))
 	case fstatus:
 		return m.fspecialWrite(c.StatusWriter(m.buff))
 	case faside:
@@ -165,10 +164,10 @@ func (m *msg) fspecialWrite(w io.WriteCloser, err error) error {
 	return nil
 }
 
-func (m *msg) fnormalWrite(c *fs.Control) error {
+func (m *msg) fnormalWrite(c *service.Control) error {
 	var color *markup.Color
 
-	w, err := c.MainWriter(m.buff, "feed")
+	w, err := c.MainWriter(m.buff)
 	if err != nil {
 		return err
 	}

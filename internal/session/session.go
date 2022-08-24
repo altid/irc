@@ -11,13 +11,12 @@ import (
 	"path"
 	"strings"
 
+	"github.com/altid/ircfs/internal/format"
+	"github.com/altid/libs/service"
 	"github.com/altid/libs/config/types"
-	"github.com/altid/libs/fs"
 	"github.com/altid/libs/markup"
 	"gopkg.in/irc.v3"
 )
-
-var workdir = path.Join(*mtpt, *srv)
 
 type ctlItem int
 
@@ -42,7 +41,7 @@ type Session struct {
 	j        chan string // joins
 	m        chan *msg   // messages
 	Defaults *Defaults
-        Verbose  bool
+    Verbose  bool
 	debug    func(ctlItem, ...interface{})
 }
 
@@ -81,7 +80,7 @@ func (s *Session) Parse() {
 	}
 }
 
-func (s *Session) Run(c *fs.Control, cmd *fs.Command) error {
+func (s *Session) Run(c *service.Control, cmd *service.Command) error {
 	s.debug(ctlMsg, cmd)
 	switch cmd.Name {
 	case "a", "act", "action", "me":
@@ -96,7 +95,7 @@ func (s *Session) Run(c *fs.Control, cmd *fs.Command) error {
 		if len(cmd.Args) < 1 {
 			return errors.New("no user specified")
 		}
-		if e := c.CreateBuffer(cmd.Args[0], "feed"); e != nil {
+		if e := c.CreateBuffer(cmd.Args[0]); e != nil {
 			return e
 		}
 
@@ -113,7 +112,7 @@ func (s *Session) Run(c *fs.Control, cmd *fs.Command) error {
 	case "close":
 		// IRC buffers do not allow spaces
 		s.debug(ctlPart, cmd.Args[0])
-		if e := c.DeleteBuffer(cmd.Args[0], "feed"); e != nil {
+		if e := c.DeleteBuffer(cmd.Args[0]); e != nil {
 			return e
 		}
 
@@ -121,7 +120,7 @@ func (s *Session) Run(c *fs.Control, cmd *fs.Command) error {
 		s.debug(ctlSucceed, "part")
 		return err
 	case "open":
-		if e := c.CreateBuffer(cmd.Args[0], "feed"); e != nil {
+		if e := c.CreateBuffer(cmd.Args[0]); e != nil {
 			return e
 		}
 
@@ -133,12 +132,12 @@ func (s *Session) Run(c *fs.Control, cmd *fs.Command) error {
 		}
 
 		s.i <- cmd.Args[0]
-		s.e <- path.Join(workdir, cmd.Args[0], "input")
+		s.e <- path.Join(cmd.Args[0], "input")
 
 		s.debug(ctlSucceed, "join")
 		return nil
 	default:
-		return fmt.Errorf("Unsupported command %s", cmd.Name)
+		return fmt.Errorf("unsupported command %s", cmd.Name)
 	}
 
 	s.debug(ctlSucceed, cmd)
@@ -171,25 +170,34 @@ func (s *Session) Handle(bufname string, l *markup.Lexer) error {
 	return nil
 }
 
+func (s *Session) Start(ctx context.Context, c *service.Control) error {
+	if e := s.connect(ctx); e != nil {
+		return e
+	}
+	s.debug(ctlStart, s.Defaults.Address, s.Defaults.Port)
+	go s.fileListener(ctx, c)
+	return nil
+}
+
 // Tie the utility functions like title and feed to the fileWriter
-func (s *Session) fileListener(ctx context.Context, c *fs.Control) {
+func (s *Session) fileListener(ctx context.Context, c *service.Control) {
 	for {
 		select {
 		case e := <-s.e:
 			s.debug(ctlEvent, e)
-			c.Event(e)
+			//c.Event(e)
 		case j := <-s.j:
 			buffs := getChans(j)
 			for _, buff := range buffs {
-				if !c.HasBuffer(buff, "feed") {
-					cmd := &fs.Command{
+				if !c.HasBuffer(buff) {
+					cmd := &service.Command{
 						Name: "open",
 						Args: []string{buff},
 					}
 
 					go func() {
 						s.Run(c, cmd)
-						c.Input(buff)
+						//c.Input(buff)
 					}()
 				}
 			}
@@ -197,10 +205,10 @@ func (s *Session) fileListener(ctx context.Context, c *fs.Control) {
 			if e := fileWriter(c, m); e != nil {
 				errorWriter(c, e)
 			}
-		case b := <-s.i:
-			if e := c.Input(b); e != nil {
-				errorWriter(c, e)
-			}
+		//case b := <-s.i:
+			//if e := c.Input(b); e != nil {
+			//	errorWriter(c, e)
+			//}
 		case <-ctx.Done():
 			return
 		}
@@ -223,6 +231,7 @@ func (s *Session) connect(ctx context.Context) error {
 	switch s.Defaults.SSL {
 	case "none":
 		s.conn = conn
+		s.debug(ctlRun)
 		return nil
 	case "simple":
 		tlsConfig = &tls.Config{
@@ -273,7 +282,7 @@ func ctlLogging(ctl ctlItem, args ...interface{}) {
 	case ctlInput:
 		l.Printf("input target=\"%s\" data=\"%s\"\n", args[0], args[1])
 	case ctlMsg:
-		m := args[0].(*fs.Command)
+		m := args[0].(*service.Command)
 		line := strings.Join(m.Args, " ")
 		l.Printf("%s data=\"%s\"\n", m.Name, line)
 	case ctlErr:

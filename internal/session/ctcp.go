@@ -9,7 +9,7 @@ import (
 
 var ctcpMsg ctlItem
 
-func parseForCTCP(c *irc.Client, m *irc.Message, s *Server) {
+func parseForCTCP(c *irc.Client, m *irc.Message, s *Session) {
 	prefix := &irc.Prefix{
 		Name: c.CurrentNick(),
 	}
@@ -17,55 +17,55 @@ func parseForCTCP(c *irc.Client, m *irc.Message, s *Server) {
 	s.debug(ctcpMsg, m)
 	token := strings.Split(m.Params[1], " ")
 	switch token[0] {
-	case "ACTION":
+	case "\x01ACTION":
 		m.Params[1] = strings.Join(token[1:], " ")
 		fn := faction
 		if m.Params[0] == prefix.Name {
 			fn = fselfaction
 		}
 		feed(fn, m.Params[0], s, m)
-	case "CLIENTINFO":
+	case "\x01CLIENTINFO":
 		c.WriteMessage(&irc.Message{
 			Prefix:  prefix,
 			Command: "CLIENTINFO",
 			Params:  []string{m.Prefix.Name, "ACTION CLIENTINFO FINGER PING SOURCE TIME USER INFO VERSION"},
 		})
 		feed(fserver, "server", s, m)
-	case "FINGER":
+	case "\x01FINGER":
 		c.WriteMessage(&irc.Message{
 			Prefix:  prefix,
 			Command: "FINGER",
 			Params:  []string{m.Prefix.Name, "ircfs 0.0.1"},
 		})
 		feed(fserver, "server", s, m)
-	case "PING", "PING":
+	case "\x01PING", "PING":
 		c.WriteMessage(&irc.Message{
 			Prefix:  prefix,
 			Command: "PONG",
 			Params:  []string{m.Prefix.Name, m.Params[1]},
 		})
-	case "SOURCE":
+	case "\x01SOURCE":
 		c.WriteMessage(&irc.Message{
 			Prefix:  prefix,
 			Command: "SOURCE",
 			Params:  []string{m.Prefix.Name, "https://github.com/altid/ircfs"},
 		})
 		feed(fserver, "server", s, m)
-	case "TIME":
+	case "\x01TIME":
 		c.WriteMessage(&irc.Message{
 			Prefix:  prefix,
 			Command: "TIME",
 			Params:  []string{m.Prefix.Name, time.Now().Format(time.RFC3339)},
 		})
 		feed(fserver, "server", s, m)
-	case "VERSION":
+	case "\x01VERSION":
 		c.WriteMessage(&irc.Message{
 			Prefix:  prefix,
 			Command: "VERSION",
 			Params:  []string{m.Prefix.Name, "ircfs 0.0.0"},
 		})
 		feed(fserver, "server", s, m)
-	case "USERINFO":
+	case "\x01USERINFO":
 		c.WriteMessage(&irc.Message{
 			Prefix:  prefix,
 			Command: "USERINFO",
@@ -77,7 +77,7 @@ func parseForCTCP(c *irc.Client, m *irc.Message, s *Server) {
 	}
 }
 
-func defaultCTCP(c *irc.Client, m *irc.Message, s *Server) {
+func defaultCTCP(c *irc.Client, m *irc.Message, s *Session) {
 	// User mentions, don't send highlights; just notifications
 	switch {
 	// TODO(halfwit) Would prefer to use hostmask matches here

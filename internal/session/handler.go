@@ -8,14 +8,14 @@ import (
 
 // BUG(halfwit): Logs are being created for user events such as client quit
 // https://github.com/altid/ircfs/issues/4
-func handlerFunc(s *Server) irc.HandlerFunc {
+func handlerFunc(s *Session) irc.HandlerFunc {
 	return irc.HandlerFunc(func(c *irc.Client, m *irc.Message) {
 		switch m.Command {
 		case "PRIVMSG":
 			parseForCTCP(c, m, s)
 			return
 		case "QUIT":
-			//TODO(halfwit): When smart filtering is implemented
+			//TODO(halfwit): When smart filteringf is implemented
 			// we will check the map of names for channels
 			// log to that channel when we're connected to it
 			// and logging is enabled/smart filter
