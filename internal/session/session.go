@@ -33,6 +33,7 @@ const (
 )
 
 type Session struct {
+	Client   *irc.Client
 	cancel   context.CancelFunc
 	conn     net.Conn
 	conf     irc.ClientConfig
@@ -171,11 +172,12 @@ func (s *Session) Handle(bufname string, l *markup.Lexer) error {
 }
 
 func (s *Session) Start(ctx context.Context, c *service.Control) error {
-	if e := s.connect(ctx); e != nil {
-		return e
-	}
-	s.debug(ctlStart, s.Defaults.Address, s.Defaults.Port)
 	go s.fileListener(ctx, c)
+	if err:= s.connect(ctx); err != nil {
+		return err
+	}
+
+	s.Client = irc.NewClient(s.conn, s.conf)
 	return nil
 }
 
@@ -187,6 +189,7 @@ func (s *Session) fileListener(ctx context.Context, c *service.Control) {
 			s.debug(ctlEvent, e)
 			//c.Event(e)
 		case j := <-s.j:
+			fmt.Printf("In filelistener with j: %s\n", j)
 			buffs := getChans(j)
 			for _, buff := range buffs {
 				if !c.HasBuffer(buff) {
@@ -194,7 +197,6 @@ func (s *Session) fileListener(ctx context.Context, c *service.Control) {
 						Name: "open",
 						Args: []string{buff},
 					}
-
 					go func() {
 						s.Run(c, cmd)
 						//c.Input(buff)
@@ -202,6 +204,7 @@ func (s *Session) fileListener(ctx context.Context, c *service.Control) {
 				}
 			}
 		case m := <-s.m:
+			fmt.Printf("In filelistener with m: %s\n", m.data)
 			if e := fileWriter(c, m); e != nil {
 				errorWriter(c, e)
 			}

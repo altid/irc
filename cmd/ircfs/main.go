@@ -9,10 +9,11 @@ import (
 )
 
 var (
-	srv   = flag.String("s", "irc", "Name of service")
+	srv   = flag.String("s", "irc", "name of service")
+	addr  = flag.String("a", "localhost:12345", "listening address")
 	mdns  = flag.Bool("m", false, "enable mDNS broadcast of service")
 	debug = flag.Bool("d", false, "enable debug printing")
-	ssh   = flag.Bool("x", false, "enable ssh listener (default is 9p)")
+	ssh   = flag.Bool("x", false, "enable ssh listener (default \"9p\")")
 	ldir  = flag.Bool("l", false, "enable logging for main buffers")
 	setup = flag.Bool("conf", false, "run configuration setup")
 )
@@ -31,7 +32,7 @@ func main() {
 		os.Exit(0)
 	}
 
-	ircfs, err := ircfs.Register(*ssh, *ldir, *srv, *debug)
+	ircfs, err := ircfs.Register(*ssh, *ldir, *addr, *srv, *debug)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -46,6 +47,6 @@ func main() {
 	}
 
 	if e := ircfs.Listen(); e != nil {
-		log.Fatal(e)
+		log.Fatalf("Listen failed: %s\n", e)
 	}
 }

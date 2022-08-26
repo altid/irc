@@ -3,6 +3,7 @@ package ircfs
 import (
 	"context"
 
+	"github.com/altid/ircfs/internal/commands"
 	"github.com/altid/ircfs/internal/session"
 	"github.com/altid/libs/config"
 	"github.com/altid/libs/mdns"
@@ -28,12 +29,12 @@ func CreateConfig(srv string, debug bool) error {
 }
 
 // This connects to IRC, manages interactions with the plugins 
-func Register(ssh, ldir bool, srv string, debug bool) (*Ircfs, error) {
+func Register(ssh, ldir bool, addr, srv string, debug bool) (*Ircfs, error) {
     // Some sane-ish defaults
     defaults := &session.Defaults{
-        Address: "libera.chat",
+        Address: "irc.libera.chat",
         SSL:     "none",
-        Port:    6697,
+        Port:    6667,
         Auth:    "password",
         Filter:  "",
         Nick:    "guest",
@@ -49,12 +50,16 @@ func Register(ssh, ldir bool, srv string, debug bool) (*Ircfs, error) {
         return nil, e
     }
 
-    l, err := tolisten(defaults, ssh)
+    l, err := tolisten(defaults, addr, ssh)
     if err != nil { 
         return nil, err
     }
 
-    s:= tostore(defaults, ldir)
+    s := tostore(defaults, ldir)
+    if e := l.Register(s, nil); e != nil {
+        return nil, e
+    }
+
     session := &session.Session{
         Defaults: defaults,
         Verbose: debug,
@@ -77,7 +82,10 @@ func Register(ssh, ldir bool, srv string, debug bool) (*Ircfs, error) {
         return nil, err
     }
 
+    // Add in commands and make sure our type has a controller as well
+    c.SetCommands(commands.Commands...)
     i.control = c
+
     return i, nil
 }
 
@@ -99,7 +107,21 @@ func (ircfs *Ircfs) Start() error {
 
 // Listen starts up our listener on the network
 func (ircfs *Ircfs) Listen() error {
-    return ircfs.listener.Listen()
+    err := make(chan error)
+    go func(chan error) {
+        err <- ircfs.session.Client.Run()
+    }(err)
+
+    go func(chan error) {
+        err <- ircfs.listener.Listen()
+    }(err)
+
+    select {
+    case e := <-err:
+        return e
+    case <-ircfs.ctx.Done():
+        return nil
+    }
 }
 
 func (ircfs *Ircfs) Cleanup() {
@@ -113,12 +135,13 @@ func (ircfs *Ircfs) Session() *session.Session {
     return ircfs.session
 }
 
-func tolisten(d *session.Defaults, ssh bool) (listener.Listener, error) {
+func tolisten(d *session.Defaults, addr string, ssh bool) (listener.Listener, error) {
     //if ssh {
     //    return listener.NewListenSsh()
     //}
 
-    return listener.NewListen9p(d.Address, d.TLSCert, d.TLSKey)
+    //return listener.NewListen9p(addr, d.TLSCert, d.TLSKey)
+    return listener.NewListen9p(addr, "", "")
 }
 
 func tostore(d *session.Defaults, ldir bool) store.Filer {

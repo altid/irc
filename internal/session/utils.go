@@ -151,7 +151,7 @@ func fileWriter(c *service.Control, m *msg) error {
 // We take the error in here for a cleaner switch
 func (m *msg) fspecialWrite(w io.WriteCloser, err error) error {
 	if err != nil {
-		return err
+		return fmt.Errorf("error in special writer: %s", err)
 	}
 
 	cleaner := markup.NewCleaner(w)
