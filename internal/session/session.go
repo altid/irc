@@ -1,4 +1,4 @@
-package session 
+package session
 
 import (
 	"context"
@@ -12,9 +12,10 @@ import (
 	"strings"
 
 	"github.com/altid/ircfs/internal/format"
-	"github.com/altid/libs/service"
 	"github.com/altid/libs/config/types"
 	"github.com/altid/libs/markup"
+	"github.com/altid/libs/service/commander"
+	"github.com/altid/libs/service/controller"
 	"gopkg.in/irc.v3"
 )
 
@@ -34,19 +35,20 @@ const (
 
 type Session struct {
 	Client   *irc.Client
+	ctx      context.Context
 	cancel   context.CancelFunc
 	conn     net.Conn
 	conf     irc.ClientConfig
-	e        chan string // events
-	i        chan string // inputs
-	j        chan string // joins
-	m        chan *msg   // messages
+	e        chan string             // events
+	i        chan string             // inputs
+	j        chan *commander.Command // joins
+	m        chan *msg               // messages
 	Defaults *Defaults
-    Verbose  bool
+	Verbose  bool
 	debug    func(ctlItem, ...interface{})
 }
 
-type Defaults struct { 
+type Defaults struct {
 	Address string       `altid:"address,prompt:IP Address of IRC server you wish to connect to"`
 	SSL     string       `altid:"ssl,prompt:SSL mode,pick:none|simple|certificate"`
 	Port    int          `altid:"port,no_prompt"`
@@ -64,9 +66,10 @@ type Defaults struct {
 func (s *Session) Parse() {
 	s.m = make(chan *msg)
 	s.e = make(chan string)
-	s.j = make(chan string)
+	s.j = make(chan *commander.Command)
 	s.i = make(chan string)
 	s.debug = func(ctlItem, ...interface{}) {}
+	s.ctx, s.cancel = context.WithCancel(context.Background())
 
 	s.conf = irc.ClientConfig{
 		User:    s.Defaults.User,
@@ -81,7 +84,7 @@ func (s *Session) Parse() {
 	}
 }
 
-func (s *Session) Run(c *service.Control, cmd *service.Command) error {
+func (s *Session) Run(c controller.Controller, cmd *commander.Command) error {
 	s.debug(ctlMsg, cmd)
 	switch cmd.Name {
 	case "a", "act", "action", "me":
@@ -161,7 +164,7 @@ func (s *Session) Handle(bufname string, l *markup.Lexer) error {
 		return e
 	}
 
-        s.m <- &msg{
+	s.m <- &msg{
 		data: data,
 		from: s.conf.Nick,
 		buff: bufname,
@@ -171,47 +174,56 @@ func (s *Session) Handle(bufname string, l *markup.Lexer) error {
 	return nil
 }
 
-func (s *Session) Start(ctx context.Context, c *service.Control) error {
-	go s.fileListener(ctx, c)
-	if err:= s.connect(ctx); err != nil {
+func (s *Session) Start(c controller.Controller) error {
+	go s.fileListener(s.ctx, c)
+	if err := s.connect(s.ctx); err != nil {
 		return err
 	}
 
 	s.Client = irc.NewClient(s.conn, s.conf)
+	return s.Client.Run()
+}
+
+func (s *Session) Listen(c controller.Controller) {
+	err := make(chan error)
+	go func(err chan error) {
+		err <- s.Start(c)
+	}(err)
+
+	select {
+	case e := <-err:
+		s.debug(ctlErr, e)
+		log.Fatal(e)
+	case <-s.ctx.Done():
+	}
+}
+
+func (s *Session) Command(cmd *commander.Command) error {
+	go func(j chan *commander.Command, cmd *commander.Command) {
+		j <- cmd
+	}(s.j, cmd)
 	return nil
 }
 
 // Tie the utility functions like title and feed to the fileWriter
-func (s *Session) fileListener(ctx context.Context, c *service.Control) {
+func (s *Session) fileListener(ctx context.Context, c controller.Controller) {
 	for {
 		select {
 		case e := <-s.e:
 			s.debug(ctlEvent, e)
 			//c.Event(e)
 		case j := <-s.j:
-			fmt.Printf("In filelistener with j: %s\n", j)
-			buffs := getChans(j)
-			for _, buff := range buffs {
-				if !c.HasBuffer(buff) {
-					cmd := &service.Command{
-						Name: "open",
-						Args: []string{buff},
-					}
-					go func() {
-						s.Run(c, cmd)
-						//c.Input(buff)
-					}()
-				}
+			if e := s.Run(c, j); e != nil {
+				errorWriter(c, e)
 			}
 		case m := <-s.m:
-			fmt.Printf("In filelistener with m: %s\n", m.data)
 			if e := fileWriter(c, m); e != nil {
 				errorWriter(c, e)
 			}
 		//case b := <-s.i:
-			//if e := c.Input(b); e != nil {
-			//	errorWriter(c, e)
-			//}
+		//if e := c.Input(b); e != nil {
+		//	errorWriter(c, e)
+		//}
 		case <-ctx.Done():
 			return
 		}
@@ -285,7 +297,7 @@ func ctlLogging(ctl ctlItem, args ...interface{}) {
 	case ctlInput:
 		l.Printf("input target=\"%s\" data=\"%s\"\n", args[0], args[1])
 	case ctlMsg:
-		m := args[0].(*service.Command)
+		m := args[0].(*commander.Command)
 		line := strings.Join(m.Args, " ")
 		l.Printf("%s data=\"%s\"\n", m.Name, line)
 	case ctlErr:

@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/altid/libs/markup"
-	"github.com/altid/libs/service"
+	"github.com/altid/libs/service/controller"
 	"gopkg.in/irc.v3"
 )
 
@@ -118,14 +118,14 @@ func status(s *Session, m *irc.Message) {
 	// Just use m.Params[0] for the fname
 }
 
-func errorWriter(c *service.Control, err error) {
+func errorWriter(c controller.Controller, err error) {
 	ew, _ := c.ErrorWriter()
 	defer ew.Close()
 
 	fmt.Fprintf(ew, "ircfs: %s\n", err)
 }
 
-func fileWriter(c *service.Control, m *msg) error {
+func fileWriter(c controller.Controller, m *msg) error {
 	if m.from == "freenode-connect" {
 		return nil
 	}
@@ -164,7 +164,7 @@ func (m *msg) fspecialWrite(w io.WriteCloser, err error) error {
 	return nil
 }
 
-func (m *msg) fnormalWrite(c *service.Control) error {
+func (m *msg) fnormalWrite(c controller.Controller) error {
 	var color *markup.Color
 
 	w, err := c.MainWriter(m.buff)

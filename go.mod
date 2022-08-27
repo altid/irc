@@ -3,7 +3,7 @@ module github.com/altid/ircfs
 go 1.18
 
 require (
-	github.com/altid/libs v0.2.1
+	github.com/altid/libs v0.2.2
 	gopkg.in/irc.v3 v3.1.4
 )
 
@@ -20,5 +20,3 @@ require (
 	golang.org/x/net v0.0.0-20220622184535-263ec571b305 // indirect
 	golang.org/x/sys v0.0.0-20220622161953-175b2fd9d664 // indirect
 )
-
-replace github.com/altid/libs => /Users/halfwit/Work/altid/libs

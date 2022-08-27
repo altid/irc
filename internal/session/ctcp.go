@@ -1,9 +1,10 @@
-package session 
+package session
 
 import (
 	"strings"
 	"time"
 
+	"github.com/altid/libs/service/commander"
 	"gopkg.in/irc.v3"
 )
 
@@ -83,7 +84,10 @@ func defaultCTCP(c *irc.Client, m *irc.Message, s *Session) {
 	// TODO(halfwit) Would prefer to use hostmask matches here
 	// Messages the user writes
 	case m.Name == c.CurrentNick():
-		s.j <- m.Params[0]
+		s.j <- &commander.Command{
+			Name: "open",
+			Args: []string{m.Params[0]},
+		}
 		feed(fself, m.Params[0], s, m)
 	// User is highlighted
 	case strings.Contains(m.Params[1], c.CurrentNick()):
@@ -101,11 +105,17 @@ func defaultCTCP(c *irc.Client, m *irc.Message, s *Session) {
 		}
 	// PM received, make sure the file exists
 	case m.Params[0] == c.CurrentNick():
-		s.j <- m.Prefix.Name
+		s.j <- &commander.Command{
+			Name: "open",
+			Args: []string{m.Prefix.Name},
+		}
 		feed(fbuffer, m.Prefix.Name, s, m)
 	// Normal message from a buffer
 	case c.FromChannel(m):
-		s.j <- m.Params[0]
+		s.j <- &commander.Command{
+			Name: "open",
+			Args: []string{m.Params[0]},
+		}
 		feed(fbuffer, m.Params[0], s, m)
 	default:
 		feed(fserver, "server", s, m)

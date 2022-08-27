@@ -2,10 +2,8 @@
 9fans.net/go v0.0.4/go.mod h1:lfPdxjq9v8pVQXUMBCx5EO5oLXWQFlKRQgs1kEkjoIM=
 aqwari.net/retry v0.0.0-20180428204214-1281ce5d8df0 h1:BeD6U5TNwhMWxeydyi5xqpaNZx1MWl5QTcW4w7Mxf+Y=
 aqwari.net/retry v0.0.0-20180428204214-1281ce5d8df0/go.mod h1:XSNyyoM+OSg3vRmROPrS1lEpV7q/I9J1HAKMMxdUkU4=
-github.com/altid/libs v0.2.0 h1:hsRb8e5LzNH75JfWxYg/M1SGOGVnh4P7OhUaGsd0ycQ=
-github.com/altid/libs v0.2.0/go.mod h1:zkLLaoU8rklnPoGTmFLzslnEK9dx6/DEc05jwDePejU=
-github.com/altid/libs v0.2.1 h1:ekt4k3Yc7PgwnTXYAX9yO9NcO97K5YmCvYs4Fd/BtTQ=
-github.com/altid/libs v0.2.1/go.mod h1:zkLLaoU8rklnPoGTmFLzslnEK9dx6/DEc05jwDePejU=
+github.com/altid/libs v0.2.2 h1:B/dfYMgYbrS7g3JoUZEZMCSUCN2jhsmbj6lvPvdBUes=
+github.com/altid/libs v0.2.2/go.mod h1:zkLLaoU8rklnPoGTmFLzslnEK9dx6/DEc05jwDePejU=
 github.com/cenkalti/backoff v2.2.1+incompatible h1:tNowT99t7UNflLxfYYSlKYsBpXdEet03Pg2g16Swow4=
 github.com/cenkalti/backoff v2.2.1+incompatible/go.mod h1:90ReRw6GdpyfrHakVjL/QHaoyV4aDUVVkXQJJJ3NXXM=
 github.com/davecgh/go-spew v1.1.0 h1:ZDRjVQ15GmhC3fiQ8ni8+OwkZQO4DARzQgrnXU1Liz8=

@@ -42,11 +42,7 @@ func main() {
 		ircfs.Broadcast()
 	}
 
-	if e := ircfs.Start(); e != nil {
+	if e := ircfs.Run(); e != nil {
 		log.Fatal(e)
-	}
-
-	if e := ircfs.Listen(); e != nil {
-		log.Fatalf("Listen failed: %s\n", e)
 	}
 }

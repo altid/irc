@@ -1,8 +1,9 @@
-package session 
+package session
 
 import (
 	"time"
 
+	"github.com/altid/libs/service/commander"
 	"gopkg.in/irc.v3"
 )
 
@@ -33,7 +34,12 @@ func handlerFunc(s *Session) irc.HandlerFunc {
 			if s.conf.Nick != "" {
 				c.Writef("NICK %s", s.conf.Nick)
 			}
-			s.j <- s.Defaults.Buffs
+			for _, buff := range getChans(s.Defaults.Buffs) {
+				s.j <- &commander.Command{
+					Name: "open",
+					Args: []string{buff},
+				}
+			}
 		case "301":
 			feed(fbuffer, m.Params[0], s, m)
 		case "333": //topicwhotime <client> <channel> <nick> <setat> unix time
@@ -54,7 +60,12 @@ func handlerFunc(s *Session) irc.HandlerFunc {
 			title(m.Params[1], s, m)
 		case "331", "332":
 			// Make sure we start listener and add tab
-			s.j <- m.Params[1]
+			for _, buff := range getChans(m.Params[1]) {
+				s.j <- &commander.Command{
+					Name: "open",
+					Args: []string{buff},
+				}
+			}
 			if m.Command == "332" {
 				// Give the join time to propagate
 				// TODO(halfwit) Create the directory for title if none exists
