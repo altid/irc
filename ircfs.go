@@ -87,7 +87,7 @@ func (ircfs *Ircfs) Run() error {
 	return ircfs.run()
 }
 
-func (ircfs *Ircfs) Broadcast() {
+func (ircfs *Ircfs) Broadcast() error {
 	entry := &mdns.Entry{
 		Addr: ircfs.session.Defaults.Address,
 		Name: ircfs.name,
@@ -95,8 +95,12 @@ func (ircfs *Ircfs) Broadcast() {
 		Port: ircfs.session.Defaults.Port,
 	}
 
-	mdns.Register(entry)
+	if e := mdns.Register(entry); e != nil {
+		return e
+	}
+
 	ircfs.mdns = entry
+	return nil
 }
 
 func (ircfs *Ircfs) Cleanup() {

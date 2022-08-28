@@ -59,6 +59,7 @@ func pm(s *Session, msg string) error {
 		},
 		Params: token[:1],
 	}
+
 	m.Params = append(m.Params, strings.Join(token[1:], " "))
 	return sendmsg(s, m)
 }
@@ -116,6 +117,7 @@ func feed(fn fname, name string, s *Session, m *irc.Message) {
 
 func status(s *Session, m *irc.Message) {
 	// Just use m.Params[0] for the fname
+	
 }
 
 func errorWriter(c controller.Controller, err error) {
@@ -149,7 +151,7 @@ func fileWriter(c controller.Controller, m *msg) error {
 }
 
 // We take the error in here for a cleaner switch
-func (m *msg) fspecialWrite(w io.WriteCloser, err error) error {
+func (m *msg) fspecialWrite(w controller.WriteCloser, err error) error {
 	if err != nil {
 		return fmt.Errorf("error in special writer: %s", err)
 	}
@@ -169,6 +171,7 @@ func (m *msg) fnormalWrite(c controller.Controller) error {
 
 	w, err := c.MainWriter(m.buff)
 	if err != nil {
+		fmt.Printf("fnormalwrite: %s\n", err)
 		return err
 	}
 
@@ -197,5 +200,6 @@ func (m *msg) fnormalWrite(c controller.Controller) error {
 	}
 
 	_, err = feed.WritefEscaped("%s\n", m.data)
+	fmt.Println(m.data)
 	return err
 }

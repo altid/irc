@@ -21,13 +21,13 @@ func handlerFunc(s *Session) irc.HandlerFunc {
 			// log to that channel when we're connected to it
 			// and logging is enabled/smart filter
 			// https://github.com/altid/ircfs/issues/5
-			//feed(fbuffer, m.Prefix.Name, s, m)
+			feed(fbuffer, m.Prefix.Name, s, m)
 		case "PART", "KICK", "JOIN", "NICK":
-			//name := "server"
-			//if c.FromChannel(m) {
-			//	name = m.Params[0]
-			//}
-			//feed(fbuffer, name, s, m)
+			name := "server"
+			if c.FromChannel(m) {
+				name = m.Params[0]
+			}
+			feed(fbuffer, name, s, m)
 		case "PING", "PING ZNC":
 			c.Writef("PONG %s", m.Params[0])
 		case "001":

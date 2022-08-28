@@ -8,7 +8,6 @@ import (
 	"log"
 	"net"
 	"os"
-	"path"
 	"strings"
 
 	"github.com/altid/ircfs/internal/format"
@@ -27,6 +26,7 @@ const (
 	ctlStart
 	ctlEvent
 	ctlMsg
+	ctlCommand
 	ctlInput
 	ctlRun
 	ctlSucceed
@@ -39,8 +39,6 @@ type Session struct {
 	cancel   context.CancelFunc
 	conn     net.Conn
 	conf     irc.ClientConfig
-	e        chan string             // events
-	i        chan string             // inputs
 	j        chan *commander.Command // joins
 	m        chan *msg               // messages
 	Defaults *Defaults
@@ -65,9 +63,7 @@ type Defaults struct {
 
 func (s *Session) Parse() {
 	s.m = make(chan *msg)
-	s.e = make(chan string)
 	s.j = make(chan *commander.Command)
-	s.i = make(chan string)
 	s.debug = func(ctlItem, ...interface{}) {}
 	s.ctx, s.cancel = context.WithCancel(context.Background())
 
@@ -89,24 +85,30 @@ func (s *Session) Run(c controller.Controller, cmd *commander.Command) error {
 	switch cmd.Name {
 	case "a", "act", "action", "me":
 		if len(cmd.Args) < 1 {
-			return errors.New("no action entered")
+			e := errors.New("no action entered")
+			s.debug(ctlErr, e)
+			return e
 		}
 		line := strings.Join(cmd.Args[1:], " ")
 		if e := action(s, cmd.Args[0], line); e != nil {
+			s.debug(ctlErr, e)
 			return e
 		}
 	case "msg", "query":
 		if len(cmd.Args) < 1 {
-			return errors.New("no user specified")
+			e := errors.New("no user specified")
+			s.debug(ctlErr, e)
+			return e
 		}
 		if e := c.CreateBuffer(cmd.Args[0]); e != nil {
+			s.debug(ctlErr, e)
 			return e
 		}
 
-		s.i <- cmd.Args[0]
 		if len(cmd.Args) > 1 {
 			line := strings.Join(cmd.Args[1:], " ")
 			if e := pm(s, line); e != nil {
+				s.debug(ctlErr, e)
 				return e
 			}
 		}
@@ -117,31 +119,35 @@ func (s *Session) Run(c controller.Controller, cmd *commander.Command) error {
 		// IRC buffers do not allow spaces
 		s.debug(ctlPart, cmd.Args[0])
 		if e := c.DeleteBuffer(cmd.Args[0]); e != nil {
+			s.debug(ctlErr, e)
 			return e
 		}
 
 		_, err := fmt.Fprintf(s.conn, "PART %s\n", cmd.Args[0])
 		s.debug(ctlSucceed, "part")
+		if err != nil {
+			s.debug(ctlErr, err)
+		}
 		return err
 	case "open":
 		if e := c.CreateBuffer(cmd.Args[0]); e != nil {
+			s.debug(ctlErr, e)
 			return e
 		}
 
 		s.debug(ctlJoin, cmd.Args[0])
 		if cmd.Args[0][0] == '#' {
 			if _, e := fmt.Fprintf(s.conn, "JOIN %s\n", cmd.Args[0]); e != nil {
+				s.debug(ctlErr, e)
 				return e
 			}
 		}
 
-		s.i <- cmd.Args[0]
-		s.e <- path.Join(cmd.Args[0], "input")
-
 		s.debug(ctlSucceed, "join")
 		return nil
 	default:
-		return fmt.Errorf("unsupported command %s", cmd.Name)
+		e := fmt.Errorf("unsupported command %s", cmd.Name)
+		s.debug(ctlErr, e)
 	}
 
 	s.debug(ctlSucceed, cmd)
@@ -154,13 +160,15 @@ func (s *Session) Quit() {
 
 // input is always sent down raw to the server
 func (s *Session) Handle(bufname string, l *markup.Lexer) error {
+	s.debug(ctlInput, l)
 	data, err := format.Input(l)
 	if err != nil {
+		s.debug(ctlErr, err)
 		return err
 	}
 
-	s.debug(ctlInput, bufname, data)
 	if _, e := fmt.Fprintf(s.conn, ":%s PRIVMSG %s :%s\n", s.conf.Name, bufname, data); e != nil {
+		s.debug(ctlErr, e)
 		return e
 	}
 
@@ -177,6 +185,7 @@ func (s *Session) Handle(bufname string, l *markup.Lexer) error {
 func (s *Session) Start(c controller.Controller) error {
 	go s.fileListener(s.ctx, c)
 	if err := s.connect(s.ctx); err != nil {
+		s.debug(ctlErr, err)
 		return err
 	}
 
@@ -199,9 +208,10 @@ func (s *Session) Listen(c controller.Controller) {
 }
 
 func (s *Session) Command(cmd *commander.Command) error {
-	go func(j chan *commander.Command, cmd *commander.Command) {
-		j <- cmd
-	}(s.j, cmd)
+	go func(s *Session, cmd *commander.Command) {
+		s.j <- cmd
+	}(s, cmd)
+
 	return nil
 }
 
@@ -209,21 +219,17 @@ func (s *Session) Command(cmd *commander.Command) error {
 func (s *Session) fileListener(ctx context.Context, c controller.Controller) {
 	for {
 		select {
-		case e := <-s.e:
-			s.debug(ctlEvent, e)
-			//c.Event(e)
 		case j := <-s.j:
+			s.debug(ctlCommand, j)
 			if e := s.Run(c, j); e != nil {
+				s.debug(ctlErr, e)
 				errorWriter(c, e)
 			}
 		case m := <-s.m:
 			if e := fileWriter(c, m); e != nil {
+				s.debug(ctlErr, e)
 				errorWriter(c, e)
 			}
-		//case b := <-s.i:
-		//if e := c.Input(b); e != nil {
-		//	errorWriter(c, e)
-		//}
 		case <-ctx.Done():
 			return
 		}
@@ -240,6 +246,7 @@ func (s *Session) connect(ctx context.Context) error {
 
 	conn, err := dialer.DialContext(ctx, "tcp", dialString)
 	if err != nil {
+		s.debug(ctlErr, err)
 		return err
 	}
 
@@ -256,6 +263,7 @@ func (s *Session) connect(ctx context.Context) error {
 	case "certificate":
 		cert, err := tls.LoadX509KeyPair(s.Defaults.TLSCert, s.Defaults.TLSKey)
 		if err != nil {
+			s.debug(ctlErr, err)
 			return err
 		}
 
@@ -269,6 +277,7 @@ func (s *Session) connect(ctx context.Context) error {
 
 	tlsconn := tls.Client(conn, tlsConfig)
 	if e := tlsconn.Handshake(); e != nil {
+		s.debug(ctlErr, e)
 		return e
 	}
 
@@ -295,13 +304,19 @@ func ctlLogging(ctl ctlItem, args ...interface{}) {
 	case ctlEvent:
 		l.Printf("event data=\"%s\"\n", args[0])
 	case ctlInput:
-		l.Printf("input target=\"%s\" data=\"%s\"\n", args[0], args[1])
+		if m, ok := args[0].(*markup.Lexer); ok {
+			data, _ := m.Bytes()
+			l.Printf("input data=\"%s\"", data)
+		}
+	case ctlCommand:
+		m := args[0].(*commander.Command)
+		l.Printf("command name=\"%s\" heading=\"%d\" sender=\"%s\" args=\"%s\" from=\"%s\"", m.Name, m.Heading, m.Sender, m.Args, m.From)
 	case ctlMsg:
 		m := args[0].(*commander.Command)
 		line := strings.Join(m.Args, " ")
 		l.Printf("%s data=\"%s\"\n", m.Name, line)
 	case ctlErr:
-		l.Printf("error buffer=\"%s\" err=\"%v\"\n", args[0], args[1])
+		l.Printf("error err=\"%v\"\n", args[0])
 	// This will be a lot of line noise
 	case ctcpMsg:
 		m := args[0].(*irc.Message)

@@ -39,7 +39,9 @@ func main() {
 
 	defer ircfs.Cleanup()
 	if *mdns {
-		ircfs.Broadcast()
+		if e := ircfs.Broadcast(); e != nil {
+			log.Fatal(e)
+		}
 	}
 
 	if e := ircfs.Run(); e != nil {
