@@ -116,8 +116,11 @@ func feed(fn fname, name string, s *Session, m *irc.Message) {
 }
 
 func status(s *Session, m *irc.Message) {
-	// Just use m.Params[0] for the fname
-	
+	s.m <- &msg{
+		buff: m.Params[0],
+		data: m.Params[1],
+		fn:   fstatus,
+	}
 }
 
 func errorWriter(c controller.Controller, err error) {
@@ -128,17 +131,13 @@ func errorWriter(c controller.Controller, err error) {
 }
 
 func fileWriter(c controller.Controller, m *msg) error {
-	if m.from == "freenode-connect" {
-		return nil
-	}
-
 	switch m.fn {
 	case fbuffer, faction, fhighlight, fselfaction, fself, ftime:
 		return m.fnormalWrite(c)
 	case fnotification:
 		return c.Notification(markup.NewNotifier(m.buff, m.from, m.data).Parse())
 	case fserver:
-		return m.fspecialWrite(c.MainWriter("server"))
+		return m.fspecialWrite(c.FeedWriter("server"))
 	case fstatus:
 		return m.fspecialWrite(c.StatusWriter(m.buff))
 	case faside:
@@ -169,7 +168,7 @@ func (m *msg) fspecialWrite(w controller.WriteCloser, err error) error {
 func (m *msg) fnormalWrite(c controller.Controller) error {
 	var color *markup.Color
 
-	w, err := c.MainWriter(m.buff)
+	w, err := c.FeedWriter(m.buff)
 	if err != nil {
 		fmt.Printf("fnormalwrite: %s\n", err)
 		return err
@@ -200,6 +199,5 @@ func (m *msg) fnormalWrite(c controller.Controller) error {
 	}
 
 	_, err = feed.WritefEscaped("%s\n", m.data)
-	fmt.Println(m.data)
 	return err
 }

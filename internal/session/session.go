@@ -10,9 +10,11 @@ import (
 	"os"
 	"strings"
 
+	//"github.com/altid/ircfs/internal/format"
 	"github.com/altid/ircfs/internal/format"
 	"github.com/altid/libs/config/types"
 	"github.com/altid/libs/markup"
+	"github.com/altid/libs/service/callback"
 	"github.com/altid/libs/service/commander"
 	"github.com/altid/libs/service/controller"
 	"gopkg.in/irc.v3"
@@ -78,6 +80,11 @@ func (s *Session) Parse() {
 	if s.Verbose {
 		s.debug = ctlLogging
 	}
+}
+
+func (s *Session) Connect(client *callback.Client, ctrl controller.Controller) error {
+	fmt.Println("Neat")
+	return nil
 }
 
 func (s *Session) Run(c controller.Controller, cmd *commander.Command) error {
@@ -160,8 +167,13 @@ func (s *Session) Quit() {
 
 // input is always sent down raw to the server
 func (s *Session) Handle(bufname string, l *markup.Lexer) error {
-	s.debug(ctlInput, l)
 	data, err := format.Input(l)
+	if l == nil {
+		e := errors.New("provided lexel was nil")
+		s.debug(ctlErr, e)
+		return e
+	}
+	s.debug(ctlInput, data, bufname)
 	if err != nil {
 		s.debug(ctlErr, err)
 		return err
@@ -173,7 +185,7 @@ func (s *Session) Handle(bufname string, l *markup.Lexer) error {
 	}
 
 	s.m <- &msg{
-		data: data,
+		data: string(data),
 		from: s.conf.Nick,
 		buff: bufname,
 	}
@@ -189,6 +201,7 @@ func (s *Session) Start(c controller.Controller) error {
 		return err
 	}
 
+	c.CreateBuffer("server")
 	s.Client = irc.NewClient(s.conn, s.conf)
 	return s.Client.Run()
 }
@@ -294,29 +307,26 @@ func ctlLogging(ctl ctlItem, args ...interface{}) {
 	case ctlSucceed:
 		l.Printf("%s succeeded\n", args[0])
 	case ctlJoin:
-		l.Printf("join target=\"%s\"\n", args[0])
+		l.Printf("join: target=\"%s\"\n", args[0])
 	case ctlStart:
-		l.Printf("start addr=\"%s\", port=%d\n", args[0], args[1])
+		l.Printf("start: addr=\"%s\", port=%d\n", args[0], args[1])
 	case ctlRun:
 		l.Println("connected")
 	case ctlPart:
-		l.Printf("part target=\"%s\"\n", args[0])
+		l.Printf("part: target=\"%s\"\n", args[0])
 	case ctlEvent:
-		l.Printf("event data=\"%s\"\n", args[0])
+		l.Printf("event: data=\"%s\"\n", args[0])
 	case ctlInput:
-		if m, ok := args[0].(*markup.Lexer); ok {
-			data, _ := m.Bytes()
-			l.Printf("input data=\"%s\"", data)
-		}
+		l.Printf("input: data=\"%s\" bufname=\"%s\"", args[0], args[1])
 	case ctlCommand:
 		m := args[0].(*commander.Command)
 		l.Printf("command name=\"%s\" heading=\"%d\" sender=\"%s\" args=\"%s\" from=\"%s\"", m.Name, m.Heading, m.Sender, m.Args, m.From)
 	case ctlMsg:
 		m := args[0].(*commander.Command)
 		line := strings.Join(m.Args, " ")
-		l.Printf("%s data=\"%s\"\n", m.Name, line)
+		l.Printf("%s: data=\"%s\"\n", m.Name, line)
 	case ctlErr:
-		l.Printf("error err=\"%v\"\n", args[0])
+		l.Printf("error: err=\"%v\"\n", args[0])
 	// This will be a lot of line noise
 	case ctcpMsg:
 		m := args[0].(*irc.Message)

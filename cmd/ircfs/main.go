@@ -45,6 +45,9 @@ func main() {
 	}
 
 	if e := ircfs.Run(); e != nil {
+		
 		log.Fatal(e)
 	}
+	log.Println("Here we are though")
+	os.Exit(0)
 }

@@ -53,7 +53,7 @@ func Register(ssh, ldir bool, addr, srv string, debug bool) (*Ircfs, error) {
 		return nil, err
 	}
 
-	s := tostore(defaults, ldir)
+	s := tostore(defaults, ldir, debug)
 	session := &session.Session{
 		Defaults: defaults,
 		Verbose:  debug,
@@ -73,7 +73,7 @@ func Register(ssh, ldir bool, addr, srv string, debug bool) (*Ircfs, error) {
 	c.WithListener(l)
 	c.WithStore(s)
 	c.WithContext(ctx)
-	//c.WithCallbacks()
+	c.WithCallbacks(session)
 	c.WithRunner(session)
 
 	// Add in commands and make sure our type has a controller as well
@@ -126,10 +126,10 @@ func tolisten(d *session.Defaults, addr string, ssh, debug bool) (listener.Liste
 	return listener.NewListen9p(addr, d.TLSCert, d.TLSKey, debug)
 }
 
-func tostore(d *session.Defaults, ldir bool) store.Filer {
+func tostore(d *session.Defaults, ldir, debug bool) store.Filer {
 	if ldir {
-		return store.NewLogStore(d.Logdir.String())
+		return store.NewLogStore(d.Logdir.String(), debug)
 	}
 
-	return store.NewRamStore()
+	return store.NewRamStore(debug)
 }

@@ -40,13 +40,18 @@ func handlerFunc(s *Session) irc.HandlerFunc {
 					Args: []string{buff},
 				}
 			}
+			m.Params[0] = "server"
+			m.Params[1] = "connected"
+			status(s, m)
 		case "301":
 			feed(fbuffer, m.Params[0], s, m)
 		case "333": //topicwhotime <client> <channel> <nick> <setat> unix time
 			timeSetAt(s, m)
 			return
 		case "MODE", "324":
-			status(s, m)
+			//m.Params[0] = "server"
+			//m.Params[1] = "mode"
+			//status(s, m)
 		//case "305": //BACK
 		//case "306": //AWAY
 		// Sidebar
