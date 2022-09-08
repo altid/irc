@@ -4,6 +4,8 @@ aqwari.net/retry v0.0.0-20180428204214-1281ce5d8df0 h1:BeD6U5TNwhMWxeydyi5xqpaNZ
 aqwari.net/retry v0.0.0-20180428204214-1281ce5d8df0/go.mod h1:XSNyyoM+OSg3vRmROPrS1lEpV7q/I9J1HAKMMxdUkU4=
 github.com/altid/libs v0.2.3 h1:1nrPkdFiBtb+bv5YzfhMpItCK2GBgL5uFYi9wooxObE=
 github.com/altid/libs v0.2.3/go.mod h1:zkLLaoU8rklnPoGTmFLzslnEK9dx6/DEc05jwDePejU=
+github.com/altid/libs v0.2.4 h1:oEExtaOf0wl6jO1k4T0ypg9hTiya2zxyNggk9cb4mbU=
+github.com/altid/libs v0.2.4/go.mod h1:zkLLaoU8rklnPoGTmFLzslnEK9dx6/DEc05jwDePejU=
 github.com/cenkalti/backoff v2.2.1+incompatible h1:tNowT99t7UNflLxfYYSlKYsBpXdEet03Pg2g16Swow4=
 github.com/cenkalti/backoff v2.2.1+incompatible/go.mod h1:90ReRw6GdpyfrHakVjL/QHaoyV4aDUVVkXQJJJ3NXXM=
 github.com/davecgh/go-spew v1.1.0 h1:ZDRjVQ15GmhC3fiQ8ni8+OwkZQO4DARzQgrnXU1Liz8=
