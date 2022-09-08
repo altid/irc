@@ -4,6 +4,7 @@ import (
 	"encoding/csv"
 	"fmt"
 	"io"
+	"net"
 	"strconv"
 	"strings"
 	"time"
@@ -29,11 +30,17 @@ const (
 	ftitle
 )
 
+var qids map[string]io.WriteCloser
+
 type msg struct {
 	buff string
 	data string
 	from string
 	fn   fname
+}
+
+func init() {
+	qids = make(map[string]io.WriteCloser)
 }
 
 func getChans(buffs string) []string {
@@ -50,94 +57,88 @@ func getChans(buffs string) []string {
 }
 
 // Private message
-func pm(s *Session, msg string) error {
+func pm(conn net.Conn, name, msg string) error {
 	token := strings.Fields(msg)
 	m := &irc.Message{
 		Command: "PRIVMSG",
 		Prefix: &irc.Prefix{
-			Name: s.conf.Name,
+			Name: name,
 		},
 		Params: token[:1],
 	}
 
 	m.Params = append(m.Params, strings.Join(token[1:], " "))
-	return sendmsg(s, m)
+	return sendmsg(conn, m)
 }
 
-func action(s *Session, from, msg string) error {
+func action(conn net.Conn, name, from, msg string) error {
 	m := &irc.Message{
 		Command: "PRIVMSG",
 		Prefix: &irc.Prefix{
-			Name: s.conf.Name,
+			Name: name,
 		},
 		Params: []string{
 			from,
 			fmt.Sprintf("ACTION %s", msg),
 		},
 	}
-	return sendmsg(s, m)
+	return sendmsg(conn, m)
 }
 
-func sendmsg(s *Session, m *irc.Message) error {
-	w := irc.NewWriter(s.conn)
+func sendmsg(conn net.Conn, m *irc.Message) error {
+	w := irc.NewWriter(conn)
 	return w.WriteMessage(m)
 }
 
-func timeSetAt(s *Session, m *irc.Message) {
+func timeSetAt(ctrl controller.Controller, m *irc.Message) {
 	i, err := strconv.ParseInt(m.Params[3], 10, 64)
 	if err != nil {
 		return
 	}
 	t := time.Unix(i, 0).Format(time.RFC1123)
 	from := strings.Split(m.Params[2], "!")
-	s.m <- &msg{
+	fileWriter(ctrl, &msg{
 		buff: m.Params[1],
 		data: t,
 		from: from[0],
 		fn:   ftime,
-	}
+	})
 }
 
-func title(name string, s *Session, m *irc.Message) {
-	s.m <- &msg{
+func title(name string, ctrl controller.Controller, m *irc.Message) {
+	fileWriter(ctrl, &msg{
 		buff: name,
 		data: m.Trailing(),
 		fn:   ftitle,
-	}
+	})
 }
 
-func feed(fn fname, name string, s *Session, m *irc.Message) {
-	s.m <- &msg{
+func feed(fn fname, name string, ctrl controller.Controller, m *irc.Message) {
+	fileWriter(ctrl, &msg{
 		buff: name,
 		data: m.Trailing(),
 		from: m.Prefix.Name,
 		fn:   fn,
-	}
+	})
 }
 
-func status(s *Session, m *irc.Message) {
-	s.m <- &msg{
+func status(ctrl controller.Controller, m *irc.Message) {
+	fileWriter(ctrl, &msg{
 		buff: m.Params[0],
-		data: m.Params[1],
+		data: fmt.Sprintf("%s: [%s]", m.Prefix.Name, m.Params[1]),
 		fn:   fstatus,
-	}
-}
-
-func errorWriter(c controller.Controller, err error) {
-	ew, _ := c.ErrorWriter()
-	defer ew.Close()
-
-	fmt.Fprintf(ew, "ircfs: %s\n", err)
+	})
 }
 
 func fileWriter(c controller.Controller, m *msg) error {
 	switch m.fn {
+	case fserver:
+		m.buff = "server"
+		return m.fnormalWrite(c)
 	case fbuffer, faction, fhighlight, fselfaction, fself, ftime:
 		return m.fnormalWrite(c)
 	case fnotification:
 		return c.Notification(markup.NewNotifier(m.buff, m.from, m.data).Parse())
-	case fserver:
-		return m.fspecialWrite(c.FeedWriter("server"))
 	case fstatus:
 		return m.fspecialWrite(c.StatusWriter(m.buff))
 	case faside:
@@ -166,17 +167,15 @@ func (m *msg) fspecialWrite(w controller.WriteCloser, err error) error {
 }
 
 func (m *msg) fnormalWrite(c controller.Controller) error {
+	var err error
 	var color *markup.Color
 
 	w, err := c.FeedWriter(m.buff)
 	if err != nil {
-		fmt.Printf("fnormalwrite: %s\n", err)
 		return err
 	}
 
 	feed := markup.NewCleaner(w)
-	defer feed.Close()
-
 	switch m.fn {
 	case fselfaction:
 		color, _ = markup.NewColor(markup.Grey, []byte(m.from))
@@ -196,6 +195,9 @@ func (m *msg) fnormalWrite(c controller.Controller) error {
 	case ftime:
 		color, _ = markup.NewColor(markup.Orange, []byte(m.from))
 		feed.WritefEscaped("Topic was set by %s, on ", color)
+	case fserver:
+		color, _ = markup.NewColor(markup.Green, []byte(m.from))
+		feed.WritefEscaped("%s: ", color)
 	}
 
 	_, err = feed.WritefEscaped("%s\n", m.data)

@@ -10,11 +10,9 @@ import (
 	"os"
 	"strings"
 
-	//"github.com/altid/ircfs/internal/format"
 	"github.com/altid/ircfs/internal/format"
 	"github.com/altid/libs/config/types"
 	"github.com/altid/libs/markup"
-	"github.com/altid/libs/service/callback"
 	"github.com/altid/libs/service/commander"
 	"github.com/altid/libs/service/controller"
 	"gopkg.in/irc.v3"
@@ -41,8 +39,7 @@ type Session struct {
 	cancel   context.CancelFunc
 	conn     net.Conn
 	conf     irc.ClientConfig
-	j        chan *commander.Command // joins
-	m        chan *msg               // messages
+	ctrl     controller.Controller
 	Defaults *Defaults
 	Verbose  bool
 	debug    func(ctlItem, ...interface{})
@@ -64,8 +61,6 @@ type Defaults struct {
 }
 
 func (s *Session) Parse() {
-	s.m = make(chan *msg)
-	s.j = make(chan *commander.Command)
 	s.debug = func(ctlItem, ...interface{}) {}
 	s.ctx, s.cancel = context.WithCancel(context.Background())
 
@@ -82,8 +77,8 @@ func (s *Session) Parse() {
 	}
 }
 
-func (s *Session) Connect(client *callback.Client, ctrl controller.Controller) error {
-	fmt.Println("Neat")
+func (s *Session) Connect(Username string) error {
+	// We can check blacklists here, etc
 	return nil
 }
 
@@ -97,7 +92,7 @@ func (s *Session) Run(c controller.Controller, cmd *commander.Command) error {
 			return e
 		}
 		line := strings.Join(cmd.Args[1:], " ")
-		if e := action(s, cmd.Args[0], line); e != nil {
+		if e := action(s.conn, s.conf.Name, cmd.Args[0], line); e != nil {
 			s.debug(ctlErr, e)
 			return e
 		}
@@ -114,7 +109,7 @@ func (s *Session) Run(c controller.Controller, cmd *commander.Command) error {
 
 		if len(cmd.Args) > 1 {
 			line := strings.Join(cmd.Args[1:], " ")
-			if e := pm(s, line); e != nil {
+			if e := pm(s.conn, s.conf.Name, line); e != nil {
 				s.debug(ctlErr, e)
 				return e
 			}
@@ -143,6 +138,7 @@ func (s *Session) Run(c controller.Controller, cmd *commander.Command) error {
 		}
 
 		s.debug(ctlJoin, cmd.Args[0])
+		// This is a bit fragile, make sure we're not looping here
 		if cmd.Args[0][0] == '#' {
 			if _, e := fmt.Fprintf(s.conn, "JOIN %s\n", cmd.Args[0]); e != nil {
 				s.debug(ctlErr, e)
@@ -184,24 +180,30 @@ func (s *Session) Handle(bufname string, l *markup.Lexer) error {
 		return e
 	}
 
-	s.m <- &msg{
+	m := &msg{
 		data: string(data),
 		from: s.conf.Nick,
 		buff: bufname,
 	}
 
+	fileWriter(s.ctrl, m)
 	s.debug(ctlSucceed, "input")
+
 	return nil
 }
 
 func (s *Session) Start(c controller.Controller) error {
-	go s.fileListener(s.ctx, c)
 	if err := s.connect(s.ctx); err != nil {
 		s.debug(ctlErr, err)
 		return err
 	}
 
 	c.CreateBuffer("server")
+
+	// We would like to do this any other way ideally
+	// but this saves us many allocations on using a channel receiver
+	s.ctrl = c
+
 	s.Client = irc.NewClient(s.conn, s.conf)
 	return s.Client.Run()
 }
@@ -221,33 +223,7 @@ func (s *Session) Listen(c controller.Controller) {
 }
 
 func (s *Session) Command(cmd *commander.Command) error {
-	go func(s *Session, cmd *commander.Command) {
-		s.j <- cmd
-	}(s, cmd)
-
-	return nil
-}
-
-// Tie the utility functions like title and feed to the fileWriter
-func (s *Session) fileListener(ctx context.Context, c controller.Controller) {
-	for {
-		select {
-		case j := <-s.j:
-			s.debug(ctlCommand, j)
-			if e := s.Run(c, j); e != nil {
-				s.debug(ctlErr, e)
-				errorWriter(c, e)
-			}
-		case m := <-s.m:
-			if e := fileWriter(c, m); e != nil {
-				s.debug(ctlErr, e)
-				errorWriter(c, e)
-			}
-		case <-ctx.Done():
-			return
-		}
-	}
-
+	return s.Run(s.ctrl, cmd)
 }
 
 func (s *Session) connect(ctx context.Context) error {
@@ -327,7 +303,6 @@ func ctlLogging(ctl ctlItem, args ...interface{}) {
 		l.Printf("%s: data=\"%s\"\n", m.Name, line)
 	case ctlErr:
 		l.Printf("error: err=\"%v\"\n", args[0])
-	// This will be a lot of line noise
 	case ctcpMsg:
 		m := args[0].(*irc.Message)
 		l.Printf("ctcp: name=\"%s\" prefix=\"%s\" params=\"%v\"\n", m.Name, m.Prefix, m.Params)
