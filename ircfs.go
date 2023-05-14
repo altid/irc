@@ -2,6 +2,8 @@ package ircfs
 
 import (
 	"context"
+	"net/url"
+	"strconv"
 
 	"github.com/altid/ircfs/internal/commands"
 	"github.com/altid/ircfs/internal/session"
@@ -16,34 +18,34 @@ type Ircfs struct {
 	run     func() error
 	session *session.Session
 	name    string
+	addr    string
 	debug   bool
 	mdns    *mdns.Entry
 	ctx     context.Context
 }
 
+// Some sane-ish defaults
+var defaults *session.Defaults = &session.Defaults{
+	Address: "irc.libera.chat",
+	SSL:     "none",
+	Port:    6667,
+	Auth:    "password",
+	Filter:  "",
+	Nick:    "guest",
+	User:    "guest",
+	Name:    "guest",
+	Buffs:   "#altid",
+	Logdir:  "",
+	TLSCert: "",
+	TLSKey:  "",
+}
+
 func CreateConfig(srv string, debug bool) error {
-	d := &session.Defaults{}
-	return config.Create(d, srv, "", debug)
+	return config.Create(defaults, srv, "", debug)
 }
 
 // This connects to IRC, manages interactions with the plugins
 func Register(ssh, ldir bool, addr, srv string, debug bool) (*Ircfs, error) {
-	// Some sane-ish defaults
-	defaults := &session.Defaults{
-		Address: "irc.libera.chat",
-		SSL:     "none",
-		Port:    6667,
-		Auth:    "password",
-		Filter:  "",
-		Nick:    "guest",
-		User:    "guest",
-		Name:    "guest",
-		Buffs:   "#altid",
-		Logdir:  "",
-		TLSCert: "",
-		TLSKey:  "",
-	}
-
 	if e := config.Marshal(defaults, srv, "", debug); e != nil {
 		return nil, e
 	}
@@ -66,6 +68,7 @@ func Register(ssh, ldir bool, addr, srv string, debug bool) (*Ircfs, error) {
 		session: session,
 		ctx:     ctx,
 		name:    srv,
+		addr:    addr,
 		debug:   debug,
 	}
 
@@ -88,11 +91,17 @@ func (ircfs *Ircfs) Run() error {
 }
 
 func (ircfs *Ircfs) Broadcast() error {
+	dial, err := url.Parse(ircfs.addr)
+	if err != nil {
+		return err
+	}
 	entry := &mdns.Entry{
-		Addr: ircfs.session.Defaults.Address,
+		Addr: dial.Hostname(),
 		Name: ircfs.name,
-		Txt:  nil,
-		Port: ircfs.session.Defaults.Port,
+		Port: 564,
+	}
+	if(dial.Port() != "") {
+		entry.Port, _ = strconv.Atoi(dial.Port())
 	}
 
 	if e := mdns.Register(entry); e != nil {

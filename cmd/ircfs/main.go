@@ -10,7 +10,7 @@ import (
 
 var (
 	srv   = flag.String("s", "irc", "name of service")
-	addr  = flag.String("a", "localhost:12345", "listening address")
+	addr  = flag.String("a", "127.0.0.1:12345", "listening address")
 	mdns  = flag.Bool("m", false, "enable mDNS broadcast of service")
 	debug = flag.Bool("d", false, "enable debug printing")
 	ssh   = flag.Bool("x", false, "enable ssh listener (default \"9p\")")
