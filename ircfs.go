@@ -2,8 +2,6 @@ package ircfs
 
 import (
 	"context"
-	"net/url"
-	"strconv"
 
 	"github.com/altid/ircfs/internal/commands"
 	"github.com/altid/ircfs/internal/session"
@@ -91,19 +89,10 @@ func (ircfs *Ircfs) Run() error {
 }
 
 func (ircfs *Ircfs) Broadcast() error {
-	dial, err := url.Parse(ircfs.addr)
+	entry, err := mdns.ParseURL(ircfs.addr, ircfs.name)
 	if err != nil {
 		return err
 	}
-	entry := &mdns.Entry{
-		Addr: dial.Hostname(),
-		Name: ircfs.name,
-		Port: 564,
-	}
-	if(dial.Port() != "") {
-		entry.Port, _ = strconv.Atoi(dial.Port())
-	}
-
 	if e := mdns.Register(entry); e != nil {
 		return e
 	}
