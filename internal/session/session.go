@@ -42,14 +42,14 @@ type Session struct {
 	ctrl     controller.Controller
 	Defaults *Defaults
 	Verbose  bool
-	debug    func(ctlItem, ...interface{})
+	debug    func(ctlItem, ...any)
 }
 
 type Defaults struct {
 	Address string       `altid:"address,prompt:IP Address of IRC server you wish to connect to"`
 	SSL     string       `altid:"ssl,prompt:SSL mode,pick:none|simple|certificate"`
 	Port    int          `altid:"port,no_prompt"`
-	Auth    types.Auth   `altid:"auth,Authentication method to use:"`
+	Auth    types.Auth   `altid:"auth,prompt:Authentication method to use:,pick:none|factotum|password"`
 	Filter  string       `altid:"filter,no_prompt"`
 	Nick    string       `altid:"nick,prompt:Enter your IRC nickname (this is what will be shown on messages you send)"`
 	User    string       `altid:"user,no_prompt"`
@@ -61,7 +61,7 @@ type Defaults struct {
 }
 
 func (s *Session) Parse() {
-	s.debug = func(ctlItem, ...interface{}) {}
+	s.debug = func(ctlItem, ...any) {}
 	s.ctx, s.cancel = context.WithCancel(context.Background())
 
 	s.conf = irc.ClientConfig{
@@ -276,7 +276,7 @@ func (s *Session) connect(ctx context.Context) error {
 	return nil
 }
 
-func ctlLogging(ctl ctlItem, args ...interface{}) {
+func ctlLogging(ctl ctlItem, args ...any) {
 	l := log.New(os.Stdout, "ircfs ", 0)
 
 	switch ctl {

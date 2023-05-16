@@ -34,7 +34,7 @@ func Input(l *mp.Lexer) (string, error) {
 		case mp.EOF:
 			return m.String(), nil
 		case mp.ErrorText:
-			return "", fmt.Errorf("error parsing input: %v", i.Data)
+			return "", fmt.Errorf("error parsing input: %s", i.Data)
 		case mp.URLLink, mp.URLText, mp.ImagePath, mp.ImageLink, mp.ImageText:
 			continue
 		case mp.ColorText, mp.ColorTextBold:

@@ -137,8 +137,8 @@ func tolisten(d *session.Defaults, addr string, ssh, debug bool) (listener.Liste
 
 func tostore(d *session.Defaults, ldir, debug bool) store.Filer {
 	if ldir {
-		return store.NewLogStore(d.Logdir.String(), debug)
+		return store.NewLogstore(d.Logdir.String(), debug)
 	}
 
-	return store.NewRamStore(debug)
+	return store.NewRamstore(debug)
 }

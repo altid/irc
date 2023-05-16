@@ -15,7 +15,6 @@ var ctcpMsg ctlItem
 // https://github.com/altid/ircfs/issues/4
 func handlerFunc(s *Session) irc.HandlerFunc {
 	return irc.HandlerFunc(func(c *irc.Client, m *irc.Message) {
-		//log.Println(m)
 		switch m.Command {
 		case "PRIVMSG":
 			prefix := &irc.Prefix{

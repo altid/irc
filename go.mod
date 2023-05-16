@@ -3,7 +3,7 @@ module github.com/altid/ircfs
 go 1.18
 
 require (
-	github.com/altid/libs v0.2.4
+	github.com/altid/libs v0.2.5
 	gopkg.in/irc.v3 v3.1.4
 )
 
@@ -22,4 +22,3 @@ require (
 	golang.org/x/sys v0.0.0-20220829200755-d48e67d00261 // indirect
 	golang.org/x/tools v0.1.12 // indirect
 )
-
