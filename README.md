@@ -4,13 +4,15 @@ Ircfs is a file service used to connect to an IRC network
 
 ![Go](https://github.com/altid/ircfs/workflows/Go/badge.svg) [![Go Report Card](https://goreportcard.com/badge/github.com/altid/ircfs)](https://goreportcard.com/report/github.com/altid/ircfs) [![License](http://img.shields.io/:license-mit-blue.svg)](http://doge.mit-license.org)
 
-`go install github.com/altid/ircfs`
+`go install github.com/altid/ircfs/cmd/ircfs@latest`
 
 ## Usage
 
-`ircfs [-p <servicename>]`
-
+`ircfs [-s <servicename>] [-d] [-a <address to bind to>] [-m]`
+ - -m broadcasts an mDNS record for the service
+ - -d enables debug output
  - if no service name is given, `irc` is used
+ - Address is the address that the host binds to, not the address of your IRC network!
 
 [Wiki!](https://github.com/altid/ircfs/wiki)
 
@@ -24,7 +26,6 @@ service=irc address=libera.chat port=6697 auth=pass=hunter2 ssl=none
 	channels=#altid
 	log=/home/guest/logs/irc/
 	filter=all
-	# listen_address=192.168.1.144:12345
 
 service=irc2 address=supersecure.ircserver.net port=28888 auth=factotum
 	ssl=cert cert=/path/to/some/cert.pem key=/path/to/some/key.pem
@@ -50,4 +51,3 @@ service=irc2 address=supersecure.ircserver.net port=28888 auth=factotum
    - all filters all JOIN/PART/QUIT messages
    - smart filters JOIN/PART/QUIT messages for people who haven't written to the channel recently
    - none does not filter any messages
-
