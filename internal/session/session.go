@@ -181,7 +181,8 @@ func (s *Session) Handle(bufname string, l *markup.Lexer) error {
 	}
 
 	m := &msg{
-		data: string(data),
+		// Some clients can send whitespace on the end, make sure we clear it out
+		data: strings.TrimRight(string(data), "\n\r"),
 		from: s.conf.Nick,
 		buff: bufname,
 	}
