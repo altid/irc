@@ -1,4 +1,4 @@
-package main
+package format
 
 import (
 	"testing"
@@ -8,19 +8,19 @@ import (
 
 func TestInput(t *testing.T) {
 	tests := map[string]string{
-		"**bold test**": "bold test",
-		"inline **bold** test": "inline bold test",
-		"*emphasis test*": "emphasis test",
-		"inline *emphasis* test": "inline emphasis test",
+		"**bold test**":               "bold test",
+		"inline **bold** test":        "inline bold test",
+		"*emphasis test*":             "emphasis test",
+		"inline *emphasis* test":      "inline emphasis test",
 		"%[coloured text test](blue)": "2coloured text test",
 		//"%[coloured text with inline **bold** ](blue)": "2coloured text with inline bold",
 	}
 
 	for key, value := range tests {
 		l := markup.NewStringLexer(key)
-		out, _ := input(l)
+		out, _ := Input(l)
 
-		if string(out.data) != value {
+		if out != value {
 			t.Error("mismatched values")
 		}
 	}

@@ -1,84 +1,133 @@
-package main
+package ircfs
 
 import (
 	"context"
-	"flag"
-	"log"
-	"os"
-	"os/user"
 
+	"github.com/altid/ircfs/internal/commands"
+	"github.com/altid/ircfs/internal/session"
 	"github.com/altid/libs/config"
-	"github.com/altid/libs/fs"
-	"gopkg.in/irc.v3"
+	"github.com/altid/libs/mdns"
+	"github.com/altid/libs/service"
+	"github.com/altid/libs/service/listener"
+	"github.com/altid/libs/store"
 )
 
-var (
-	mtpt  = flag.String("p", "/tmp/altid", "Path for filesystem")
-	srv   = flag.String("s", "irc", "Name of service")
-	debug = flag.Bool("d", false, "enable debug printing")
-	setup = flag.Bool("conf", false, "run configuration setup")
-)
+type Ircfs struct {
+	run     func() error
+	session *session.Session
+	name    string
+	addr    string
+	debug   bool
+	mdns    *mdns.Entry
+	ctx     context.Context
+}
 
-func main() {
-	flag.Parse()
-	if flag.Lookup("h") != nil {
-		flag.Usage()
-		os.Exit(1)
+// Some sane-ish defaults
+var defaults *session.Defaults = &session.Defaults{
+	Address: "irc.libera.chat",
+	SSL:     "none",
+	Port:    6667,
+	Auth:    "password",
+	Filter:  "",
+	Nick:    "guest",
+	User:    "guest",
+	Name:    "guest",
+	Buffs:   "#altid",
+	Logdir:  "",
+	TLSCert: "",
+	TLSKey:  "",
+}
+
+func CreateConfig(srv string, debug bool) error {
+	return config.Create(defaults, srv, "", debug)
+}
+
+// This connects to IRC, manages interactions with the plugins
+func Register(ssh, ldir bool, addr, srv string, debug bool) (*Ircfs, error) {
+	if e := config.Marshal(defaults, srv, "", debug); e != nil {
+		return nil, e
 	}
 
-	u, _ := user.Current()
-
-	conf := &defaults{
-		Address: "libera.chat",
-		Auth:    "password",
-		SSL:     "none",
-		Port:    6697,
-		Filter:  "none",
-		Nick:    u.Name,
-		Name:    "guest",
-		User:    "guest",
-		Logdir:  "none",
-		TLSCert: "none",
-		TLSKey:  "none",
-	}
-
-	if *setup {
-		if e := config.Create(conf, *srv, "", *debug); e != nil {
-			log.Fatal(e)
-		}
-
-		os.Exit(0)
-	}
-
-	if e := config.Marshal(conf, *srv, "", *debug); e != nil {
-		log.Printf("config file malformed or missing. Please run %s -c or manually repair", os.Args[0])
-		log.Fatal(e)
-	}
-
-	ctx, cancel := context.WithCancel(context.Background())
-
-	s := &server{
-		cancel: cancel,
-		d:      conf,
-	}
-
-	s.parse()
-
-	ctrl, err := fs.New(s, string(conf.Logdir), *mtpt, *srv, "feed", *debug)
+	l, err := tolisten(defaults, addr, ssh, debug)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
-	defer ctrl.Cleanup()
-	ctrl.CreateBuffer("server", "feed")
-	go ctrl.Listen()
-	go s.fileListener(ctx, ctrl)
-
-	if e := s.connect(ctx); e != nil {
-		log.Fatal(e)
+	s := tostore(defaults, ldir, debug)
+	session := &session.Session{
+		Defaults: defaults,
+		Verbose:  debug,
 	}
 
-	defer s.conn.Close()
-	client := irc.NewClient(s.conn, s.conf)
-	client.RunContext(ctx)
+	session.Parse()
+	ctx := context.Background()
+
+	i := &Ircfs{
+		session: session,
+		ctx:     ctx,
+		name:    srv,
+		addr:    addr,
+		debug:   debug,
+	}
+
+	c := service.New(srv, addr, debug)
+	c.WithListener(l)
+	c.WithStore(s)
+	c.WithContext(ctx)
+	c.WithCallbacks(session)
+	c.WithRunner(session)
+
+	// Add in commands and make sure our type has a controller as well
+	c.SetCommands(commands.Commands)
+	i.run = c.Listen
+
+	return i, nil
+}
+
+func (ircfs *Ircfs) Run() error {
+	return ircfs.run()
+}
+
+func (ircfs *Ircfs) Broadcast() error {
+	entry, err := mdns.ParseURL(ircfs.addr, ircfs.name)
+	if err != nil {
+		return err
+	}
+	if e := mdns.Register(entry); e != nil {
+		return e
+	}
+
+	ircfs.mdns = entry
+	return nil
+}
+
+func (ircfs *Ircfs) Cleanup() {
+	if ircfs.mdns != nil {
+		ircfs.mdns.Cleanup()
+	}
+	ircfs.session.Quit()
+}
+
+func (ircfs *Ircfs) Session() *session.Session {
+	return ircfs.session
+}
+
+func tolisten(d *session.Defaults, addr string, ssh, debug bool) (listener.Listener, error) {
+	//if ssh {
+	//    return listener.NewListenSsh()
+	//}
+
+	if d.TLSKey == "none" && d.TLSCert == "none" {
+		return listener.NewListen9p(addr, "", "", debug)
+	}
+
+	return listener.NewListen9p(addr, d.TLSCert, d.TLSKey, debug)
+}
+
+func tostore(d *session.Defaults, ldir, debug bool) store.Filer {
+	if ldir {
+		return store.NewLogstore(d.Logdir.String(), debug)
+	}
+
+	return store.NewRamstore(debug)
 }
