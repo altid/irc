@@ -77,6 +77,7 @@ func (s *Session) Parse() {
 	}
 }
 
+// Future, multiuser
 func (s *Session) Connect(Username string) error {
 	// We can check blacklists here, etc
 	return nil

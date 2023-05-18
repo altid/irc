@@ -32,19 +32,19 @@ func main() {
 		os.Exit(0)
 	}
 
-	ircfs, err := ircfs.Register(*ssh, *ldir, *addr, *srv, *debug)
+	irc, err := ircfs.Register(*ssh, *ldir, *addr, *srv, *debug)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	defer ircfs.Cleanup()
+	defer irc.Cleanup()
 	if *mdns {
-		if e := ircfs.Broadcast(); e != nil {
+		if e := irc.Broadcast(); e != nil {
 			log.Fatal(e)
 		}
 	}
 
-	if e := ircfs.Run(); e != nil {
+	if e := irc.Run(); e != nil {
 
 		log.Fatal(e)
 	}
