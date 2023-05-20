@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/altid/libs/service/commander"
-	"gopkg.in/irc.v3"
+	irc "gopkg.in/irc.v3"
 )
 
 var ctcpMsg ctlItem

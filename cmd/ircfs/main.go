@@ -24,30 +24,24 @@ func main() {
 		flag.Usage()
 		os.Exit(1)
 	}
-
 	if *setup {
 		if e := ircfs.CreateConfig(*srv, *debug); e != nil {
 			log.Fatal(e)
 		}
 		os.Exit(0)
 	}
-
 	irc, err := ircfs.Register(*ssh, *ldir, *addr, *srv, *debug)
 	if err != nil {
 		log.Fatal(err)
 	}
-
 	defer irc.Cleanup()
 	if *mdns {
 		if e := irc.Broadcast(); e != nil {
 			log.Fatal(e)
 		}
 	}
-
 	if e := irc.Run(); e != nil {
-
 		log.Fatal(e)
 	}
-
 	os.Exit(0)
 }

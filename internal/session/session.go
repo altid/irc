@@ -15,7 +15,7 @@ import (
 	"github.com/altid/libs/markup"
 	"github.com/altid/libs/service/commander"
 	"github.com/altid/libs/service/controller"
-	"gopkg.in/irc.v3"
+	irc "gopkg.in/irc.v3"
 )
 
 type ctlItem int
@@ -166,7 +166,7 @@ func (s *Session) Quit() {
 func (s *Session) Handle(bufname string, l *markup.Lexer) error {
 	data, err := format.Input(l)
 	if l == nil {
-		e := errors.New("provided lexel was nil")
+		e := errors.New("provided lexer was nil")
 		s.debug(ctlErr, e)
 		return e
 	}
