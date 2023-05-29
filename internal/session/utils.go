@@ -174,6 +174,7 @@ func (m *msg) fnormalWrite(c controller.Controller) error {
 	if err != nil {
 		return err
 	}
+	defer w.Close()
 
 	feed := markup.NewCleaner(w)
 	switch m.fn {

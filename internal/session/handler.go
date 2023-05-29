@@ -20,7 +20,6 @@ func handlerFunc(s *Session) irc.HandlerFunc {
 			prefix := &irc.Prefix{
 				Name: c.CurrentNick(),
 			}
-
 			s.debug(ctcpMsg, m)
 			token := strings.Split(m.Params[1], " ")
 			switch token[0] {
@@ -97,7 +96,6 @@ func handlerFunc(s *Session) irc.HandlerFunc {
 					} else {
 						feed(fhighlight, m.Params[0], s.ctrl, m)
 					}
-
 					m := &msg{
 						fn:   fnotification,
 						buff: m.Params[0],
