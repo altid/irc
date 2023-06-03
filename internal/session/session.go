@@ -60,9 +60,9 @@ type Defaults struct {
 	TLSKey  string       `altid:"tlskey,no_prompt"`
 }
 
-func (s *Session) Parse() {
+func (s *Session) Parse(ctx context.Context) {
 	s.debug = func(ctlItem, ...any) {}
-	s.ctx, s.cancel = context.WithCancel(context.Background())
+	s.ctx, s.cancel = context.WithCancel(ctx)
 
 	s.conf = irc.ClientConfig{
 		User:    s.Defaults.User,

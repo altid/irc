@@ -58,9 +58,8 @@ func Register(ssh, ldir bool, addr, srv string, debug bool) (*Ircfs, error) {
 		Defaults: defaults,
 		Verbose:  debug,
 	}
-
-	session.Parse()
 	ctx := context.Background()
+	session.Parse(ctx)
 
 	i := &Ircfs{
 		session: session,
