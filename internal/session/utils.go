@@ -30,17 +30,11 @@ const (
 	ftitle
 )
 
-var qids map[string]io.WriteCloser
-
 type msg struct {
 	buff string
 	data string
 	from string
 	fn   fname
-}
-
-func init() {
-	qids = make(map[string]io.WriteCloser)
 }
 
 func getChans(buffs string) []string {
@@ -180,7 +174,7 @@ func (m *msg) fnormalWrite(c controller.Controller) error {
 	switch m.fn {
 	case fselfaction:
 		color, _ = markup.NewColor(markup.Grey, []byte(m.from))
-		feed.WritefEscaped(" * %s: ", color)
+		feed.WritefEscaped(" \\* %s: ", color)
 	case fself:
 		color, _ = markup.NewColor(markup.Grey, []byte(m.from))
 		feed.WritefEscaped("%s: ", color)
@@ -189,7 +183,7 @@ func (m *msg) fnormalWrite(c controller.Controller) error {
 		feed.WritefEscaped("%s: ", color)
 	case faction:
 		color, _ = markup.NewColor(markup.Blue, []byte(m.from))
-		feed.WritefEscaped(" * %s: ", color)
+		feed.WritefEscaped(" \\* %s: ", color)
 	case fhighlight:
 		color, _ = markup.NewColor(markup.Red, []byte(m.from))
 		feed.WritefEscaped("%s: ", color)

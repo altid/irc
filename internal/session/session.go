@@ -180,14 +180,13 @@ func (s *Session) Handle(bufname string, l *markup.Lexer) error {
 		s.debug(ctlErr, e)
 		return e
 	}
-
 	m := &msg{
 		// Some clients can send whitespace on the end, make sure we clear it out
 		data: strings.TrimRight(string(data), "\n\r"),
 		from: s.conf.Nick,
 		buff: bufname,
+		fn:   fself,
 	}
-
 	fileWriter(s.ctrl, m)
 	s.debug(ctlSucceed, "input")
 
