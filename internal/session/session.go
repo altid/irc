@@ -11,10 +11,9 @@ import (
 	"strings"
 
 	"github.com/altid/ircfs/internal/format"
-	"github.com/altid/libs/config/types"
 	"github.com/altid/libs/markup"
 	"github.com/altid/libs/service/commander"
-	"github.com/altid/libs/service/controller"
+	//"github.com/altid/libs/service/controller"
 	irc "gopkg.in/irc.v3"
 )
 
@@ -39,7 +38,7 @@ type Session struct {
 	cancel   context.CancelFunc
 	conn     net.Conn
 	conf     irc.ClientConfig
-	ctrl     controller.Controller
+	//ctrl     controller.Controller
 	Defaults *Defaults
 	Verbose  bool
 	debug    func(ctlItem, ...any)
@@ -49,13 +48,11 @@ type Defaults struct {
 	Address string       `altid:"address,prompt:IP Address of IRC server you wish to connect to"`
 	SSL     string       `altid:"ssl,prompt:SSL mode,pick:none|simple|certificate"`
 	Port    int          `altid:"port,no_prompt"`
-	Auth    types.Auth   `altid:"auth,prompt:Authentication method to use:,pick:none|factotum|password"`
 	Filter  string       `altid:"filter,no_prompt"`
 	Nick    string       `altid:"nick,prompt:Enter your IRC nickname (this is what will be shown on messages you send)"`
 	User    string       `altid:"user,no_prompt"`
 	Name    string       `altid:"name,no_prompt"`
 	Buffs   string       `altid:"buffs,no_prompt"`
-	Logdir  types.Logdir `altid:"logdir,no_prompt"`
 	TLSCert string       `altid:"tlscert,no_prompt"`
 	TLSKey  string       `altid:"tlskey,no_prompt"`
 }
@@ -68,7 +65,6 @@ func (s *Session) Parse(ctx context.Context) {
 		User:    s.Defaults.User,
 		Nick:    s.Defaults.Nick,
 		Name:    s.Defaults.Name,
-		Pass:    string(s.Defaults.Auth),
 		Handler: handlerFunc(s),
 	}
 
@@ -83,7 +79,8 @@ func (s *Session) Connect(Username string) error {
 	return nil
 }
 
-func (s *Session) Run(c controller.Controller, cmd *commander.Command) error {
+func (s *Session) Run(cmd *commander.Command) error {
+	/*
 	s.debug(ctlMsg, cmd)
 	switch cmd.Name {
 	case "a", "act", "action", "me":
@@ -107,7 +104,7 @@ func (s *Session) Run(c controller.Controller, cmd *commander.Command) error {
 			s.debug(ctlErr, e)
 			return e
 		}
-
+		
 		if len(cmd.Args) > 1 {
 			line := strings.Join(cmd.Args[1:], " ")
 			if e := pm(s.conn, s.conf.Name, line); e != nil {
@@ -155,11 +152,19 @@ func (s *Session) Run(c controller.Controller, cmd *commander.Command) error {
 	}
 
 	s.debug(ctlSucceed, cmd)
+	*/
 	return nil
 }
 
 func (s *Session) Quit() {
 	s.cancel()
+}
+
+func (s *Session) Ctl(b []byte) {
+	fmt.Print(b)
+}
+func (s *Session) Input(b []byte) {
+	fmt.Print(b)
 }
 
 // input is always sent down raw to the server
@@ -180,6 +185,7 @@ func (s *Session) Handle(bufname string, l *markup.Lexer) error {
 		s.debug(ctlErr, e)
 		return e
 	}
+	/*
 	m := &msg{
 		// Some clients can send whitespace on the end, make sure we clear it out
 		data: strings.TrimRight(string(data), "\n\r"),
@@ -189,10 +195,10 @@ func (s *Session) Handle(bufname string, l *markup.Lexer) error {
 	}
 	fileWriter(s.ctrl, m)
 	s.debug(ctlSucceed, "input")
-
+	*/
 	return nil
 }
-
+/*
 func (s *Session) Start(c controller.Controller) error {
 	if err := s.connect(s.ctx); err != nil {
 		s.debug(ctlErr, err)
@@ -226,7 +232,7 @@ func (s *Session) Listen(c controller.Controller) {
 func (s *Session) Command(cmd *commander.Command) error {
 	return s.Run(s.ctrl, cmd)
 }
-
+*/
 func (s *Session) connect(ctx context.Context) error {
 	var tlsConfig *tls.Config
 
