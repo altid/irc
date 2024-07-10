@@ -3,13 +3,14 @@ package ircfs
 import (
 	"context"
 
+	"github.com/altid/ircfs/internal/commands"
 	"github.com/altid/ircfs/internal/session"
 	"github.com/altid/libs/config"
 	"github.com/altid/libs/service"
 )
 
 type Ircfs struct {
-	run     func() error
+	run		func() error
 	session *session.Session
 	name    string
 	debug   bool
@@ -44,6 +45,7 @@ func Register(srv string, debug bool) (*Ircfs, error) {
 		Defaults: defaults,
 		Verbose:  debug,
 	}
+
 	ctx := context.Background()
 	session.Parse(ctx)
 
@@ -53,20 +55,15 @@ func Register(srv string, debug bool) (*Ircfs, error) {
 		name:    srv,
 		debug:   debug,
 	}
-	_, err := service.Start(srv, session)
+	
+	svc, err := service.Register(ctx, srv)
 	if err != nil {
 		return nil, err
 	}
 
-	// Literally just write to C? But we should wrap in convenience now after.
-	// Add Commands
-	// Add Context
-/*
-	c.WithContext(ctx)
-
-	// Add in commands and make sure our type has a controller as well
-	c.SetCommands(commands.Commands)
-*/
+	svc.SetCallbacks(session)
+	svc.SetCommands(commands.Commands)
+	i.run = svc.Listen
 	return i, nil
 }
 

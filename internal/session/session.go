@@ -13,7 +13,7 @@ import (
 	"github.com/altid/ircfs/internal/format"
 	"github.com/altid/libs/markup"
 	"github.com/altid/libs/service/commander"
-	//"github.com/altid/libs/service/controller"
+	"github.com/altid/libs/service/controller"
 	irc "gopkg.in/irc.v3"
 )
 
@@ -38,7 +38,7 @@ type Session struct {
 	cancel   context.CancelFunc
 	conn     net.Conn
 	conf     irc.ClientConfig
-	//ctrl     controller.Controller
+	ctrl     controller.Controller
 	Defaults *Defaults
 	Verbose  bool
 	debug    func(ctlItem, ...any)
@@ -79,8 +79,7 @@ func (s *Session) Connect(Username string) error {
 	return nil
 }
 
-func (s *Session) Run(cmd *commander.Command) error {
-	/*
+func (s *Session) Run(c controller.Controller, cmd *commander.Command) error {
 	s.debug(ctlMsg, cmd)
 	switch cmd.Name {
 	case "a", "act", "action", "me":
@@ -152,7 +151,6 @@ func (s *Session) Run(cmd *commander.Command) error {
 	}
 
 	s.debug(ctlSucceed, cmd)
-	*/
 	return nil
 }
 
@@ -160,8 +158,8 @@ func (s *Session) Quit() {
 	s.cancel()
 }
 
-func (s *Session) Ctl(b []byte) {
-	fmt.Print(b)
+func (s *Session) Ctl(c *commander.Command) {
+	fmt.Print(c.Bytes())
 }
 func (s *Session) Input(b []byte) {
 	fmt.Print(b)
@@ -185,7 +183,6 @@ func (s *Session) Handle(bufname string, l *markup.Lexer) error {
 		s.debug(ctlErr, e)
 		return e
 	}
-	/*
 	m := &msg{
 		// Some clients can send whitespace on the end, make sure we clear it out
 		data: strings.TrimRight(string(data), "\n\r"),
@@ -195,10 +192,9 @@ func (s *Session) Handle(bufname string, l *markup.Lexer) error {
 	}
 	fileWriter(s.ctrl, m)
 	s.debug(ctlSucceed, "input")
-	*/
 	return nil
 }
-/*
+
 func (s *Session) Start(c controller.Controller) error {
 	if err := s.connect(s.ctx); err != nil {
 		s.debug(ctlErr, err)
@@ -215,24 +211,10 @@ func (s *Session) Start(c controller.Controller) error {
 	return s.Client.Run()
 }
 
-func (s *Session) Listen(c controller.Controller) {
-	err := make(chan error)
-	go func(err chan error) {
-		err <- s.Start(c)
-	}(err)
-
-	select {
-	case e := <-err:
-		s.debug(ctlErr, e)
-		log.Fatal(e)
-	case <-s.ctx.Done():
-	}
-}
-
 func (s *Session) Command(cmd *commander.Command) error {
 	return s.Run(s.ctrl, cmd)
 }
-*/
+
 func (s *Session) connect(ctx context.Context) error {
 	var tlsConfig *tls.Config
 
@@ -303,7 +285,7 @@ func ctlLogging(ctl ctlItem, args ...any) {
 		l.Printf("input: data=\"%s\" bufname=\"%s\"", args[0], args[1])
 	case ctlCommand:
 		m := args[0].(*commander.Command)
-		l.Printf("command name=\"%s\" heading=\"%d\" sender=\"%s\" args=\"%s\" from=\"%s\"", m.Name, m.Heading, m.Sender, m.Args, m.From)
+		l.Printf("command name=\"%s\" heading=\"%d\" args=\"%s\" from=\"%s\"", m.Name, m.Heading, m.Args, m.From)
 	case ctlMsg:
 		m := args[0].(*commander.Command)
 		line := strings.Join(m.Args, " ")

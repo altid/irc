@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"io"
 	"net"
-	//"strconv"
+	"strconv"
 	"strings"
-	//"time"
+	"time"
 
-	//"github.com/altid/libs/markup"
-	//"github.com/altid/libs/service/controller"
+	"github.com/altid/libs/markup"
+	"github.com/altid/libs/service/controller"
 	"gopkg.in/irc.v3"
 )
 
@@ -83,7 +83,7 @@ func sendmsg(conn net.Conn, m *irc.Message) error {
 	w := irc.NewWriter(conn)
 	return w.WriteMessage(m)
 }
-/*
+
 func timeSetAt(ctrl controller.Controller, m *irc.Message) {
 	i, err := strconv.ParseInt(m.Params[3], 10, 64)
 	if err != nil {
@@ -198,4 +198,3 @@ func (m *msg) fnormalWrite(c controller.Controller) error {
 	_, err = feed.WritefEscaped("%s\n", m.data)
 	return err
 }
-*/
