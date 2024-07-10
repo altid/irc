@@ -1,11 +1,10 @@
 package session
 
 import (
-	//"log"
-	//"strings"
-	//"time"
+	"strings"
+	"time"
 
-	//"github.com/altid/libs/service/commander"
+	"github.com/altid/libs/service/commander"
 	irc "gopkg.in/irc.v3"
 )
 
@@ -15,7 +14,6 @@ var ctcpMsg ctlItem
 // https://github.com/altid/ircfs/issues/4
 func handlerFunc(s *Session) irc.HandlerFunc {
 	return irc.HandlerFunc(func(c *irc.Client, m *irc.Message) {
-		/*
 		switch m.Command {
 		case "PRIVMSG":
 			prefix := &irc.Prefix{
@@ -187,6 +185,5 @@ func handlerFunc(s *Session) irc.HandlerFunc {
 		default:
 			feed(fserver, "server", s.ctrl, m)
 		}
-			*/
 	})
 }
