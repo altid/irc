@@ -1,9 +1,9 @@
 module github.com/altid/ircfs
 
-go 1.19
+go 1.18
 
 require (
-	github.com/altid/libs v0.4.6
+	github.com/altid/libs v0.4.7
 	gopkg.in/irc.v3 v3.1.4
 )
 
