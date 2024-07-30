@@ -29,7 +29,10 @@ const (
 	ctlInput
 	ctlRun
 	ctlSucceed
+	ctlTopic
 	ctlErr
+	ctlQuit
+	ctcpMsg
 )
 
 type Session struct {
@@ -112,7 +115,6 @@ func (s *Session) Run(c controller.Controller, cmd *commander.Command) error {
 			}
 		}
 	case "nick":
-		s.conf.Name = cmd.Args[0]
 		fmt.Fprintf(s.conn, "NICK %s\n", cmd.Args[0])
 	case "close":
 		// IRC buffers do not allow spaces
@@ -123,17 +125,12 @@ func (s *Session) Run(c controller.Controller, cmd *commander.Command) error {
 		}
 
 		_, err := fmt.Fprintf(s.conn, "PART %s\n", cmd.Args[0])
-		s.debug(ctlSucceed, "part")
 		if err != nil {
 			s.debug(ctlErr, err)
+			return err
 		}
-		return err
+		return nil
 	case "open":
-		if e := c.CreateBuffer(cmd.Args[0]); e != nil {
-			s.debug(ctlErr, e)
-			return e
-		}
-
 		s.debug(ctlJoin, cmd.Args[0])
 		// This is a bit fragile, make sure we're not looping here
 		if cmd.Args[0][0] == '#' {
@@ -142,12 +139,18 @@ func (s *Session) Run(c controller.Controller, cmd *commander.Command) error {
 				return e
 			}
 		}
-
 		s.debug(ctlSucceed, "join")
 		return nil
+	case "ready":
+		//make the buffer
+		if e := c.CreateBuffer(cmd.Args[0]); e != nil {
+			s.debug(ctlErr, e)
+			return e
+		}
 	default:
 		e := fmt.Errorf("unsupported command %s", cmd.Name)
 		s.debug(ctlErr, e)
+		return e
 	}
 
 	s.debug(ctlSucceed, cmd)
@@ -202,11 +205,7 @@ func (s *Session) Start(c controller.Controller) error {
 	}
 
 	c.CreateBuffer("server")
-
-	// We would like to do this any other way ideally
-	// but this saves us many allocations on using a channel receiver
 	s.ctrl = c
-
 	s.Client = irc.NewClient(s.conn, s.conf)
 	return s.Client.Run()
 }
@@ -292,8 +291,13 @@ func ctlLogging(ctl ctlItem, args ...any) {
 		l.Printf("%s: data=\"%s\"\n", m.Name, line)
 	case ctlErr:
 		l.Printf("error: err=\"%v\"\n", args[0])
+	case ctlTopic:
+		m := args[0].(*irc.Message)
+		l.Printf("topic: data=\"%s\"", m.Params[1])
 	case ctcpMsg:
 		m := args[0].(*irc.Message)
 		l.Printf("ctcp: name=\"%s\" prefix=\"%s\" params=\"%v\"\n", m.Name, m.Prefix, m.Params)
+	default:
+		l.Printf("%v\n", args)
 	}
 }
