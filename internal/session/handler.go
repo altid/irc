@@ -169,11 +169,12 @@ func handlerFunc(s *Session) irc.HandlerFunc {
 			feed(fbuffer, m.Params[0], s.ctrl, m)
 			title(m.Params[1], s.ctrl, m)
 		case "331":
+			
 			cmd := &commander.Command{
 				Name: "ready",
 				Args: []string{m.Params[1]},
 			}
-			s.Run(s.ctrl, cmd)
+			go s.Run(s.ctrl, cmd)
 		case "332":
 			cmd := &commander.Command{
 				Name: "ready",
