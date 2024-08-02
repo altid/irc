@@ -6,8 +6,8 @@ TARG=irc
 
 all:V: $O.out
 
-$O.out:
-	go build -v -o $target cmd/$TARG/*.go
+$O.out: $OFILES
+	go build -o $target cmd/$TARG/*.go
 
 install:V: $O.out
 	mkdir -p $BIN

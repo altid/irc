@@ -207,6 +207,7 @@ func (s *Session) Start(c controller.Controller) error {
 	c.CreateBuffer("server")
 	s.ctrl = c
 	s.Client = irc.NewClient(s.conn, s.conf)
+	log.Println("In start")
 	return s.Client.Run()
 }
 
@@ -260,6 +261,7 @@ func (s *Session) connect(ctx context.Context) error {
 
 	s.conn = tlsconn
 	s.debug(ctlRun)
+	log.Println("In connect")
 
 	return nil
 }
