@@ -1,19 +1,17 @@
 package session
 
 import (
-	"log"
 	"strings"
 	"time"
 
 	"github.com/altid/libs/service/commander"
-	irc "gopkg.in/irc.v3"
+	irc "gopkg.in/irc.v4"
 )
 
 // BUG(halfwit): Logs are being created for user events such as client quit
 // https://github.com/altid/ircfs/issues/4
 func handlerFunc(s *Session) irc.HandlerFunc {
 	return irc.HandlerFunc(func(c *irc.Client, m *irc.Message) {
-		log.Printf("In the func with %v\n", m)
 		switch m.Command {
 		case "PRIVMSG":
 			prefix := &irc.Prefix{
@@ -95,13 +93,13 @@ func handlerFunc(s *Session) irc.HandlerFunc {
 					} else {
 						feed(fhighlight, m.Params[0], s.ctrl, m)
 					}
-					m := &msg{
+					nm := &msg{
 						fn:   fnotification,
 						buff: m.Params[0],
 						from: m.Name,
 						data: m.Trailing(),
 					}
-					fileWriter(s.ctrl, m)
+					fileWriter(s.ctrl, nm)
 				// PM received, make sure the file exists
 				case m.Params[0] == c.CurrentNick():
 					cmd := &commander.Command{

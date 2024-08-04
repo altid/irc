@@ -11,7 +11,7 @@ import (
 
 	"github.com/altid/libs/markup"
 	"github.com/altid/libs/service/controller"
-	"gopkg.in/irc.v3"
+	"gopkg.in/irc.v4"
 )
 
 type fname int
@@ -125,7 +125,6 @@ func status(ctrl controller.Controller, m *irc.Message) {
 }
 
 func fileWriter(c controller.Controller, m *msg) error {
-fmt.Println(m.data, m.buff, m.from)
 	switch m.fn {
 	case fserver:
 		m.buff = "server"

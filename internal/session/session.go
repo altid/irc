@@ -14,7 +14,7 @@ import (
 	"github.com/altid/libs/markup"
 	"github.com/altid/libs/service/commander"
 	"github.com/altid/libs/service/controller"
-	irc "gopkg.in/irc.v3"
+	irc "gopkg.in/irc.v4"
 )
 
 type ctlItem int
