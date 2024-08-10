@@ -11,7 +11,7 @@ import (
 
 	"github.com/altid/libs/markup"
 	"github.com/altid/libs/service/controller"
-	"gopkg.in/irc.v3"
+	"gopkg.in/irc.v4"
 )
 
 type fname int

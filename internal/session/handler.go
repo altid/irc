@@ -1,15 +1,12 @@
 package session
 
 import (
-	//"log"
 	"strings"
 	"time"
 
 	"github.com/altid/libs/service/commander"
-	irc "gopkg.in/irc.v3"
+	irc "gopkg.in/irc.v4"
 )
-
-var ctcpMsg ctlItem
 
 // BUG(halfwit): Logs are being created for user events such as client quit
 // https://github.com/altid/ircfs/issues/4
@@ -96,13 +93,13 @@ func handlerFunc(s *Session) irc.HandlerFunc {
 					} else {
 						feed(fhighlight, m.Params[0], s.ctrl, m)
 					}
-					m := &msg{
+					nm := &msg{
 						fn:   fnotification,
 						buff: m.Params[0],
 						from: m.Name,
 						data: m.Trailing(),
 					}
-					fileWriter(s.ctrl, m)
+					fileWriter(s.ctrl, nm)
 				// PM received, make sure the file exists
 				case m.Params[0] == c.CurrentNick():
 					cmd := &commander.Command{
@@ -124,11 +121,12 @@ func handlerFunc(s *Session) irc.HandlerFunc {
 				}
 			}
 		case "QUIT":
-			//TODO(halfwit): When smart filteringf is implemented
+			//TODO(halfwit): When smart filtering is implemented
 			// we will check the map of names for channels
 			// log to that channel when we're connected to it
 			// and logging is enabled/smart filter
 			// https://github.com/altid/ircfs/issues/5
+			//s.debug(ctlQuit, m)
 			feed(fbuffer, m.Prefix.Name, s.ctrl, m)
 		case "PART", "KICK", "JOIN", "NICK":
 			name := "server"
@@ -155,7 +153,6 @@ func handlerFunc(s *Session) irc.HandlerFunc {
 			feed(fbuffer, m.Params[0], s.ctrl, m)
 		case "333": //topicwhotime <client> <channel> <nick> <setat> unix time
 			timeSetAt(s.ctrl, m)
-			return
 		case "MODE", "324":
 			m.Params[0] = "server"
 			status(s.ctrl, m)
@@ -168,21 +165,23 @@ func handlerFunc(s *Session) irc.HandlerFunc {
 		//<client> <channel>
 		// Title
 		case "TOPIC":
+			s.debug(ctlTopic, m)
 			feed(fbuffer, m.Params[0], s.ctrl, m)
 			title(m.Params[1], s.ctrl, m)
 		case "331":
+			
 			cmd := &commander.Command{
-				Name: "open",
-				Args: []string{m.Params[1]},
-			}
-			s.Run(s.ctrl, cmd)
-		case "332":
-			cmd := &commander.Command{
-				Name: "open",
+				Name: "ready",
 				Args: []string{m.Params[1]},
 			}
 			go s.Run(s.ctrl, cmd)
-			//title(m.Params[1], s.ctrl, m)
+		case "332":
+			cmd := &commander.Command{
+				Name: "ready",
+				Args: []string{m.Params[1]},
+			}
+			go s.Run(s.ctrl, cmd)
+			title(m.Params[1], s.ctrl, m)
 		default:
 			feed(fserver, "server", s.ctrl, m)
 		}

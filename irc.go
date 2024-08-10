@@ -36,7 +36,7 @@ func CreateConfig(srv string, debug bool) error {
 }
 
 // This connects to IRC, manages interactions with the plugins
-func Register(srv string, debug bool) (*Ircfs, error) {
+func Register(srv string, fg, debug bool) (*Ircfs, error) {
 	if e := config.Marshal(defaults, srv, "", debug); e != nil {
 		return nil, e
 	}
@@ -56,7 +56,7 @@ func Register(srv string, debug bool) (*Ircfs, error) {
 		debug:   debug,
 	}
 	
-	svc, err := service.Register(ctx, srv)
+	svc, err := service.Register(ctx, srv, fg)
 	if err != nil {
 		return nil, err
 	}

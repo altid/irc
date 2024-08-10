@@ -11,11 +11,10 @@ import (
 	"strings"
 
 	"github.com/altid/ircfs/internal/format"
-	"github.com/altid/libs/config/types"
 	"github.com/altid/libs/markup"
 	"github.com/altid/libs/service/commander"
 	"github.com/altid/libs/service/controller"
-	irc "gopkg.in/irc.v3"
+	irc "gopkg.in/irc.v4"
 )
 
 type ctlItem int
@@ -30,7 +29,10 @@ const (
 	ctlInput
 	ctlRun
 	ctlSucceed
+	ctlTopic
 	ctlErr
+	ctlQuit
+	ctcpMsg
 )
 
 type Session struct {
@@ -49,13 +51,11 @@ type Defaults struct {
 	Address string       `altid:"address,prompt:IP Address of IRC server you wish to connect to"`
 	SSL     string       `altid:"ssl,prompt:SSL mode,pick:none|simple|certificate"`
 	Port    int          `altid:"port,no_prompt"`
-	Auth    types.Auth   `altid:"auth,prompt:Authentication method to use:,pick:none|factotum|password"`
 	Filter  string       `altid:"filter,no_prompt"`
 	Nick    string       `altid:"nick,prompt:Enter your IRC nickname (this is what will be shown on messages you send)"`
 	User    string       `altid:"user,no_prompt"`
 	Name    string       `altid:"name,no_prompt"`
 	Buffs   string       `altid:"buffs,no_prompt"`
-	Logdir  types.Logdir `altid:"logdir,no_prompt"`
 	TLSCert string       `altid:"tlscert,no_prompt"`
 	TLSKey  string       `altid:"tlskey,no_prompt"`
 }
@@ -68,7 +68,6 @@ func (s *Session) Parse(ctx context.Context) {
 		User:    s.Defaults.User,
 		Nick:    s.Defaults.Nick,
 		Name:    s.Defaults.Name,
-		Pass:    string(s.Defaults.Auth),
 		Handler: handlerFunc(s),
 	}
 
@@ -107,7 +106,7 @@ func (s *Session) Run(c controller.Controller, cmd *commander.Command) error {
 			s.debug(ctlErr, e)
 			return e
 		}
-
+		
 		if len(cmd.Args) > 1 {
 			line := strings.Join(cmd.Args[1:], " ")
 			if e := pm(s.conn, s.conf.Name, line); e != nil {
@@ -116,7 +115,6 @@ func (s *Session) Run(c controller.Controller, cmd *commander.Command) error {
 			}
 		}
 	case "nick":
-		s.conf.Name = cmd.Args[0]
 		fmt.Fprintf(s.conn, "NICK %s\n", cmd.Args[0])
 	case "close":
 		// IRC buffers do not allow spaces
@@ -127,17 +125,12 @@ func (s *Session) Run(c controller.Controller, cmd *commander.Command) error {
 		}
 
 		_, err := fmt.Fprintf(s.conn, "PART %s\n", cmd.Args[0])
-		s.debug(ctlSucceed, "part")
 		if err != nil {
 			s.debug(ctlErr, err)
+			return err
 		}
-		return err
+		return nil
 	case "open":
-		if e := c.CreateBuffer(cmd.Args[0]); e != nil {
-			s.debug(ctlErr, e)
-			return e
-		}
-
 		s.debug(ctlJoin, cmd.Args[0])
 		// This is a bit fragile, make sure we're not looping here
 		if cmd.Args[0][0] == '#' {
@@ -146,12 +139,18 @@ func (s *Session) Run(c controller.Controller, cmd *commander.Command) error {
 				return e
 			}
 		}
-
 		s.debug(ctlSucceed, "join")
 		return nil
+	case "ready":
+		//make the buffer
+		if e := c.CreateBuffer(cmd.Args[0]); e != nil {
+			s.debug(ctlErr, e)
+			return e
+		}
 	default:
 		e := fmt.Errorf("unsupported command %s", cmd.Name)
 		s.debug(ctlErr, e)
+		return e
 	}
 
 	s.debug(ctlSucceed, cmd)
@@ -160,6 +159,13 @@ func (s *Session) Run(c controller.Controller, cmd *commander.Command) error {
 
 func (s *Session) Quit() {
 	s.cancel()
+}
+
+func (s *Session) Ctl(c *commander.Command) {
+	fmt.Print(c.Bytes())
+}
+func (s *Session) Input(b []byte) {
+	fmt.Print(b)
 }
 
 // input is always sent down raw to the server
@@ -189,7 +195,6 @@ func (s *Session) Handle(bufname string, l *markup.Lexer) error {
 	}
 	fileWriter(s.ctrl, m)
 	s.debug(ctlSucceed, "input")
-
 	return nil
 }
 
@@ -200,27 +205,10 @@ func (s *Session) Start(c controller.Controller) error {
 	}
 
 	c.CreateBuffer("server")
-
-	// We would like to do this any other way ideally
-	// but this saves us many allocations on using a channel receiver
 	s.ctrl = c
-
 	s.Client = irc.NewClient(s.conn, s.conf)
+	log.Println("In start")
 	return s.Client.Run()
-}
-
-func (s *Session) Listen(c controller.Controller) {
-	err := make(chan error)
-	go func(err chan error) {
-		err <- s.Start(c)
-	}(err)
-
-	select {
-	case e := <-err:
-		s.debug(ctlErr, e)
-		log.Fatal(e)
-	case <-s.ctx.Done():
-	}
 }
 
 func (s *Session) Command(cmd *commander.Command) error {
@@ -273,6 +261,7 @@ func (s *Session) connect(ctx context.Context) error {
 
 	s.conn = tlsconn
 	s.debug(ctlRun)
+	log.Println("In connect")
 
 	return nil
 }
@@ -297,15 +286,20 @@ func ctlLogging(ctl ctlItem, args ...any) {
 		l.Printf("input: data=\"%s\" bufname=\"%s\"", args[0], args[1])
 	case ctlCommand:
 		m := args[0].(*commander.Command)
-		l.Printf("command name=\"%s\" heading=\"%d\" sender=\"%s\" args=\"%s\" from=\"%s\"", m.Name, m.Heading, m.Sender, m.Args, m.From)
+		l.Printf("command name=\"%s\" heading=\"%d\" args=\"%s\" from=\"%s\"", m.Name, m.Heading, m.Args, m.From)
 	case ctlMsg:
 		m := args[0].(*commander.Command)
 		line := strings.Join(m.Args, " ")
 		l.Printf("%s: data=\"%s\"\n", m.Name, line)
 	case ctlErr:
 		l.Printf("error: err=\"%v\"\n", args[0])
+	case ctlTopic:
+		m := args[0].(*irc.Message)
+		l.Printf("topic: data=\"%s\"", m.Params[1])
 	case ctcpMsg:
 		m := args[0].(*irc.Message)
 		l.Printf("ctcp: name=\"%s\" prefix=\"%s\" params=\"%v\"\n", m.Name, m.Prefix, m.Params)
+	default:
+		l.Printf("%v\n", args)
 	}
 }
