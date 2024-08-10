@@ -4,6 +4,8 @@ Irc is an Altid service used to connect to an IRC network
 
 ![Go](https://github.com/altid/irc/workflows/Go/badge.svg) [![Go Report Card](https://goreportcard.com/badge/github.com/altid/ircfs)](https://goreportcard.com/report/github.com/altid/ircfs) [![License](http://img.shields.io/:license-mit-blue.svg)](http://doge.mit-license.org)
 
+*currently working on plan9 only*
+
 `go install github.com/altid/ircfs/cmd/irc@latest`
 
 ## Usage
