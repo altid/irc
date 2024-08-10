@@ -8,7 +8,8 @@ Irc is an Altid service used to connect to an IRC network
 
 ## Usage
 
-`ircfs [-s <servicename>] [-d] [-a <address to bind to>] [-m]`
+`irc [-s <servicename>] [-f]`
+ - -f run in forgeround
  - -d enables debug output
  - if no service name is given, `irc` is used
 
