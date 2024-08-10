@@ -1,4 +1,4 @@
-module github.com/altid/ircfs
+module github.com/altid/irc
 
 go 1.18
 

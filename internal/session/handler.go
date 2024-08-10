@@ -9,7 +9,7 @@ import (
 )
 
 // BUG(halfwit): Logs are being created for user events such as client quit
-// https://github.com/altid/ircfs/issues/4
+// https://github.com/altid/irc/issues/4
 func handlerFunc(s *Session) irc.HandlerFunc {
 	return irc.HandlerFunc(func(c *irc.Client, m *irc.Message) {
 		switch m.Command {
@@ -38,7 +38,7 @@ func handlerFunc(s *Session) irc.HandlerFunc {
 				c.WriteMessage(&irc.Message{
 					Prefix:  prefix,
 					Command: "FINGER",
-					Params:  []string{m.Prefix.Name, "ircfs 0.1.0"},
+					Params:  []string{m.Prefix.Name, "altid/irc 0.1.1"},
 				})
 				feed(fserver, "server", s.ctrl, m)
 			case "\x01PING", "PING":
@@ -51,7 +51,7 @@ func handlerFunc(s *Session) irc.HandlerFunc {
 				c.WriteMessage(&irc.Message{
 					Prefix:  prefix,
 					Command: "SOURCE",
-					Params:  []string{m.Prefix.Name, "https://github.com/altid/ircfs"},
+					Params:  []string{m.Prefix.Name, "https://github.com/altid/irc"},
 				})
 				feed(fserver, "server", s.ctrl, m)
 			case "\x01TIME":
@@ -65,7 +65,7 @@ func handlerFunc(s *Session) irc.HandlerFunc {
 				c.WriteMessage(&irc.Message{
 					Prefix:  prefix,
 					Command: "VERSION",
-					Params:  []string{m.Prefix.Name, "ircfs 0.1.0"},
+					Params:  []string{m.Prefix.Name, "altid/irc 0.1.1"},
 				})
 				feed(fserver, "server", s.ctrl, m)
 			case "\x01USERINFO":
@@ -125,7 +125,7 @@ func handlerFunc(s *Session) irc.HandlerFunc {
 			// we will check the map of names for channels
 			// log to that channel when we're connected to it
 			// and logging is enabled/smart filter
-			// https://github.com/altid/ircfs/issues/5
+			// https://github.com/altid/irc/issues/5
 			//s.debug(ctlQuit, m)
 			feed(fbuffer, m.Prefix.Name, s.ctrl, m)
 		case "PART", "KICK", "JOIN", "NICK":

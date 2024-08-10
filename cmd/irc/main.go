@@ -5,7 +5,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/altid/ircfs"
+	"github.com/altid/irc"
 )
 
 var (
@@ -23,18 +23,18 @@ func main() {
 	}
 
 	if *setup {
-		if e := ircfs.CreateConfig(*srv, *debug); e != nil {
+		if e := irc.CreateConfig(*srv, *debug); e != nil {
 			log.Fatal(e)
 		}
 		os.Exit(0)
 	}
 
-	irc, err := ircfs.Register(*srv, *fg, *debug)
+	svc, err := irc.Register(*srv, *fg, *debug)
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer irc.Cleanup()
-	if e := irc.Run(); e != nil {
+	defer svc.Cleanup()
+	if e := svc.Run(); e != nil {
 		log.Fatal(e)
 	}
 }

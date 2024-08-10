@@ -10,7 +10,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/altid/ircfs/internal/format"
+	"github.com/altid/irc/internal/format"
 	"github.com/altid/libs/markup"
 	"github.com/altid/libs/service/commander"
 	"github.com/altid/libs/service/controller"
@@ -267,7 +267,7 @@ func (s *Session) connect(ctx context.Context) error {
 }
 
 func ctlLogging(ctl ctlItem, args ...any) {
-	l := log.New(os.Stdout, "ircfs ", 0)
+	l := log.New(os.Stdout, "irc ", 0)
 
 	switch ctl {
 	case ctlSucceed:
